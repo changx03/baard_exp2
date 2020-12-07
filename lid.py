@@ -70,9 +70,15 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size):
     return lid_benign, lid_noisy, lid_adv
 
 
-def merge_and_generate_labels(lid_pos, lid_neg):
-    """TODO"""
-    return 0, 0
+def merge_and_generate_labels(X_pos, X_neg):
+    """Merge positive and negative artifact and generate labels
+    """
+    X_pos = X_pos.reshape(X_pos.shape[0], -1)
+    X_neg = X_neg.reshape(X_pos.shape[0], -1)
+    X = np.concatenate((X_pos, X_neg))
+    y = np.concatenate((np.ones(X_pos.shape[0]), np.zeros(X_neg.shape[0])))
+    y = y.reshape((X.shape[0], 1))
+    return X, y
 
 
 def get_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100):
@@ -85,13 +91,4 @@ def get_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100):
     return artifacts, labels
 
 
-class LID():
-    def __init__(self, model):
-        self.model = model
 
-    def fit(self, X, X_noisy, X_adv, k=20, batch_size=100):
-        # get layer-wise output functions
-        pass
-
-    def detect(self, X):
-        pass

@@ -136,3 +136,7 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Additional datasets
+data/cifar-10-batches-py/
+cifar-10-python.tar.gz

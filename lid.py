@@ -89,6 +89,3 @@ def get_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100):
     lid_neg = np.concatenate((lid_benign, lid_noisy))
     artifacts, labels = merge_and_generate_labels(lid_pos, lid_neg)
     return artifacts, labels
-
-
-

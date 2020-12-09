@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from sklearn.metrics import auc, roc_auc_score, roc_curve
+from sklearn.metrics import roc_auc_score, roc_curve
 from torch.utils.data import DataLoader, TensorDataset
 
 
@@ -46,7 +46,8 @@ def get_shape(dataset):
     return tuple(shape)
 
 
-def get_correct_examples(model, dataset, device='cuda', batch_size=512):
+def get_correct_examples(model, dataset, device='cuda',
+                         batch_size=512, return_tensor=True):
     """Remove incorrect predictions"""
     model.eval()
     shape = get_shape(dataset)
@@ -68,5 +69,7 @@ def get_correct_examples(model, dataset, device='cuda', batch_size=512):
             corrects[start:end] = y.eq(preds.view_as(y)).cpu()
             start += n
     indices = torch.squeeze(torch.nonzero(corrects), 1)
+    if return_tensor:
+        return X[indices], Y[indices]
     dataset = TensorDataset(X[indices], Y[indices])
     return dataset

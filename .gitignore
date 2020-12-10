@@ -139,5 +139,7 @@ cython_debug/
 
 # Additional datasets
 data/cifar-10-batches-py/
+data/MNIST/
 cifar-10-python.tar.gz
 .pylintrc
+nohup.out

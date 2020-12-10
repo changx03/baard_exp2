@@ -5,17 +5,18 @@ from scipy.spatial.distance import cdist
 from tqdm import tqdm
 
 
-def mle_batch(data_benign, data_current, k):
+def mle_batch(data, batch, k):
     """Compute Maximum Likelihood Estimator of LID within k nearlest neighbours
     """
-    def estimator_func(v):
+    k = min(k, len(data)-1)
+
+    def mle(v):
         return - k / np.sum(np.log(v/v[-1]))
 
-    k = min(k, len(data_benign)-1)
-    dist = cdist(data_benign, data_current)
-    dist = np.apply_along_axis(np.sort, axis=1, arr=dist)[:, 1:k+1]
-    dist = np.apply_along_axis(estimator_func, axis=1, arr=dist)
-    return dist
+    a = cdist(batch, data)
+    a = np.apply_along_axis(np.sort, axis=1, arr=a)[:, 1:k+1]
+    a = np.apply_along_axis(mle, axis=1, arr=a)
+    return a
 
 
 def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size,):
@@ -89,7 +90,7 @@ def merge_and_generate_labels(X_pos, X_neg):
     print(X_pos.shape, X_neg.shape)
     X = np.concatenate((X_pos, X_neg))
     y = np.concatenate((np.ones(X_pos.shape[0]), np.zeros(X_neg.shape[0])))
-    y = y.reshape((X.shape[0], 1))
+    y = y.astype(np.long)
     return X, y
 
 

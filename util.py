@@ -28,7 +28,7 @@ def get_roc(y_true, y_pred, show_plot=False):
     auc_score = roc_auc_score(y_true, y_pred)
 
     if show_plot:
-        plt.figure(figsize=(7, 6))
+        plt.figure(figsize=(6, 6))
         plt.plot(fpr, tpr, color='blue', label='ROC (AUC = %0.4f)' % auc_score)
         plt.legend(loc='lower right')
         plt.title("ROC Curve")

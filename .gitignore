@@ -143,3 +143,4 @@ data/MNIST/
 cifar-10-python.tar.gz
 .pylintrc
 nohup.out
+.vscode/

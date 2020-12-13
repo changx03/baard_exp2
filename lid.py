@@ -20,7 +20,7 @@ def mle_batch(data, batch, k):
     return a
 
 
-def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device='cpu'):
+def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device):
     """
     Get the local intrinsic dimensionality of each Xi in X_adv
     estimated by k close neighbours in the random batch it lies in.

@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from scipy.spatial.distance import cdist
+from sklearn.neighbors import KDTree
 from tqdm import tqdm
 
 
@@ -123,8 +124,9 @@ def eval_single_lid(sequence, X_train, x, k=20, batch_size=100, device='cpu'):
         layer.eval()
         output = layer(samples)
         output = output.view(output.size(0), -1).cpu().detach().numpy()
-        dist = cdist(output, output)
-        dist = np.sort(dist[0])[1:k+1]
+        tree = KDTree(output, leaf_size=2, metric='euclidean')
+        dist, _ = tree.query(output, k=k+1)
+        dist = dist[1:]
         single_lid[i] = mle(dist)
 
     # TODO: Not tested yet!

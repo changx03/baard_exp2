@@ -5,6 +5,16 @@ from scipy.spatial.distance import cdist
 from tqdm import tqdm
 
 
+def get_hidden_layers(sequence, device):
+    n_hidden_layers = len(list(sequence.children())) - 1
+    # get deep representations
+    hidden_layers = []
+    for i in range(1, n_hidden_layers+1):
+        layer = nn.Sequential(*list(sequence.children())[:i]).to(device)
+        hidden_layers.append(layer)
+    return hidden_layers, n_hidden_layers
+
+
 def mle_batch(data, batch, k):
     """Compute Maximum Likelihood Estimator of LID within k nearlest neighbours
     """
@@ -22,17 +32,10 @@ def mle_batch(data, batch, k):
 
 def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device):
     """
-    Get the local intrinsic dimensionality of each Xi in X_adv
+    Train the local intrinsic dimensionality of each Xi in X_adv
     estimated by k close neighbours in the random batch it lies in.
     """
-    sequence.to(device)
-
-    n_hidden_layers = len(list(sequence.children())) - 1
-    # get deep representations
-    hidden_layers = []
-    for i in range(1, n_hidden_layers+1):
-        layer = nn.Sequential(*list(sequence.children())[:i])
-        hidden_layers.append(layer)
+    hidden_layers, n_hidden_layers = get_hidden_layers(sequence, device)
     print('Number of hidden layers: {}'.format(len(hidden_layers)))
 
     # Convert numpy Array to PyTorch Tensor
@@ -103,3 +106,26 @@ def get_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu'):
     lid_neg = np.concatenate((lid_benign, lid_noisy))
     artifacts, labels = merge_and_generate_labels(lid_pos, lid_neg)
     return artifacts, labels
+
+
+def eval_single_lid(sequence, X_train, x, k=20, batch_size=100, device='cpu'):
+    """Evaluate LID for a single example"""
+    def mle(v):
+        return - k / np.sum(np.log(v/v[-1]))
+
+    samples = np.random.choice(X_train, size=batch_size, replace=False)
+    samples = np.concatenate((np.expand_dims(x, axis=0), samples))
+    samples = torch.tensor(samples, dtype=torch.float32).to(device)
+    hidden_layers, n_hidden_layers = get_hidden_layers(sequence, device)
+    single_lid = np.zeros(n_hidden_layers, dtype=np.float32)
+    
+    for i, layer in enumerate(hidden_layers):
+        layer.eval()
+        output = layer(samples)
+        output = output.view(output.size(0), -1).cpu().detach().numpy()
+        dist = cdist(output, output)
+        dist = np.sort(dist[0])[1:k+1]
+        single_lid[i] = mle(dist)
+
+    # TODO: Not tested yet!
+    return single_lid

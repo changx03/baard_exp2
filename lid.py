@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from scipy.spatial.distance import cdist
-from sklearn.neighbors import KDTree
+from sklearn.neighbors import BallTree
 from tqdm import tqdm
 
 
@@ -119,14 +119,14 @@ def eval_single_lid(sequence, X_train, x, k=20, batch_size=100, device='cpu'):
     samples = torch.tensor(samples, dtype=torch.float32).to(device)
     hidden_layers, n_hidden_layers = get_hidden_layers(sequence, device)
     single_lid = np.zeros(n_hidden_layers, dtype=np.float32)
-    
+
     for i, layer in enumerate(hidden_layers):
         layer.eval()
         output = layer(samples)
         output = output.view(output.size(0), -1).cpu().detach().numpy()
-        tree = KDTree(output, leaf_size=2, metric='euclidean')
-        dist, _ = tree.query(output, k=k+1)
-        dist = dist[1:]
+        tree = BallTree(output, leaf_size=2)
+        dist, _ = tree.query(output[:1], k=k+1)
+        dist = np.squeeze(dist, axis=0)[1:]
         single_lid[i] = mle(dist)
 
     # TODO: Not tested yet!

@@ -5,8 +5,12 @@ from scipy.spatial.distance import cdist
 from sklearn.neighbors import BallTree
 from tqdm import tqdm
 
+from util import merge_and_generate_labels
+
 
 def get_hidden_layers(sequence, device):
+    """Get a list of functions to compute the outpus in each hidden layer
+    """
     n_hidden_layers = len(list(sequence.children())) - 1
     # get deep representations
     hidden_layers = []
@@ -40,9 +44,10 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device):
     print('Number of hidden layers: {}'.format(len(hidden_layers)))
 
     # Convert numpy Array to PyTorch Tensor
-    X = torch.tensor(X, dtype=torch.float32).to(device)
-    X_noisy = torch.tensor(X_noisy, dtype=torch.float32).to(device)
-    X_adv = torch.tensor(X_adv, dtype=torch.float32).to(device)
+    indices = np.random.permutation(X.shape[0])
+    X = torch.tensor(X[indices], dtype=torch.float32).to(device)
+    X_noisy = torch.tensor(X_noisy[indices], dtype=torch.float32).to(device)
+    X_adv = torch.tensor(X_adv[indices], dtype=torch.float32).to(device)
 
     def estimate(i_batch):
         start = i_batch * batch_size
@@ -87,18 +92,6 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device):
     return lid_benign, lid_noisy, lid_adv
 
 
-def merge_and_generate_labels(X_pos, X_neg):
-    """Merge positive and negative artifact and generate labels
-    """
-    X_pos = X_pos.reshape(X_pos.shape[0], -1)
-    X_neg = X_neg.reshape(X_neg.shape[0], -1)
-    # print(X_pos.shape, X_neg.shape)
-    X = np.concatenate((X_pos, X_neg))
-    y = np.concatenate((np.ones(X_pos.shape[0]), np.zeros(X_neg.shape[0])))
-    y = y.astype(np.long)
-    return X, y
-
-
 def get_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu'):
     """Get local intrinsic dimensionality (LID)"""
     lid_benign, lid_noisy, lid_adv = get_lid_random_batch(
@@ -110,11 +103,12 @@ def get_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu'):
 
 
 def eval_single_lid(sequence, X_train, x, k=20, batch_size=100, device='cpu'):
-    """Evaluate LID for a single example"""
+    """Compute LID value for a single example"""
     def mle(v):
         return - k / np.sum(np.log(v/v[-1]))
 
-    samples = np.random.choice(X_train, size=batch_size, replace=False)
+    indices = np.random.choice(len(X_train), size=batch_size, replace=False)
+    samples = X_train[indices]
     samples = np.concatenate((np.expand_dims(x, axis=0), samples))
     samples = torch.tensor(samples, dtype=torch.float32).to(device)
     hidden_layers, n_hidden_layers = get_hidden_layers(sequence, device)
@@ -129,5 +123,4 @@ def eval_single_lid(sequence, X_train, x, k=20, batch_size=100, device='cpu'):
         dist = np.squeeze(dist, axis=0)[1:]
         single_lid[i] = mle(dist)
 
-    # TODO: Not tested yet!
     return single_lid

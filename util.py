@@ -73,3 +73,23 @@ def get_correct_examples(model, dataset, device='cuda',
         return X[indices], Y[indices]
     dataset = TensorDataset(X[indices], Y[indices])
     return dataset
+
+
+def get_binary_labels(adv, benign):
+    """
+    Create binary labels with adversarial exmaples examples 1 and benign 
+    examples return 0.
+    """
+    y = np.concatenate((np.ones(adv.shape[0]), np.zeros(benign.shape[0])))
+    return y.astype(np.long)
+
+
+def merge_and_generate_labels(X_adv, X_benign, flatten=True):
+    """Merge positive and negative artifact and generate labels
+    """
+    if flatten:
+        X_adv = X_adv.reshape(X_adv.shape[0], -1)
+        X_benign = X_benign.reshape(X_benign.shape[0], -1)
+    X = np.concatenate((X_adv, X_benign))
+    y = get_binary_labels(X_adv, X_benign)
+    return X, y

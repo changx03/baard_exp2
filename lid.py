@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from numpy.core.numeric import indices
 from scipy.spatial.distance import cdist
 from sklearn.neighbors import BallTree
 from tqdm import tqdm
@@ -124,3 +125,37 @@ def eval_single_lid(sequence, X_train, x, k=20, batch_size=100, device='cpu'):
         single_lid[i] = mle(dist)
 
     return single_lid
+
+
+def eval_lid(sequence, X_train, X_eval, k=20, batch_size=100, device='cpu'):
+    """Evaluate X using LID characteristics
+    TODO: Consider multithreading
+    """
+    def mle(v):
+        return - k / np.sum(np.log(v/v[-1]))
+
+    n_examples = X_eval.shape[0]
+    hidden_layers, n_hidden_layers = get_hidden_layers(sequence, device)
+    results = np.zeros((n_examples, n_hidden_layers), dtype=np.float32)
+
+    for j in tqdm(range(n_examples)):
+        x = X_eval[j]
+        indices = np.random.choice(
+            len(X_train), size=batch_size, replace=False)
+        samples = X_train[indices]
+        samples = np.concatenate((np.expand_dims(x, axis=0), samples))
+        samples = torch.tensor(samples, dtype=torch.float32).to(device)
+        single_lid = np.zeros(n_hidden_layers, dtype=np.float32)
+
+        for i, layer in enumerate(hidden_layers):
+            layer.eval()
+            output = layer(samples)
+            output = output.view(output.size(0), -1).cpu().detach().numpy()
+            tree = BallTree(output, leaf_size=2)
+            dist, _ = tree.query(output[:1], k=k+1)
+            dist = np.squeeze(dist, axis=0)[1:]
+            single_lid[i] = mle(dist)
+
+        results[j] = single_lid
+
+    return results

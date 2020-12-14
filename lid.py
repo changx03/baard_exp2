@@ -92,7 +92,7 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device):
     return lid_benign, lid_noisy, lid_adv
 
 
-def get_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu'):
+def train_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu'):
     """Get local intrinsic dimensionality (LID)"""
     lid_benign, lid_noisy, lid_adv = get_lid_random_batch(
         sequence, X, X_noisy, X_adv, k, batch_size, device)

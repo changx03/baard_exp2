@@ -144,3 +144,4 @@ cifar-10-python.tar.gz
 .pylintrc
 nohup.out
 .vscode/
+baard_venv/

@@ -22,10 +22,10 @@ def unnormalize(data, xmin, xmax):
     return data * (xmax - xmin) + xmin
 
 
-def get_roc(y_true, y_pred, show_plot=False):
+def get_roc(y_true, y_prob, show_plot=False):
     """Get ROC AUC scores"""
-    fpr, tpr, thresholds = roc_curve(y_true, y_pred)
-    auc_score = roc_auc_score(y_true, y_pred)
+    fpr, tpr, thresholds = roc_curve(y_true, y_prob)
+    auc_score = roc_auc_score(y_true, y_prob)
 
     if show_plot:
         plt.figure(figsize=(6, 6))

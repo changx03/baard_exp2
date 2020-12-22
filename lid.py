@@ -1,9 +1,13 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from numpy.core.numeric import indices
+from numpy.core.fromnumeric import repeat
 from scipy.spatial.distance import cdist
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.linear_model import LogisticRegressionCV
+from sklearn.metrics import roc_auc_score
 from sklearn.neighbors import BallTree
+from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 
 from util import merge_and_generate_labels
@@ -103,31 +107,8 @@ def train_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu'):
     return artifacts, labels
 
 
-def eval_single_lid(sequence, X_train, x, k=20, batch_size=100, device='cpu'):
-    """Compute LID value for a single example"""
-    def mle(v):
-        return - k / np.sum(np.log(v/v[-1]))
-
-    indices = np.random.choice(len(X_train), size=batch_size, replace=False)
-    samples = X_train[indices]
-    samples = np.concatenate((np.expand_dims(x, axis=0), samples))
-    samples = torch.tensor(samples, dtype=torch.float32).to(device)
-    hidden_layers, n_hidden_layers = get_hidden_layers(sequence, device)
-    single_lid = np.zeros(n_hidden_layers, dtype=np.float32)
-
-    for i, layer in enumerate(hidden_layers):
-        layer.eval()
-        output = layer(samples)
-        output = output.view(output.size(0), -1).cpu().detach().numpy()
-        tree = BallTree(output, leaf_size=2)
-        dist, _ = tree.query(output[:1], k=k+1)
-        dist = np.squeeze(dist, axis=0)[1:]
-        single_lid[i] = mle(dist)
-
-    return single_lid
-
-
-def eval_lid(sequence, X_train, X_eval, k=20, batch_size=100, device='cpu'):
+def eval_lid(sequence, X_train, X_eval, k=20, batch_size=100,
+             device='cpu'):
     """Evaluate X using LID characteristics
     TODO: Consider multithreading
     """
@@ -159,3 +140,96 @@ def eval_lid(sequence, X_train, X_eval, k=20, batch_size=100, device='cpu'):
         results[j] = single_lid
 
     return results
+
+
+def merge_adv_data(X_benign, X_noisy, X_adv):
+    """Merger benign, noisy and adversarial examples into one dataset"""
+    assert X_benign.shape == X_noisy.shape and X_noisy.shape == X_adv.shape, \
+        'All 3 datasets must have same shape'
+
+    n = X_benign.shape[0]
+    x_shape = tuple(list(X_benign.shape)[1:])
+    output_x_shape = tuple([n, 3] + list(x_shape))
+    output = np.zeros(output_x_shape, dtype=np.float32)
+    Y = np.repeat([[0, 0, 1]], repeats=n, axis=0).astype(np.long)
+
+    for i in range(n):
+        output[i, 0] = X_benign[i]
+        output[i, 1] = X_noisy[i]
+        output[i, 2] = X_adv[i]
+
+    return output, Y
+
+
+class LidDetector(BaseEstimator, ClassifierMixin):
+    """A LID Detector for detection adversarial examples
+    TODO: Returns all negative! Need fix!
+    """
+
+    def __init__(self, model, k=20, batch_size=100, device='cpu'):
+        self.model = model
+        self.k = k
+        self.batch_size = batch_size
+        self.device = device
+
+    def fit(self, X, y=None):
+        """Train detector; Expecting each X contains bengin, noisy and 
+        adversarial examples.
+        """
+        n = X.shape[0]
+        single_shape = list(X.shape)[2:]
+        X_shape = tuple([n] + list(single_shape))
+        X_benign = np.zeros(X_shape, dtype=np.float32)
+        X_noisy = np.zeros(X_shape, dtype=np.float32)
+        X_adv = np.zeros(X_shape, dtype=np.float32)
+
+        for i in range(n):
+            X_benign[i] = X[i, 0]
+            X_noisy[i] = X[i, 1]
+            X_adv[i] = X[i, 2]
+
+        characteristics, labels = train_lid(
+            self.model,
+            X=X_benign,
+            X_noisy=X_noisy,
+            X_adv=X_adv,
+            k=self.k,
+            batch_size=self.batch_size,
+            device=self.device
+        )
+        self.scaler_ = MinMaxScaler().fit(characteristics)
+        self.X_train_ = X_benign
+
+        self.detector_ = LogisticRegressionCV(cv=5, n_jobs=-1)
+        self.detector_.fit(characteristics, labels)
+
+        return self  # Must return the classifier
+
+    def predict(self, X):
+        characteristics = eval_lid(
+            self.model,
+            X_train=self.X_train_,
+            X_eval=X,
+            k=self.k,
+            batch_size=self.batch_size,
+            device=self.device
+        )
+        characteristics = self.scaler_.transform(characteristics)
+        return self.detector_.predict(characteristics)
+
+    def predict_proba(self, X):
+        characteristics = eval_lid(
+            self.model,
+            X_train=self.X_train_,
+            X_eval=X,
+            k=self.k,
+            batch_size=self.batch_size,
+            device=self.device
+        )
+        characteristics = self.scaler_.transform(characteristics)
+        return self.detector_.predict_proba(characteristics)
+
+    def score(self, X, y):
+        """Return ROC AUC score"""
+        prob = self.predict_proba(X)[:, 1]
+        return roc_auc_score(y, prob)

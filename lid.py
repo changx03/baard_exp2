@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from numpy.core.fromnumeric import repeat
 from scipy.spatial.distance import cdist
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.linear_model import LogisticRegressionCV
@@ -14,7 +13,7 @@ from util import merge_and_generate_labels
 
 
 def get_hidden_layers(sequence, device):
-    """Get a list of functions to compute the outpus in each hidden layer
+    """Returns a list of functions to compute the outpus in each hidden layer.
     """
     n_hidden_layers = len(list(sequence.children())) - 1
     # get deep representations
@@ -26,7 +25,7 @@ def get_hidden_layers(sequence, device):
 
 
 def mle_batch(data, batch, k):
-    """Compute Maximum Likelihood Estimator of LID within k nearlest neighbours
+    """Computes Maximum Likelihood Estimator of LID within k nearlest neighbours.
     """
     k = min(k, len(data)-1)
 
@@ -41,9 +40,9 @@ def mle_batch(data, batch, k):
 
 
 def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device):
-    """
-    Train the local intrinsic dimensionality of each Xi in X_adv
-    estimated by k close neighbours in the random batch it lies in.
+    """Trains the local intrinsic dimensionality (LID) using samples in X and 
+    its coresponding noisy and adversarial examples.
+    Estimated by k close neighbours in the random batch it lies in.
     """
     hidden_layers, n_hidden_layers = get_hidden_layers(sequence, device)
     print('Number of hidden layers: {}'.format(len(hidden_layers)))
@@ -98,7 +97,7 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device):
 
 
 def train_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu'):
-    """Get local intrinsic dimensionality (LID)"""
+    """Gets local intrinsic dimensionality (LID)."""
     lid_benign, lid_noisy, lid_adv = get_lid_random_batch(
         sequence, X, X_noisy, X_adv, k, batch_size, device)
     lid_pos = lid_adv
@@ -109,7 +108,7 @@ def train_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu'):
 
 def eval_lid(sequence, X_train, X_eval, k=20, batch_size=100,
              device='cpu'):
-    """Evaluate X using LID characteristics
+    """Evaluates samples in X using LID characteristics.
     TODO: Consider multithreading
     """
     def mle(v):
@@ -143,7 +142,7 @@ def eval_lid(sequence, X_train, X_eval, k=20, batch_size=100,
 
 
 def merge_adv_data(X_benign, X_noisy, X_adv):
-    """Merger benign, noisy and adversarial examples into one dataset"""
+    """Merges benign, noisy and adversarial examples into one dataset."""
     assert X_benign.shape == X_noisy.shape and X_noisy.shape == X_adv.shape, \
         'All 3 datasets must have same shape'
 
@@ -162,9 +161,7 @@ def merge_adv_data(X_benign, X_noisy, X_adv):
 
 
 class LidDetector(BaseEstimator, ClassifierMixin):
-    """A LID Detector for detection adversarial examples
-    TODO: Returns all negative! Need fix!
-    """
+    """LID Detector for detecting adversarial examples."""
 
     def __init__(self, model, k=20, batch_size=100, device='cpu'):
         self.model = model
@@ -173,8 +170,8 @@ class LidDetector(BaseEstimator, ClassifierMixin):
         self.device = device
 
     def fit(self, X, y=None):
-        """Train detector; Expecting each X contains bengin, noisy and 
-        adversarial examples.
+        """Fits the model according to the given training data.
+        Expecting each X contains bengin, noisy and adversarial examples.
         """
         n = X.shape[0]
         single_shape = list(X.shape)[2:]
@@ -188,7 +185,7 @@ class LidDetector(BaseEstimator, ClassifierMixin):
             X_noisy[i] = X[i, 1]
             X_adv[i] = X[i, 2]
 
-        characteristics, labels = train_lid(
+        self.characteristics_, labels = train_lid(
             self.model,
             X=X_benign,
             X_noisy=X_noisy,
@@ -197,15 +194,17 @@ class LidDetector(BaseEstimator, ClassifierMixin):
             batch_size=self.batch_size,
             device=self.device
         )
-        self.scaler_ = MinMaxScaler().fit(characteristics)
+        self.scaler_ = MinMaxScaler().fit(self.characteristics_)
+        self.characteristics_ = self.scaler_.transform(self.characteristics_)
         self.X_train_ = X_benign
 
         self.detector_ = LogisticRegressionCV(cv=5, n_jobs=-1)
-        self.detector_.fit(characteristics, labels)
+        self.detector_.fit(self.characteristics_, labels)
 
         return self  # Must return the classifier
 
     def predict(self, X):
+        """Predicts class labels for samples in X."""
         characteristics = eval_lid(
             self.model,
             X_train=self.X_train_,
@@ -218,6 +217,7 @@ class LidDetector(BaseEstimator, ClassifierMixin):
         return self.detector_.predict(characteristics)
 
     def predict_proba(self, X):
+        """Returns probability estimates."""
         characteristics = eval_lid(
             self.model,
             X_train=self.X_train_,
@@ -230,6 +230,6 @@ class LidDetector(BaseEstimator, ClassifierMixin):
         return self.detector_.predict_proba(characteristics)
 
     def score(self, X, y):
-        """Return ROC AUC score"""
+        """Returns the ROC AUC score."""
         prob = self.predict_proba(X)[:, 1]
         return roc_auc_score(y, prob)

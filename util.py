@@ -6,24 +6,25 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 def get_range(data):
-    """Get column-wise min and max values"""
-    x_max = np.max(data, axis=0)
-    x_min = np.min(data, axis=0)
+    """Returns column-wise min and max values"""
+    x_max = np.max(data, axis=0).astype(np.float32)
+    x_min = np.min(data, axis=0).astype(np.float32)
     return (x_min, x_max)
 
 
 def normalize(data, xmin, xmax):
-    """Scale the data to [0, 1]"""
+    """Rescales the data to [0, 1]"""
     return (data - xmin) / (xmax - xmin)
 
 
 def unnormalize(data, xmin, xmax):
-    """Rescale the data to normal range"""
+    """Reverses the data to normal range"""
     return data * (xmax - xmin) + xmin
 
 
 def get_roc(y_true, y_prob, show_plot=False):
-    """Get ROC AUC scores"""
+    """Returns False-Positive-Rate, True-Positive-Rate, AUC score and thresholds.
+    """
     fpr, tpr, thresholds = roc_curve(y_true, y_prob)
     auc_score = roc_auc_score(y_true, y_prob)
 
@@ -40,7 +41,7 @@ def get_roc(y_true, y_prob, show_plot=False):
 
 
 def get_shape(dataset):
-    """Get the shape of the data (This ignores the label)"""
+    """Retruns the shape of the data in a PyTorch Dataset object."""
     shape = list(next(iter(dataset))[0].size())
     shape = [len(dataset)] + shape
     return tuple(shape)
@@ -48,7 +49,7 @@ def get_shape(dataset):
 
 def get_correct_examples(model, dataset, device='cuda',
                          batch_size=512, return_tensor=True):
-    """Remove incorrect predictions"""
+    """Removes incorrect predictions."""
     model.eval()
     shape = get_shape(dataset)
     X = torch.zeros(shape, dtype=torch.float32)
@@ -65,8 +66,8 @@ def get_correct_examples(model, dataset, device='cuda',
             x = x.to(device)
             y = y.to(device)
             outputs = model(x)
-            preds = outputs.max(1, keepdim=True)[1]
-            corrects[start:end] = y.eq(preds.view_as(y)).cpu()
+            predictions = outputs.max(1, keepdim=True)[1]
+            corrects[start:end] = y.eq(predictions.view_as(y)).cpu()
             start += n
     indices = torch.squeeze(torch.nonzero(corrects), 1)
     if return_tensor:
@@ -76,20 +77,18 @@ def get_correct_examples(model, dataset, device='cuda',
 
 
 def get_binary_labels(adv, benign):
-    """
-    Create binary labels with adversarial exmaples examples 1 and benign 
-    examples return 0.
+    """Creates binary labels with adversarial examples assign to 1 and benign 
+    examples assign to 0.
     """
     y = np.concatenate((np.ones(adv.shape[0]), np.zeros(benign.shape[0])))
     return y.astype(np.long)
 
 
 def merge_and_generate_labels(X_adv, X_benign, flatten=True):
-    """Merge positive and negative artifact and generate labels
-    """
+    """Merges positive and negative artifact and generate labels."""
     if flatten:
         X_adv = X_adv.reshape(X_adv.shape[0], -1)
         X_benign = X_benign.reshape(X_benign.shape[0], -1)
-    X = np.concatenate((X_adv, X_benign))
+    X = np.concatenate((X_adv, X_benign)).astype(np.float32)
     y = get_binary_labels(X_adv, X_benign)
     return X, y

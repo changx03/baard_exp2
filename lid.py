@@ -39,13 +39,14 @@ def mle_batch(data, batch, k):
     return a
 
 
-def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device):
+def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device,
+                         disable_progress_bar=True):
     """Trains the local intrinsic dimensionality (LID) using samples in X and 
     its coresponding noisy and adversarial examples.
     Estimated by k close neighbours in the random batch it lies in.
     """
     hidden_layers, n_hidden_layers = get_hidden_layers(sequence, device)
-    print('Number of hidden layers: {}'.format(len(hidden_layers)))
+    # print('Number of hidden layers: {}'.format(len(hidden_layers)))
 
     # Convert numpy Array to PyTorch Tensor
     indices = np.random.permutation(X.shape[0])
@@ -84,7 +85,7 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device):
     lid_noisy = []
     n_batches = int(np.ceil(X.shape[0] / float(batch_size)))
     with torch.no_grad():
-        for i_batch in tqdm(range(n_batches)):
+        for i_batch in tqdm(range(n_batches), disable=disable_progress_bar):
             batch_benign, batch_noisy, batch_adv = estimate(i_batch)
             lid_benign.extend(batch_benign)
             lid_noisy.extend(batch_noisy)
@@ -96,10 +97,12 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device):
     return lid_benign, lid_noisy, lid_adv
 
 
-def train_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu'):
+def train_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu',
+              disable_progress_bar=True):
     """Gets local intrinsic dimensionality (LID)."""
     lid_benign, lid_noisy, lid_adv = get_lid_random_batch(
-        sequence, X, X_noisy, X_adv, k, batch_size, device)
+        sequence, X, X_noisy, X_adv, k, batch_size, device,
+        disable_progress_bar=disable_progress_bar)
     lid_pos = lid_adv
     lid_neg = np.concatenate((lid_benign, lid_noisy))
     artifacts, labels = merge_and_generate_labels(lid_pos, lid_neg)
@@ -107,7 +110,7 @@ def train_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu'):
 
 
 def eval_lid(sequence, X_train, X_eval, k=20, batch_size=100,
-             device='cpu'):
+             device='cpu', disable_progress_bar=True):
     """Evaluates samples in X using LID characteristics.
     TODO: Consider multithreading
     """
@@ -118,7 +121,7 @@ def eval_lid(sequence, X_train, X_eval, k=20, batch_size=100,
     hidden_layers, n_hidden_layers = get_hidden_layers(sequence, device)
     results = np.zeros((n_examples, n_hidden_layers), dtype=np.float32)
 
-    for j in tqdm(range(n_examples)):
+    for j in tqdm(range(n_examples), disable=disable_progress_bar):
         x = X_eval[j]
         indices = np.random.choice(
             len(X_train), size=batch_size, replace=False)
@@ -161,18 +164,48 @@ def merge_adv_data(X_benign, X_noisy, X_adv):
 
 
 class LidDetector(BaseEstimator, ClassifierMixin):
-    """LID Detector for detecting adversarial examples."""
+    """LID Detector for detecting adversarial examples.
+    
+    Parameters
+    ----------
+    model : torch.nn.Sequential
+        A PyTorch neural network sequential model.
 
-    def __init__(self, model, k=20, batch_size=100, device='cpu'):
+    k : int
+        Number of nearlest neighbours.
+    
+    batch_size : 100
+        Number of random samples in each batch.
+
+    device : {'cpu', 'gpu'}, default='cpu'
+    """
+
+    def __init__(self, *, model=None, k=20, batch_size=100, device='cpu'):
         self.model = model
         self.k = k
         self.batch_size = batch_size
         self.device = device
 
-    def fit(self, X, y=None):
+    def fit(self, X, y=None, disable_progress_bar=True):
         """Fits the model according to the given training data.
         Expecting each X contains bengin, noisy and adversarial examples.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, 3, n_features)
+            Training vector, Each sample contains benign, noisy and adversarial 
+            examples as a tuple. Use the `merge_adv_data` function to create X.
+
+        y : array-like of shape (n_samples, 3), default=None
+            Benign, noisy are labeld as 0. Adversarial examples are labeld as 1.
+
+        Returns
+        -------
+        self : object
         """
+        if self.model is None:
+            raise ValueError('Model cannot be None.')
+
         n = X.shape[0]
         single_shape = list(X.shape)[2:]
         X_shape = tuple([n] + list(single_shape))
@@ -192,19 +225,23 @@ class LidDetector(BaseEstimator, ClassifierMixin):
             X_adv=X_adv,
             k=self.k,
             batch_size=self.batch_size,
-            device=self.device
+            device=self.device,
+            disable_progress_bar=disable_progress_bar
         )
         self.scaler_ = MinMaxScaler().fit(self.characteristics_)
         self.characteristics_ = self.scaler_.transform(self.characteristics_)
         self.X_train_ = X_benign
 
-        self.detector_ = LogisticRegressionCV(cv=5, n_jobs=-1)
+        self.detector_ = LogisticRegressionCV(cv=5)
         self.detector_.fit(self.characteristics_, labels)
 
         return self  # Must return the classifier
 
     def predict(self, X):
         """Predicts class labels for samples in X."""
+        if self.model is None:
+            raise ValueError('Model cannot be None.')
+
         characteristics = eval_lid(
             self.model,
             X_train=self.X_train_,
@@ -218,6 +255,9 @@ class LidDetector(BaseEstimator, ClassifierMixin):
 
     def predict_proba(self, X):
         """Returns probability estimates."""
+        if self.model is None:
+            raise ValueError('Model cannot be None.')
+
         characteristics = eval_lid(
             self.model,
             X_train=self.X_train_,
@@ -230,6 +270,46 @@ class LidDetector(BaseEstimator, ClassifierMixin):
         return self.detector_.predict_proba(characteristics)
 
     def score(self, X, y):
-        """Returns the ROC AUC score."""
-        prob = self.predict_proba(X)[:, 1]
-        return roc_auc_score(y, prob)
+        """Returns the ROC AUC score.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, 3, n_features)
+            Training vector, Each sample contains benign, noisy and adversarial 
+            examples as a tuple. Use the `merge_adv_data` function to create X.
+
+        y : array-like of shape (n_samples, 3), default=None
+            Benign, noisy are labeld as 0. Adversarial examples are labeld as 1.
+
+        Returns
+        -------
+        score : float
+            The ROC AUC score.
+        """
+        if self.model is None:
+            raise ValueError('Model cannot be None.')
+
+        n = X.shape[0]
+        single_shape = list(X.shape)[2:]
+        X_shape = tuple([n] + list(single_shape))
+        X_benign = np.zeros(X_shape, dtype=np.float32)
+        X_noisy = np.zeros(X_shape, dtype=np.float32)
+        X_adv = np.zeros(X_shape, dtype=np.float32)
+
+        for i in range(n):
+            X_benign[i] = X[i, 0]
+            X_noisy[i] = X[i, 1]
+            X_adv[i] = X[i, 2]
+
+        characteristics, labels = train_lid(
+            self.model,
+            X=X_benign,
+            X_noisy=X_noisy,
+            X_adv=X_adv,
+            k=self.k,
+            batch_size=self.batch_size,
+            device=self.device
+        )
+        characteristics = self.scaler_.transform(characteristics)
+        prob = self.detector_.predict_proba(characteristics)[:, 1]
+        return roc_auc_score(labels, prob)

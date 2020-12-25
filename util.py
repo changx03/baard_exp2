@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.random import uniform
 import torch
+from numpy.random import uniform
 from sklearn.metrics import roc_auc_score, roc_curve
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -111,13 +111,14 @@ def merge_and_generate_labels(X_adv, X_benign, flatten=True):
     y = get_binary_labels(X_adv, X_benign)
     return X, y
 
+
 def generate_random_samples(x, clip_values, r, size):
     """Generates uniformly distributed random samples around x within hypercube
     B(x, r), where r is L-infinity distance.
     """
     x_min = clip_values[0]
     x_max = clip_values[1]
-    shape = tuple([size]+ list(x.shape))
+    shape = tuple([size] + list(x.shape))
     dtype = x.dtype
     noise = uniform(low=-abs(r), high=abs(r), size=shape).astype(dtype)
     rng_samples = np.repeat([x], repeats=size, axis=0) + noise

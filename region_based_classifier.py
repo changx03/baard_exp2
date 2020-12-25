@@ -1,12 +1,14 @@
 """
 Region-based classification using PyTorch.
 """
+import datetime
 import logging
+import time
 
 import numpy as np
 import torch
 from sklearn.base import BaseEstimator, ClassifierMixin
-from torch.utils import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset
 
 from util import generate_random_samples
 
@@ -28,24 +30,43 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
         self.batch_size = batch_size
         self.device = device
 
-    def search_r(self, X, y, r0=0, step_size=0.01, update=True):
+    def search_r(self, X, y, r0=0, step_size=0.01, stop=None, update=True,
+                 verbose=0):
         r = r0
         n = len(X)
+        time_start = time.time()
         tensor_X = torch.tensor(X, dtype=torch.float32)
-        tensor_y = torch.tensor(y, dtype=torch.long)
+        tensor_y = torch.tensor(y, dtype=torch.int64)
         tensor_predictions_point = self.__predict(tensor_X)
         corrects = tensor_predictions_point.eq(
             tensor_y.view_as(tensor_predictions_point)).sum().item()
         acc_point = corrects / float(n)
         acc_region = self.score(X, y, r=r)
+        results = [[r, acc_region]]
 
-        while acc_region >= acc_point:
+        time_elapsed = time.time() - time_start
+        if verbose > 0:
+            print('[{:s}] Accuracy point-based: {:.4f}, region-based: {:.4f}, r: {:.2f}'.format(
+                str(datetime.timedelta(seconds=time_elapsed)), acc_point, acc_region, r))
+
+        # If stop is not None, keep running until reaches stop value.
+        if stop is None:
+            stop = r0
+
+        while acc_region >= acc_point or r <= stop:
+            time_start = time.time()
             r += step_size
             acc_region = self.score(X, y, r=r)
+            results.append([r, acc_region])
+
+            time_elapsed = time.time() - time_start
+            if verbose > 0:
+                print('[{:s}] Accuracy point-based: {:.4f}, region-based: {:.4f}, r: {:.2f}'.format(
+                    str(datetime.timedelta(seconds=time_elapsed)), acc_point, acc_region, r))
 
         if update:
             self.r = r - step_size
-        return self.r
+        return self.r, np.array(results, dtype=np.float32)
 
     def fit(self, X=None, y=None):
         """Region-based classifier does not require fit."""
@@ -92,7 +113,8 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
                 tensor_x_rng = torch.tensor(x_rng, dtype=torch.float32)
                 tensor_preds_rng = self.__predict(tensor_x_rng)
                 preds_rng = tensor_preds_rng.cpu().detach().numpy()
-                prob = np.bincount(preds_rng).astype(np.float32)
+                prob = np.bincount(
+                    preds_rng, minlength=self.n_class).astype(np.float32)
                 prob = prob / float(np.sum(prob))
                 probabilities[i] = prob
 
@@ -107,8 +129,8 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
 
     def __predict(self, tensor_X):
         dataset = TensorDataset(tensor_X)
-        loader = DataLoader(dataset, batchsize=self.batch_size, shuffle=False)
-        tensor_predictions = -torch.ones(len(tensor_X), dtype=torch.long)
+        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
+        tensor_predictions = -torch.ones(len(tensor_X), dtype=torch.int64)
         start = 0
 
         for x in loader:
@@ -116,7 +138,7 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
             n = x.size(0)
             end = start + n
             outputs = self.model(x)
-            preds = outputs.max(1)[1].type(torch.long)
+            preds = outputs.max(1)[1].type(torch.int64)
             tensor_predictions[start:end] = preds
             start += n
 

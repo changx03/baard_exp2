@@ -150,3 +150,9 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
             start += n
 
         return tensor_predictions
+
+    def save(self, path):
+        pass
+
+    def load(self, path):
+        pass

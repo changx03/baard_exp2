@@ -177,7 +177,7 @@ class LidDetector(BaseEstimator, ClassifierMixin):
     batch_size : 100
         Number of random samples in each batch.
 
-    device : {'cpu', 'gpu'}, default='cpu'
+    device : {'cpu', 'cuda'}, default='cpu'
     """
 
     def __init__(self, *, model=None, k=20, batch_size=100, device='cpu'):
@@ -313,3 +313,9 @@ class LidDetector(BaseEstimator, ClassifierMixin):
         characteristics = self.scaler_.transform(characteristics)
         prob = self.detector_.predict_proba(characteristics)[:, 1]
         return roc_auc_score(labels, prob)
+
+    def save(self, path):
+        pass
+
+    def load(self, path):
+        pass

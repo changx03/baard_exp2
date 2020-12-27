@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import TensorDataset, DataLoader
 
 
 class Autoencoder1(nn.Module):
@@ -40,7 +41,7 @@ class Autoencoder2(nn.Module):
         return x
 
 
-def torch_add_noise(X, x_min, x_max, epsilon, device):
+def torch_add_noise(X, x_min, x_max, epsilon, device='cpu'):
     """Returns X with Gaussian noise and clip."""
     normal = torch.distributions.normal.Normal(
         loc=torch.zeros(X.size(), dtype=torch.float32),
@@ -53,7 +54,7 @@ def torch_add_noise(X, x_min, x_max, epsilon, device):
 
 class MagNetDetector():
     def __init__(self, *, model=None, lr=0.001, batch_size=256, regularization=1e-9,
-                 noise_strength=0.025, norm='l2', device='cuda'):
+                 noise_strength=0.025, norm='l2', device='cpu'):
         if norm not in ['l1', 'l2']:
             raise ValueError('Norm can only be either l1 or l2.')
 
@@ -82,17 +83,48 @@ class MagNetDetector():
 
 
 class MagNetNoiseReformer():
-    def __init__(self, noise_strength):
+    def __init__(self, noise_strength, device):
         self.noise_strength = noise_strength
+        self.device = device
 
-    def reform(self, X):
+    def reform(self, X, x_min, x_max):
+        if isinstance(X, np.ndarray):
+            X = torch.from_numpy(X)
+            X = torch_add_noise(
+                X, x_min, x_max, self.noise_strength, self.device)
+            X = X.cpu().detach().numpy()
+        elif isinstance(X, torch.Tensor):
+            X = torch_add_noise(
+                X, x_min, x_max, self.noise_strength, self.device)
+        else:
+            raise ValueError('X must be either a ndarray or a Tensor.')
         return X
 
 
 class MagNetAutoencoderReformer():
-    def __init__(self, model, device):
+    def __init__(self, model, batch_size=512, device='cpu'):
         self.model = model
+        self.batch_size = batch_size
         self.device = device
 
     def reform(self, X):
-        return X
+        if isinstance(X, np.ndarray):
+            X_tensor = torch.from_numpy(X)
+        elif isinstance(X, torch.Tensor):
+            X_tensor = X
+        else:
+            raise ValueError('X must be either a ndarray or a Tensor.')
+        dataset = TensorDataset(X_tensor)
+        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
+        X_ae = torch.zeros_like(X_tensor)
+        self.model = self.model.to(self.device)
+        self.model.eval()
+        start = 0
+        for x in loader:
+            x = x.to(self.device)
+            end = start + x.size(0)
+            X_ae[start:end] = self.model(x)
+            start += end
+        if isinstance(X, np.ndarray):
+            X_ae = X_ae.cpu().detach().numpy()
+        return X_ae

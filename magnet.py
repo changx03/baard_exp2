@@ -83,7 +83,7 @@ class MagNetDetector():
 
 
 class MagNetNoiseReformer():
-    def __init__(self, noise_strength, device):
+    def __init__(self, noise_strength=0.025, device='cpu'):
         self.noise_strength = noise_strength
         self.device = device
 

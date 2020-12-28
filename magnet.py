@@ -70,6 +70,12 @@ def js_divergence(p, q):
     return 0.5 * (kl_divergence(p, m) + kl_divergence(q, m))
 
 
+def smooth_softmax(X, t):
+    """The smoother softmax function in distillation network."""
+    X_exp = torch.exp(X/t)
+    return X_exp / torch.sum(X_exp, 1).view(X.size(0), 1)
+
+
 class MagNetDetector():
     """MagNet Detector which supports PyTorch.
 
@@ -83,7 +89,7 @@ class MagNetDetector():
 
     classifier : torch.nn.Module object, default=None
         The classifier is only required when using probability divergence based
-        detector.
+        detector. This classifier must implement 'before_softmax' method.
 
     lr : float, default=0.001
         Learning rate for training the autoencoder.
@@ -93,7 +99,7 @@ class MagNetDetector():
 
     weight_decay : float, default=1e-9
         Weight decay coefficient for AdamW optimizer.
-    
+
     x_min : float or array, default=0.0
 
     x_max : float or array, default=1.0
@@ -106,9 +112,13 @@ class MagNetDetector():
         - 'error' will use reconstruction error to compute threshold.
         - 'prob' will use probability divergence to compute threshold.
 
-    p : {1, 2}, default=1
+    p : {1, 2, None}, default=1
         P-norm for computing the reconstruction error. Only used when 
         algorithm='error'.
+
+    temperature : float, default=10
+        The temperature parameter, T, in smoother softmax function. 
+        Only used when algorithm='prob. temperature >= 1.
 
     device : torch.device, default='cpu'
         The device for PyTorch. Using 'cuda' is recommended.
@@ -116,7 +126,8 @@ class MagNetDetector():
 
     def __init__(self, *, encoder=None, classifier=None, lr=0.001,
                  batch_size=256, weight_decay=1e-9, x_min=0.0, x_max=1.0,
-                 noise_strength=0.025, algorithm='error', p=1, device='cpu'):
+                 noise_strength=0.025, algorithm='error', p=1, temperature=10.0,
+                 device='cpu'):
         self.encoder = encoder
         self.classifier = classifier
         self.lr = lr
@@ -127,6 +138,7 @@ class MagNetDetector():
         self.noise_strength = noise_strength
         self.algorithm = algorithm
         self.p = p
+        self.temperature = temperature
         self.device = device
 
         self.history_train_loss = []
@@ -211,9 +223,8 @@ class MagNetDetector():
 
         X_ae = self.predict(X)
         if self.algorithm == 'error':
-            X = X.reshape(X.shape[0], -1)
-            X_ae = X_ae.reshape(X.shape[0], -1)
             diff = np.abs(X - X_ae)
+            diff = diff.reshape(diff.shape[0], -1)
             scores = np.mean(np.power(diff, self.p), axis=1)
         else:  # self.algorithm == 'prob'
             scores = self.__get_js_divergence(
@@ -259,6 +270,7 @@ class MagNetDetector():
             'noise_strength': self.noise_strength,
             'algorithm': self.algorithm,
             'p': self.p,
+            'temperature': self.temperature,
             'history_train_loss': self.history_train_loss,
             'threshold': self.threshold,
             'encoder_state_dict': self.encoder.state_dict(),
@@ -278,6 +290,7 @@ class MagNetDetector():
         self.noise_strength = checkpoint['noise_strength']
         self.algorithm = checkpoint['algorithm']
         self.p = checkpoint['p']
+        self.temperature = checkpoint['temperature']
         self.history_train_loss = checkpoint['history_train_loss']
         self.threshold = checkpoint['threshold']
 
@@ -324,9 +337,9 @@ class MagNetDetector():
         return total_loss
 
     def __get_js_divergence(self, A, B):
-        if self.classifier.device != self.device:
-            self.classifier.to(self.device)
+        self.classifier.to(self.device)
         self.classifier.eval()
+        before_softmax = self.classifier.before_softmax
         dataset = TensorDataset(A, B)
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
         with torch.no_grad():
@@ -340,8 +353,10 @@ class MagNetDetector():
                 end = start + a.size(0)
                 a = a.to(self.device)
                 b = b.to(self.device)
-                prob_A[start:end] = self.classifier(a).cpu()
-                prob_B[start:end] = self.classifier(b).cpu()
+                prob_A[start:end] = smooth_softmax(
+                    before_softmax(a), self.temperature).cpu()
+                prob_B[start:end] = smooth_softmax(
+                    before_softmax(b), self.temperature).cpu()
                 start = end
         prob_A = prob_A.detach().numpy()
         prob_B = prob_B.detach().numpy()
@@ -487,8 +502,7 @@ class MagNetOperator():
         return success_rate
 
     def __predict(self, X):
-        if self.classifier.device != self.device:
-            self.classifier = self.classifier.to(self.device)
+        self.classifier = self.classifier.to(self.device)
         self.classifier.eval()
         dataset = TensorDataset(X)
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)

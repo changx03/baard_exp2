@@ -16,22 +16,78 @@ logger = logging.getLogger(__name__)
 
 
 class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
-    """Region Based Classifier for robust classification. This classifier is 
-    used to restore the true label of adversarial examples.
+    """Region Based Classifier for robust classification. 
+
+    This classifier is used to restore the true label of adversarial examples.
+
+    Parameters
+    ----------
+    model : torch.nn.Module object, default=None
+        The classifier.
+
+    r : float, default=0.2
+        The radius from the sample.
+
+    sample_size : int, default=1000
+        The number of samples generated within the radius.
+
+    n_class : int, default=10
+        The number of output classes.
+
+    x_min : float or array, default=0.0
+
+    x_max : float or array, default=1.0
+
+    batch_size : int, default=128
+        Mini batch size for training the autoencoder.
+
+    device : torch.device, default='cpu'
+        The device for PyTorch. Using 'cuda' is recommended.
     """
 
     def __init__(self, *, model=None, r=0.2, sample_size=1000, n_class=10,
-                 clip_values=None, batch_size=128, device='gpu'):
+                 x_min=0.0, x_max=1.0, batch_size=128, device='gpu'):
         self.model = model
         self.r = r
         self.sample_size = sample_size
         self.n_class = n_class
-        self.clip_values = clip_values
+        self.x_min = x_min
+        self.x_max = x_max
         self.batch_size = batch_size
         self.device = device
 
-    def search_r(self, X, y, r0=0, step_size=0.01, stop=None, update=True,
+    def search_r(self, X, y, r0=0.0, step_size=0.01, stop=None, update=True,
                  verbose=0):
+        """Search optimal radius.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Training data.
+
+        y : array-like of shape (n_samples,)
+            Target labels.
+
+        r0 : float, default=0.0
+            Start radius
+
+        step_size : float, default=0.01
+            Step size for each iteration.
+
+        stop : float, default=None
+            Maximum searching radius.
+
+        update : bool, default=True
+            Update internal radius.
+
+        Returns
+        -------
+        r_best : float
+            Optimal radius.
+
+        results : array of shape (r, accuracy)
+            History of results.
+        """
         r = r0
         time_start = time.time()
         tensor_X = torch.tensor(X, dtype=torch.float32)
@@ -91,7 +147,7 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
         with torch.no_grad():
             for i in range(n):
                 x_rng = generate_random_samples(
-                    X[i], clip_values=self.clip_values, r=r,
+                    X[i], x_min=self.min, x_max=self.max, r=r,
                     size=self.sample_size)
                 tensor_x_rng = torch.tensor(x_rng, dtype=torch.float32)
                 tensor_preds_rng = self.__predict(tensor_x_rng)
@@ -115,7 +171,7 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
         with torch.no_grad():
             for i in range(n):
                 x_rng = generate_random_samples(
-                    X[i], clip_values=self.clip_values, r=r,
+                    X[i], x_min=self.x_min, x_max=self.x_max, r=r,
                     size=self.sample_size)
                 tensor_x_rng = torch.tensor(x_rng, dtype=torch.float32)
                 tensor_preds_rng = self.__predict(tensor_x_rng)
@@ -150,9 +206,3 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
             start += n
 
         return tensor_predictions
-
-    def save(self, path):
-        pass
-
-    def load(self, path):
-        pass

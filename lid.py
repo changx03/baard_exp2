@@ -171,13 +171,14 @@ class LidDetector(BaseEstimator, ClassifierMixin):
     model : torch.nn.Sequential
         A PyTorch neural network sequential model.
 
-    k : int
+    k : int, default=20
         Number of nearlest neighbours.
     
-    batch_size : 100
+    batch_size : int, default=100
         Number of random samples in each batch.
 
-    device : {'cpu', 'cuda'}, default='cpu'
+    device : torch.device, default='cpu'
+        The device for PyTorch. Using 'cuda' is recommended.
     """
 
     def __init__(self, *, model=None, k=20, batch_size=100, device='cpu'):
@@ -192,12 +193,15 @@ class LidDetector(BaseEstimator, ClassifierMixin):
 
         Parameters
         ----------
-        X : {array-like, sparse matrix} of shape (n_samples, 3, n_features)
+        X : array-like of shape (n_samples, 3, n_features)
             Training vector, Each sample contains benign, noisy and adversarial 
             examples as a tuple. Use the `merge_adv_data` function to create X.
 
-        y : array-like of shape (n_samples, 3), default=None
-            Benign, noisy are labeld as 0. Adversarial examples are labeld as 1.
+        y : None
+            Dummy variable.
+
+        disable_progress_bar : bool, default=True
+            Show progress bar.
 
         Returns
         -------
@@ -278,8 +282,8 @@ class LidDetector(BaseEstimator, ClassifierMixin):
             Training vector, Each sample contains benign, noisy and adversarial 
             examples as a tuple. Use the `merge_adv_data` function to create X.
 
-        y : array-like of shape (n_samples, 3), default=None
-            Benign, noisy are labeld as 0. Adversarial examples are labeld as 1.
+        y : None
+            Dummy variable.
 
         Returns
         -------
@@ -313,9 +317,3 @@ class LidDetector(BaseEstimator, ClassifierMixin):
         characteristics = self.scaler_.transform(characteristics)
         prob = self.detector_.predict_proba(characteristics)[:, 1]
         return roc_auc_score(labels, prob)
-
-    def save(self, path):
-        pass
-
-    def load(self, path):
-        pass

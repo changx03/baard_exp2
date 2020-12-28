@@ -367,18 +367,19 @@ class MagNetDetector():
 class MagNetNoiseReformer():
     """MagNet Noise-based reformer"""
 
-    def __init__(self, noise_strength=0.025, device='cpu'):
+    def __init__(self, noise_strength=0.025, x_min=0.0, x_max=1.0):
         self.noise_strength = noise_strength
-        self.device = device
+        self.x_min = x_min
+        self.x_max = x_max
 
-    def reform(self, X, x_min, x_max):
+    def reform(self, X):
         if not isinstance(X, np.ndarray):
             raise ValueError('X must be a ndarray.')
 
         X_tensor = torch.from_numpy(X)
         X_noisy = torch_add_noise(
-            X_tensor, x_min, x_max, self.noise_strength, self.device)
-        X_noisy = X_noisy.cpu().detach().numpy()
+            X_tensor, self.x_min, self.x_max, self.noise_strength, 'cpu')
+        X_noisy = X_noisy.detach().numpy()
         return X_noisy
 
 
@@ -404,10 +405,10 @@ class MagNetAutoencoderReformer():
 
         start = 0
         for x in loader:
-            x = x.to(self.device)
+            x = x[0].to(self.device)
             end = start + x.size(0)
             X_ae[start:end] = self.encoder(x).cpu()
-            start += end
+            start = end
         if isinstance(X, np.ndarray):
             X_ae = X_ae.detach().numpy()
         return X_ae
@@ -511,9 +512,8 @@ class MagNetOperator():
         start = 0
         with torch.no_grad():
             for x in loader:
-                n = x.size(0)
                 x = x[0].to(self.device)
-                end = start + n
+                end = start + x.size(0)
                 outputs = self.classifier(x).cpu()
                 tensor_pred[start:end] = outputs.max(1)[1].type(torch.int64)
                 start = end

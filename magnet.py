@@ -494,7 +494,7 @@ class MagNetOperator():
         X_reformed, blocked_labels = self.detect(X)
         matched_adv = blocked_labels == y_adv
         # 1 is adversarial example, 0 is benign sample.
-        uncertain_indices = np.where(matched_adv != True)[0]
+        uncertain_indices = np.where(matched_adv == False)[0]
         predictions = self.__predict(X_reformed[uncertain_indices])
         matched_label = y_label[uncertain_indices] == predictions
         # Count correctly detected and correctly predicted after reformed.
@@ -505,7 +505,8 @@ class MagNetOperator():
     def __predict(self, X):
         self.classifier = self.classifier.to(self.device)
         self.classifier.eval()
-        dataset = TensorDataset(X)
+        tensor_X = torch.from_numpy(X).type(torch.float32)
+        dataset = TensorDataset(tensor_X)
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
         tensor_pred = -torch.ones(len(X), dtype=torch.int64)
 
@@ -514,7 +515,8 @@ class MagNetOperator():
             for x in loader:
                 x = x[0].to(self.device)
                 end = start + x.size(0)
-                outputs = self.classifier(x).cpu()
-                tensor_pred[start:end] = outputs.max(1)[1].type(torch.int64)
+                outputs = self.classifier(x)
+                preds = outputs.max(1)[1].type(torch.int64)
+                tensor_pred[start:end] = preds.cpu()
                 start = end
         return tensor_pred.detach().numpy()

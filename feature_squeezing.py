@@ -8,16 +8,11 @@ import torch
 import torch.nn as nn
 from scipy import ndimage
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.linear_model import LogisticRegressionCV
+from sklearn.metrics import roc_auc_score
 from torch.optim import SGD
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import TensorDataset
-
-
-def majority_vote(predictions, n_class):
-    """Get predictions by majority votes"""
-    counts = np.array([np.bincount(prediction, minlength=n_class)
-                       for prediction in np.transpose(predictions)])
-    return np.argmax(counts, axis=1)
 
 
 class Squeezer(abc.ABC):
@@ -79,7 +74,7 @@ class DepthSqueezer(Squeezer):
 
 class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
     def __init__(self, *, classifier=None, lr=0.001, momentum=0.9,
-                 loss=nn.CrossEntropyLoss(), batch_size=128, x_min=0.0, 
+                 loss=nn.CrossEntropyLoss(), batch_size=128, x_min=0.0,
                  x_max=1.0, squeezers=[], n_class=10, device='cuda'):
         self.classifier = classifier
         self.lr = lr
@@ -103,6 +98,7 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
         return np.array(self.__history_losses)
 
     def fit(self, X, y, epochs=50, verbose=0):
+        """Train squeezed models"""
         squeezed_data = self.__get_squeezed_data(X)
         for i in range(len(self.squeezers)):
             squeezer = self.squeezers[i]
@@ -133,11 +129,18 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
                         accuracy*100))
             self.__history_losses[i] = losses
 
-    def predict(self, X):
+    def search_threshold(self, X, y_adv):
+        """Train a logistic regression model to find the threshold"""
+        l1_scores = self.get_l1_score(X)
+        self.detector_ = LogisticRegressionCV(cv=5)
+        self.detector_.fit(l1_scores, y_adv)
+
+    def get_l1_score(self, X):
         n_squeezer = len(self.squeezers)
         n_samples = len(X)
         squeezed_data = self.__get_squeezed_data(X)
-        squeezed_preditions = -np.zeros((n_squeezer+1, n_samples), dtype=np.long)
+        outputs_squeezed = np.zeros(
+            (n_squeezer, n_samples, self.n_class), dtype=np.long)
 
         for i in range(n_squeezer):
             dataset = TensorDataset(
@@ -145,20 +148,28 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
             loader = DataLoader(
                 dataset, batch_size=self.batch_size, shuffle=False)
             model = self.squeezed_models[i]
-            squeezed_preditions[i] = self.__predict(loader, model)
-        
+            outputs_squeezed[i] = self.__predict(loader, model)
+
         # Also use the original classifier.
         dataset = TensorDataset(torch.from_numpy(X.astype(np.float32)))
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
-        squeezed_preditions[-1] = self.__predict(loader, self.classifier)
+        initial_outputs = self.__predict(loader, self.classifier)
+        l1 = np.sum(np.abs(outputs_squeezed - initial_outputs), axis=2)
+        return np.transpose(l1)
 
-        return majority_vote(squeezed_preditions, self.n_class)
+    def predict(self, X):
+        l1_scores = self.get_l1_score(X)
+        return self.detector_.predict(l1_scores)
+
+    def predict_proba(self, X):
+        l1_scores = self.get_l1_score(X)
+        return self.detector_.predict_proba(l1_scores)
 
     def score(self, X, y):
-        n = y.shape[0]
-        predictions = self.predict(X)
-        accuracy = np.sum(np.equal(predictions, y)) / float(n)
-        return accuracy
+        """Returns the ROC AUC score"""
+        l1_scores = self.get_l1_score(X)
+        prob = self.detector_.predict_proba(l1_scores)[:, 1]
+        return roc_auc_score(y, prob)
 
     def __get_squeezed_data(self, X):
         squeezed_data = []
@@ -193,7 +204,8 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
 
     def __predict(self, loader, model):
         model.eval()
-        tensor_pred = -torch.ones(len(loader.dataset), dtype=torch.long)
+        tensor_pred = torch.zeros(
+            (len(loader.dataset), self.n_class), dtype=torch.float32)
         start = 0
         with torch.no_grad():
             for mini_batch in loader:
@@ -201,20 +213,23 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
                 n = x.size(0)
                 end = start + n
                 outputs = model(x)
-                tensor_pred[start:end] = outputs.max(1)[1].type(torch.int64)
+                tensor_pred[start:end] = outputs
                 start = end
-        return tensor_pred
+        return tensor_pred.cpu().detach().numpy()
 
 
 class FeatureSqueezingSklearn(BaseEstimator, ClassifierMixin):
     def __init__(self):
-        pass
+        raise NotImplementedError
 
     def fit(self, X, y, epochs=50):
-        pass
+        raise NotImplementedError
 
     def predict(self, X):
-        pass
+        raise NotImplementedError
+    
+    def predict_proba(self, X):
+        raise NotImplementedError
 
     def score(self, X, y):
-        pass
+        raise NotImplementedError

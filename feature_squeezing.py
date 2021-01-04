@@ -13,6 +13,7 @@ from sklearn.metrics import roc_auc_score
 from torch.optim import SGD
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import TensorDataset
+from sklearn.preprocessing import MinMaxScaler
 
 
 class Squeezer(abc.ABC):
@@ -87,10 +88,10 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
         self.n_class = n_class
         self.device = device
 
-        self.squeezed_models = []
+        self.squeezed_models_ = []
         self.__history_losses = []
         for s in squeezers:
-            self.squeezed_models.append(copy.deepcopy(classifier))
+            self.squeezed_models_.append(copy.deepcopy(classifier))
             self.__history_losses.append([])
 
     @property
@@ -102,7 +103,7 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
         squeezed_data = self.__get_squeezed_data(X)
         for i in range(len(self.squeezers)):
             squeezer = self.squeezers[i]
-            model = self.squeezed_models[i]
+            model = self.squeezed_models_[i]
             samples = squeezed_data[i]
             optimizer = SGD(model.parameters(), lr=self.lr,
                             momentum=self.momentum)
@@ -132,8 +133,10 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
     def search_threshold(self, X, y_adv):
         """Train a logistic regression model to find the threshold"""
         l1_scores = self.get_l1_score(X)
+        self.scaler_ = MinMaxScaler().fit(l1_scores)
+        characteristics = self.scaler_.transform(l1_scores)
         self.detector_ = LogisticRegressionCV(cv=5)
-        self.detector_.fit(l1_scores, y_adv)
+        self.detector_.fit(characteristics, y_adv)
 
     def get_l1_score(self, X):
         n_squeezer = len(self.squeezers)
@@ -147,7 +150,7 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
                 torch.from_numpy(squeezed_data[i].astype(np.float32)))
             loader = DataLoader(
                 dataset, batch_size=self.batch_size, shuffle=False)
-            model = self.squeezed_models[i]
+            model = self.squeezed_models_[i]
             outputs_squeezed[i] = self.__predict(loader, model)
 
         # Also use the original classifier.
@@ -159,16 +162,17 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
 
     def predict(self, X):
         l1_scores = self.get_l1_score(X)
-        return self.detector_.predict(l1_scores)
+        characteristics = self.scaler_.transform(l1_scores)
+        return self.detector_.predict(characteristics)
 
     def predict_proba(self, X):
         l1_scores = self.get_l1_score(X)
-        return self.detector_.predict_proba(l1_scores)
+        characteristics = self.scaler_.transform(l1_scores)
+        return self.detector_.predict_proba(characteristics)
 
     def score(self, X, y):
         """Returns the ROC AUC score"""
-        l1_scores = self.get_l1_score(X)
-        prob = self.detector_.predict_proba(l1_scores)[:, 1]
+        prob = self.predict_proba(X)[:, 1]
         return roc_auc_score(y, prob)
 
     def __get_squeezed_data(self, X):

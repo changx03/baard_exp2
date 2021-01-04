@@ -24,7 +24,7 @@ class Squeezer(abc.ABC):
     """Base class for squeezers."""
 
     def __init__(self, name, x_min, x_max):
-        self.name
+        self.name = name
         self.x_min = x_min
         self.x_max = x_max
 
@@ -36,8 +36,8 @@ class Squeezer(abc.ABC):
 class GaussianSqueezer(Squeezer):
     """Gaussian Noise Squeezer"""
 
-    def __init__(self, name, x_min, x_max, noise_strength=0.025, std=1.0):
-        super().__init__(name, x_min, x_max)
+    def __init__(self, x_min, x_max, noise_strength=0.025, std=1.0):
+        super().__init__('gaussian', x_min, x_max)
         self.noise_strength = noise_strength
         self.std = std
 
@@ -50,8 +50,8 @@ class GaussianSqueezer(Squeezer):
 class MedianSqueezer(Squeezer):
     """Median Filter Squeezer"""
 
-    def __init__(self, name, x_min, x_max, kernel_size):
-        super().__init__(name, x_min, x_max)
+    def __init__(self, x_min, x_max, kernel_size=3):
+        super().__init__('median', x_min, x_max)
         self.kernel_size = kernel_size
 
     def transform(self, X):
@@ -65,8 +65,8 @@ class MedianSqueezer(Squeezer):
 class DepthSqueezer(Squeezer):
     """Bit Depth Squeezer"""
 
-    def __init__(self, name, x_min, x_max, bit_depth):
-        super().__init__(name, x_min, x_max)
+    def __init__(self, x_min, x_max, bit_depth=8):
+        super().__init__('depth', x_min, x_max)
         self.bit_depth = bit_depth
 
     def transform(self, X):
@@ -79,8 +79,8 @@ class DepthSqueezer(Squeezer):
 
 class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
     def __init__(self, *, classifier=None, lr=0.001, momentum=0.9,
-                 loss=nn.MSELoss(), batch_size=128, x_min=0.0, x_max=1.0,
-                 squeezers=[], n_class=10, device='cuda'):
+                 loss=nn.CrossEntropyLoss(), batch_size=128, x_min=0.0, 
+                 x_max=1.0, squeezers=[], n_class=10, device='cuda'):
         self.classifier = classifier
         self.lr = lr
         self.momentum = momentum
@@ -93,14 +93,19 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
         self.device = device
 
         self.squeezed_models = []
-        self.history_losses = []
+        self.__history_losses = []
         for s in squeezers:
             self.squeezed_models.append(copy.deepcopy(classifier))
-            self.history_losses.append([])
+            self.__history_losses.append([])
+
+    @property
+    def history_losses(self):
+        return np.array(self.__history_losses)
 
     def fit(self, X, y, epochs=50, verbose=0):
         squeezed_data = self.__get_squeezed_data(X)
         for i in range(len(self.squeezers)):
+            squeezer = self.squeezers[i]
             model = self.squeezed_models[i]
             samples = squeezed_data[i]
             optimizer = SGD(model.parameters(), lr=self.lr,
@@ -120,26 +125,32 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
                 time_elapsed = time.time() - time_start
 
                 if verbose > 0:
-                    print('{:2d}/{:2d}[{:s}] Train loss: {:.4f} acc: {:.4f}%'.format(
+                    print('{:2d}/{:2d} [{:s}] Squeezer: {:s} Train loss: {:.4f} acc: {:.4f}%'.format(
                         e+1, epochs,
                         str(datetime.timedelta(seconds=time_elapsed)),
+                        squeezer.name,
                         current_loss,
                         accuracy*100))
-            self.history_losses[i] = losses
+            self.__history_losses[i] = losses
 
     def predict(self, X):
         n_squeezer = len(self.squeezers)
         n_samples = len(X)
         squeezed_data = self.__get_squeezed_data(X)
-        squeezed_preditions = -np.zeros((n_squeezer, n_samples), dtype=np.long)
+        squeezed_preditions = -np.zeros((n_squeezer+1, n_samples), dtype=np.long)
 
         for i in range(n_squeezer):
             dataset = TensorDataset(
                 torch.from_numpy(squeezed_data[i].astype(np.float32)))
             loader = DataLoader(
-                dataset, batch_size=self.batch_size, shuffle=True)
+                dataset, batch_size=self.batch_size, shuffle=False)
             model = self.squeezed_models[i]
             squeezed_preditions[i] = self.__predict(loader, model)
+        
+        # Also use the original classifier.
+        dataset = TensorDataset(torch.from_numpy(X.astype(np.float32)))
+        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
+        squeezed_preditions[-1] = self.__predict(loader, self.classifier)
 
         return majority_vote(squeezed_preditions, self.n_class)
 

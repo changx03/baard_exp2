@@ -31,7 +31,7 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
     sample_size : int, default=1000
         The number of samples generated within the radius.
 
-    n_class : int, default=10
+    n_classes : int, default=10
         The number of output classes.
 
     x_min : float or array, default=0.0
@@ -45,12 +45,12 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
         The device for PyTorch. Using 'cuda' is recommended.
     """
 
-    def __init__(self, *, model=None, r=0.2, sample_size=1000, n_class=10,
+    def __init__(self, *, model=None, r=0.2, sample_size=1000, n_classes=10,
                  x_min=0.0, x_max=1.0, batch_size=128, device='gpu'):
         self.model = model
         self.r = r
         self.sample_size = sample_size
-        self.n_class = n_class
+        self.n_classes = n_classes
         self.x_min = x_min
         self.x_max = x_max
         self.batch_size = batch_size
@@ -165,7 +165,7 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
             r = self.r
 
         n = X.shape[0]
-        probabilities = np.zeros((n, self.n_class), dtype=np.float32)
+        probabilities = np.zeros((n, self.n_classes), dtype=np.float32)
 
         self.model.eval()
         with torch.no_grad():
@@ -177,7 +177,7 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
                 tensor_preds_rng = self.__predict(tensor_x_rng)
                 preds_rng = tensor_preds_rng.cpu().detach().numpy()
                 prob = np.bincount(
-                    preds_rng, minlength=self.n_class).astype(np.float32)
+                    preds_rng, minlength=self.n_classes).astype(np.float32)
                 prob = prob / float(np.sum(prob))
                 probabilities[i] = prob
 

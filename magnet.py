@@ -469,7 +469,7 @@ class MagNetOperator():
         X_reformed = self.reformer.reform(X)
         return X_reformed, labels
 
-    def score(self, X, y_label, y_adv):
+    def score(self, X, y_label, labels_adv):
         """Rate of success. The success means (1) correctly blocked by detector.
         (2) Failed blocked by detector, but the reformed sample is correctly 
         classified by the original classifier.
@@ -482,7 +482,7 @@ class MagNetOperator():
         y_label : array-like of shape (n_samples, )
             Target labels.
 
-        y_adv : array-like of shape (n_samples, )
+        labels_adv : array-like of shape (n_samples, )
             Target adversarial labels. 1 is adversarial example, 0 is benign.
 
         Returns
@@ -492,7 +492,7 @@ class MagNetOperator():
         """
         # Get reformed samples and the samples which are blocked by detectors.
         X_reformed, blocked_labels = self.detect(X)
-        matched_adv = blocked_labels == y_adv
+        matched_adv = blocked_labels == labels_adv
         # 1 is adversarial example, 0 is benign sample.
         uncertain_indices = np.where(matched_adv == False)[0]
         predictions = self.__predict(X_reformed[uncertain_indices])

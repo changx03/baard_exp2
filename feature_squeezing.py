@@ -76,7 +76,7 @@ class DepthSqueezer(Squeezer):
 class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
     def __init__(self, *, classifier=None, lr=0.001, momentum=0.9,
                  loss=nn.CrossEntropyLoss(), batch_size=128, x_min=0.0,
-                 x_max=1.0, squeezers=[], n_class=10, device='cuda'):
+                 x_max=1.0, squeezers=[], n_classes=10, device='cuda'):
         self.classifier = classifier
         self.lr = lr
         self.momentum = momentum
@@ -85,7 +85,7 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
         self.x_min = x_min
         self.x_max = x_max
         self.squeezers = squeezers
-        self.n_class = n_class
+        self.n_classes = n_classes
         self.device = device
 
         self.squeezed_models_ = []
@@ -130,20 +130,20 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
                         accuracy*100))
             self.__history_losses[i] = losses
 
-    def search_threshold(self, X, y_adv):
+    def search_threshold(self, X, labels_adv):
         """Train a logistic regression model to find the threshold"""
         l1_scores = self.get_l1_score(X)
         self.scaler_ = MinMaxScaler().fit(l1_scores)
         characteristics = self.scaler_.transform(l1_scores)
         self.detector_ = LogisticRegressionCV(cv=5)
-        self.detector_.fit(characteristics, y_adv)
+        self.detector_.fit(characteristics, labels_adv)
 
     def get_l1_score(self, X):
         n_squeezer = len(self.squeezers)
         n_samples = len(X)
         squeezed_data = self.__get_squeezed_data(X)
         outputs_squeezed = np.zeros(
-            (n_squeezer, n_samples, self.n_class), dtype=np.long)
+            (n_squeezer, n_samples, self.n_classes), dtype=np.long)
 
         for i in range(n_squeezer):
             dataset = TensorDataset(
@@ -209,7 +209,7 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
     def __predict(self, loader, model):
         model.eval()
         tensor_pred = torch.zeros(
-            (len(loader.dataset), self.n_class), dtype=torch.float32)
+            (len(loader.dataset), self.n_classes), dtype=torch.float32)
         start = 0
         with torch.no_grad():
             for mini_batch in loader:

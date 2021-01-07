@@ -147,7 +147,7 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
         with torch.no_grad():
             for i in range(n):
                 x_rng = generate_random_samples(
-                    X[i], x_min=self.min, x_max=self.max, r=r,
+                    X[i], x_min=self.x_min, x_max=self.x_max, r=r,
                     size=self.sample_size)
                 tensor_x_rng = torch.tensor(x_rng, dtype=torch.float32)
                 tensor_preds_rng = self.__predict(tensor_x_rng)

@@ -7,13 +7,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 from scipy import ndimage
-from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.metrics import roc_auc_score
+from sklearn.preprocessing import MinMaxScaler
 from torch.optim import SGD
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import TensorDataset
-from sklearn.preprocessing import MinMaxScaler
 
 
 class Squeezer(abc.ABC):
@@ -73,7 +72,7 @@ class DepthSqueezer(Squeezer):
         return np.clip(X_transformed, self.x_min, self.x_max)
 
 
-class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
+class FeatureSqueezingTorch:
     def __init__(self, *, classifier=None, lr=0.001, momentum=0.9,
                  loss=nn.CrossEntropyLoss(), batch_size=128, x_min=0.0,
                  x_max=1.0, squeezers=[], n_classes=10, device='cuda'):
@@ -129,6 +128,7 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
                         current_loss,
                         accuracy*100))
             self.__history_losses[i] = losses
+        return self
 
     def search_threshold(self, X, labels_adv):
         """Train a logistic regression model to find the threshold"""
@@ -200,10 +200,10 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
             optimizer.step()
 
             total_loss += l.item() * batch_size
-            predictions = outputs.max(1, keepdim=True)[1]
-            corrects += predictions.eq(y.view_as(predictions)).sum().item()
-        total_loss = total_loss / float(n)
-        accuracy = corrects / float(n)
+            pred = outputs.max(1, keepdim=True)[1]
+            corrects += pred.eq(y.view_as(pred)).sum().item()
+        total_loss = total_loss / n
+        accuracy = corrects / n
         return total_loss, accuracy
 
     def __predict(self, loader, model):
@@ -222,7 +222,7 @@ class FeatureSqueezingTorch(BaseEstimator, ClassifierMixin):
         return tensor_pred.cpu().detach().numpy()
 
 
-class FeatureSqueezingSklearn(BaseEstimator, ClassifierMixin):
+class FeatureSqueezingSklearn:
     def __init__(self):
         raise NotImplementedError
 
@@ -231,7 +231,7 @@ class FeatureSqueezingSklearn(BaseEstimator, ClassifierMixin):
 
     def predict(self, X):
         raise NotImplementedError
-    
+
     def predict_proba(self, X):
         raise NotImplementedError
 

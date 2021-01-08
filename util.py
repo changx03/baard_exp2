@@ -67,8 +67,8 @@ def get_correct_examples(model, dataset, device='cuda',
             x = x.to(device)
             y = y.to(device)
             outputs = model(x)
-            predictions = outputs.max(1, keepdim=True)[1]
-            corrects[start:end] = y.eq(predictions.view_as(y)).cpu()
+            pred = outputs.max(1, keepdim=True)[1]
+            corrects[start:end] = y.eq(pred.view_as(y)).cpu()
             start += n
     indices = torch.squeeze(torch.nonzero(corrects), 1)
     if return_tensor:

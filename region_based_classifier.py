@@ -7,7 +7,6 @@ import time
 
 import numpy as np
 import torch
-from sklearn.base import BaseEstimator, ClassifierMixin
 from torch.utils.data import DataLoader, TensorDataset
 
 from util import generate_random_samples
@@ -15,7 +14,7 @@ from util import generate_random_samples
 logger = logging.getLogger(__name__)
 
 
-class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
+class RegionBasedClassifier:
     """Region Based Classifier for robust classification. 
 
     This classifier is used to restore the true label of adversarial examples.
@@ -88,6 +87,7 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
         results : array of shape (r, accuracy)
             History of results.
         """
+        n = len(X)
         r = r0
         time_start = time.time()
         tensor_X = torch.tensor(X, dtype=torch.float32)
@@ -95,7 +95,7 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
         tensor_predictions_point = self.__predict(tensor_X)
         corrects = tensor_predictions_point.eq(
             tensor_y.view_as(tensor_predictions_point)).sum().item()
-        acc_point = corrects / float(len(X))
+        acc_point = corrects / n
         acc_region = self.score(X, y, r=r)
         results = [[r, acc_region]]
 
@@ -141,7 +141,7 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
             r = self.r
 
         n = X.shape[0]
-        predictions = -np.ones(n, dtype=np.long)
+        pred = -np.ones(n, dtype=np.long)
 
         self.model.eval()
         with torch.no_grad():
@@ -150,11 +150,11 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
                     X[i], x_min=self.x_min, x_max=self.x_max, r=r,
                     size=self.sample_size)
                 tensor_x_rng = torch.tensor(x_rng, dtype=torch.float32)
-                tensor_preds_rng = self.__predict(tensor_x_rng)
-                preds_rng = tensor_preds_rng.cpu().detach().numpy()
-                predictions[i] = np.bincount(preds_rng).argmax()
+                tensor_pred_rng = self.__predict(tensor_x_rng)
+                pred_rng = tensor_pred_rng.cpu().detach().numpy()
+                pred[i] = np.bincount(pred_rng).argmax()
 
-        return predictions
+        return pred
 
     def predict_proba(self, X, r=None):
         """Returns probability estimates."""
@@ -178,7 +178,7 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
                 preds_rng = tensor_preds_rng.cpu().detach().numpy()
                 prob = np.bincount(
                     preds_rng, minlength=self.n_classes).astype(np.float32)
-                prob = prob / float(np.sum(prob))
+                prob = prob / np.sum(prob)
                 probabilities[i] = prob
 
         return probabilities
@@ -186,14 +186,15 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
     def score(self, X, y, r=None):
         """Returns the accuracy score."""
         n = X.shape[0]
-        preds = self.predict(X, r=r)
-        accuracy = np.sum(preds == y) / float(n)
+        pred = self.predict(X, r=r)
+        accuracy = np.sum(pred == y) / n
         return accuracy
 
     def __predict(self, tensor_X):
+        n = len(tensor_X)
         dataset = TensorDataset(tensor_X)
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
-        tensor_predictions = -torch.ones(len(tensor_X), dtype=torch.int64)
+        tensor_predictions = -torch.ones(n, dtype=torch.int64)
         start = 0
 
         for x in loader:
@@ -201,8 +202,8 @@ class RegionBasedClassifier(BaseEstimator, ClassifierMixin):
             n = x.size(0)
             end = start + n
             outputs = self.model(x)
-            preds = outputs.max(1)[1].type(torch.int64)
-            tensor_predictions[start:end] = preds
+            pred = outputs.max(1)[1].type(torch.int64)
+            tensor_predictions[start:end] = pred
             start += n
 
         return tensor_predictions

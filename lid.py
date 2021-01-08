@@ -83,7 +83,7 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device,
     lid_benign = []
     lid_adv = []
     lid_noisy = []
-    n_batches = int(np.ceil(X.shape[0] / float(batch_size)))
+    n_batches = int(np.ceil(X.shape[0] / batch_size))
     with torch.no_grad():
         for i_batch in tqdm(range(n_batches), disable=disable_progress_bar):
             batch_benign, batch_noisy, batch_adv = estimate(i_batch)
@@ -238,8 +238,7 @@ class LidDetector(BaseEstimator, ClassifierMixin):
 
         self.detector_ = LogisticRegressionCV(cv=5)
         self.detector_.fit(self.characteristics_, labels)
-
-        return self  # Must return the classifier
+        return self
 
     def predict(self, X):
         """Predicts class labels for samples in X."""
@@ -273,7 +272,7 @@ class LidDetector(BaseEstimator, ClassifierMixin):
         characteristics = self.scaler_.transform(characteristics)
         return self.detector_.predict_proba(characteristics)
 
-    def score(self, X, y):
+    def score(self, X, y=None):
         """Returns the ROC AUC score.
 
         Parameters

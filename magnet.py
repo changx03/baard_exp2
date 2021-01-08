@@ -76,7 +76,7 @@ def smooth_softmax(X, t):
     return X_exp / torch.sum(X_exp, 1).view(X.size(0), 1)
 
 
-class MagNetDetector():
+class MagNetDetector:
     """MagNet Detector which supports PyTorch.
 
     This implements a single detector in MagNet framework.
@@ -221,6 +221,7 @@ class MagNetDetector():
         if not isinstance(X, np.ndarray):
             raise ValueError('X must be a ndarray.')
 
+        n = len(X)
         X_ae = self.predict(X)
         if self.algorithm == 'error':
             diff = np.abs(X - X_ae)
@@ -230,7 +231,7 @@ class MagNetDetector():
             scores = self.__get_js_divergence(
                 torch.from_numpy(X).type(torch.float32),
                 torch.from_numpy(X_ae).type(torch.float32))
-        index = int(np.round((1-fp) * len(X)))
+        index = int(np.round((1-fp) * n))
         threshold = np.sort(scores)[index]
         if update:
             self.threshold = threshold
@@ -318,7 +319,7 @@ class MagNetDetector():
             l.backward()
             optimizer.step()
             total_loss += l.item() * batch_size
-        total_loss = total_loss / float(n)
+        total_loss = total_loss / n
         return total_loss
 
     def __validate(self, loader, loss):
@@ -333,7 +334,7 @@ class MagNetDetector():
                 outputs = self.encoder(x)
                 l = loss(outputs, x)
                 total_loss += l.item() * batch_size
-        total_loss = total_loss / float(n)
+        total_loss = total_loss / n
         return total_loss
 
     def __get_js_divergence(self, A, B):
@@ -414,7 +415,7 @@ class MagNetAutoencoderReformer():
         return X_ae
 
 
-class MagNetOperator():
+class MagNetOperator:
     """MageNet framework. It combines multiple detectors and one reformer.
 
     Parameters
@@ -443,7 +444,7 @@ class MagNetOperator():
         self.device = device
 
     def detect(self, X):
-        """Testing samples in X.
+        """Detect adversarial examples in X.
 
         Parameters
         ----------
@@ -469,7 +470,7 @@ class MagNetOperator():
         X_reformed = self.reformer.reform(X)
         return X_reformed, labels
 
-    def score(self, X, y_label, labels_adv):
+    def score(self, X, y, labels_adv):
         """Rate of success. The success means (1) correctly blocked by detector.
         (2) Failed blocked by detector, but the reformed sample is correctly 
         classified by the original classifier.
@@ -479,7 +480,7 @@ class MagNetOperator():
         X : array-like of shape (n_samples, n_features)
             Test samples.
 
-        y_label : array-like of shape (n_samples, )
+        y : array-like of shape (n_samples, )
             Target labels.
 
         labels_adv : array-like of shape (n_samples, )
@@ -491,24 +492,26 @@ class MagNetOperator():
             The fraction of correctly classified samples.
         """
         # Get reformed samples and the samples which are blocked by detectors.
+        n = len(X)
         X_reformed, blocked_labels = self.detect(X)
         matched_adv = blocked_labels == labels_adv
         # 1 is adversarial example, 0 is benign sample.
         uncertain_indices = np.where(matched_adv == False)[0]
-        predictions = self.__predict(X_reformed[uncertain_indices])
-        matched_label = y_label[uncertain_indices] == predictions
+        pred = self.__predict(X_reformed[uncertain_indices])
+        matched_label = y[uncertain_indices] == pred
         # Count correctly detected and correctly predicted after reformed.
         total_correct = np.sum(matched_adv) + np.sum(matched_label)
-        success_rate = total_correct / float(len(X))
+        success_rate = total_correct / n
         return success_rate
 
     def __predict(self, X):
+        n = len(X)
         self.classifier = self.classifier.to(self.device)
         self.classifier.eval()
         tensor_X = torch.from_numpy(X).type(torch.float32)
         dataset = TensorDataset(tensor_X)
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
-        tensor_pred = -torch.ones(len(X), dtype=torch.int64)
+        tensor_pred = -torch.ones(n, dtype=torch.int64)
 
         start = 0
         with torch.no_grad():
@@ -516,7 +519,7 @@ class MagNetOperator():
                 x = x[0].to(self.device)
                 end = start + x.size(0)
                 outputs = self.classifier(x)
-                preds = outputs.max(1)[1].type(torch.int64)
-                tensor_pred[start:end] = preds.cpu()
+                pred = outputs.max(1)[1].type(torch.int64)
+                tensor_pred[start:end] = pred.cpu()
                 start = end
         return tensor_pred.detach().numpy()

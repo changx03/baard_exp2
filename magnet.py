@@ -491,16 +491,23 @@ class MagNetOperator:
         success_rate : float
             The fraction of correctly classified samples.
         """
-        # Get reformed samples and the samples which are blocked by detectors.
         n = len(X)
+        # Get reformed samples and the samples which are blocked by detectors.
         X_reformed, blocked_labels = self.detect(X)
         matched_adv = blocked_labels == labels_adv
-        # 1 is adversarial example, 0 is benign sample.
-        uncertain_indices = np.where(matched_adv == False)[0]
-        pred = self.__predict(X_reformed[uncertain_indices])
-        matched_label = y[uncertain_indices] == pred
-        # Count correctly detected and correctly predicted after reformed.
-        total_correct = np.sum(matched_adv) + np.sum(matched_label)
+        unmatched_idx = np.where(matched_adv == False)[0]
+        # Two situations for unmatched samples:
+        # 1. false positive (FP): Mislabel benign samples as advasarial examples.
+        # 2. false negative (FN): Fail to reject the sample.
+        # FP is always wrong. FN is ok, only if the prediction matches the true
+        # label.
+        fn_idx = unmatched_idx[np.where(labels_adv[unmatched_idx] == 1)[0]]
+        if len(fn_idx) == 0:
+            matched_label = 0
+        else:
+            pred = self.__predict(X_reformed[fn_idx])
+            matched_label = np.sum(y[fn_idx] == pred)
+        total_correct = np.sum(matched_adv) + matched_label
         success_rate = total_correct / n
         return success_rate
 

@@ -67,6 +67,11 @@ class ApplicabilityStage:
         self.thresholds_ = np.array(thresholds)
         return self
 
+    def search_thresholds(self, X=None, y=None, labels_adv=None):
+        """Applicability stage does not require searching for thresholds.
+        """
+        pass
+
     def predict(self, X, y):
         """Detects outliers.
 
@@ -321,6 +326,8 @@ class DecidabilityStage:
         self.k = k
         self.n_bins = n_bins
 
+        self.detectors_ = []
+
     def fit(self, X, y):
         """Fits the model according to the given training data.
 
@@ -356,8 +363,16 @@ class DecidabilityStage:
             Target adversarial labels. 1 is adversarial example, 0 is benign.
         """
         likelihoods = self.__get_likelihoods(X)[:, -self.n_bins:]
-        self.detector_ = LogisticRegressionCV(cv=5)
-        self.detector_.fit(likelihoods, labels_adv)
+        # create detectors for each class
+        for i in range(self.n_classes):
+            idx = np.where(y == i)[0]
+            if len(idx) == 0:
+                raise ValueError(
+                    'Class {:d} has no training samples!'.format(i))
+            label_subset = labels_adv[idx]
+            detector = LogisticRegressionCV(cv=5)
+            detector.fit(likelihoods[idx], label_subset)
+            self.detectors_.append(detector)
 
     def predict(self, X, y=None):
         """Detect adversarial examples for samples in X.
@@ -376,8 +391,16 @@ class DecidabilityStage:
             Returns labels for adversarial examples. 1 is adversarial example, 
             0 is benign.
         """
+        n = len(X)
         likelihoods = self.__get_likelihoods(X)[:, -self.n_bins:]
-        return self.detector_.predict(likelihoods)
+        results = np.zeros(n, dtype=np.long)
+        for i in range(self.n_classes):
+            idx = np.where(y == i)[0]
+            if len(idx) == 0:
+                continue
+            pred = self.detectors_[i].predict(likelihoods[idx])
+            results[idx] = pred
+        return results
 
     def predict_proba(self, X, y=None):
         """Predict probability estimates of adversarial examples for samples in 
@@ -396,8 +419,16 @@ class DecidabilityStage:
         labels : array of shape (n_samples, 2)
             Returns probability estimates of adversarial examples.
         """
+        n = X.shape[0]
         likelihoods = self.__get_likelihoods(X)[:, -self.n_bins:]
-        return self.detector_.predict_proba(likelihoods)
+        results = np.zeros((n, 2), dtype=np.float32)
+        for i in range(self.n_classes):
+            idx = np.where(y == i)[0]
+            if len(idx) == 0:
+                continue
+            prob = self.detectors_[i].predict_proba(likelihoods[idx])
+            results[idx] = prob
+        return results
 
     def score(self, X, y=None, labels_adv=None):
         """Returns the ROC AUC score given test data and labels.
@@ -483,12 +514,7 @@ class BAARDOperator:
             Target adversarial labels. 1 is adversarial example, 0 is benign.
         """
         for stage in self.stages:
-            try:
-                stage.search_thresholds(X, y, labels_adv)
-            except AttributeError:
-                if not isinstance(stage, ApplicabilityStage):
-                    raise ValueError(
-                        '{} is not supported!'.format(stage.__class__))
+            stage.search_thresholds(X, y, labels_adv)
 
     def detect(self, X, y):
         """Detect adversarial examples in X.

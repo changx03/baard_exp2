@@ -10,4 +10,4 @@ from .magnet import (Autoencoder1, Autoencoder2, MagNetAutoencoderReformer,
 from .region_based_classifier import RegionBasedClassifier
 from .util import (dataset2tensor, generate_random_samples, get_binary_labels,
                    get_correct_examples, get_range, get_roc, get_shape,
-                   merge_and_generate_labels, normalize, unnormalize)
+                   merge_and_generate_labels, normalize, unnormalize, score)

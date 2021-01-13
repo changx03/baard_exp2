@@ -443,13 +443,16 @@ class MagNetOperator:
         self.batch_size = batch_size
         self.device = device
 
-    def detect(self, X):
+    def detect(self, X, y=None):
         """Detect adversarial examples in X.
 
         Parameters
         ----------
         X : array-like of shape (n_samples, n_features)
             Test samples.
+        
+        y : default=None
+            Unused variable.
 
         Returns
         -------

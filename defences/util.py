@@ -122,3 +122,45 @@ def generate_random_samples(x, x_min, x_max, r, size):
     rng_samples = np.repeat([x], repeats=size, axis=0) + noise
     rng_samples = np.minimum(np.maximum(rng_samples, x_min), x_max)
     return rng_samples
+
+
+def score(blocked, y, pred, labels_adv):
+    """Rate of success. The success means (1) correctly blocked by detector.
+        (2) If an adversarial example does not alter the prediction, we allow it
+        to pass the detector.
+
+        Parameters
+        ----------
+        blocked : array-like of shape (n_samples, )
+            Blocked samples. 1 is adversarial example, 0 is benign.
+
+        y : array-like of shape (n_samples, )
+            Target labels.
+
+        pred : array-like of shape (n_samples, )
+            Predicted labels from the initial model.
+
+        labels_adv : array-like of shape (n_samples, )
+            Target adversarial labels. 1 is adversarial example, 0 is benign.
+
+        Returns
+        -------
+        success_rate : float
+            The fraction of correctly classified samples.
+    """
+    n = len(blocked)
+    matched_adv = blocked == labels_adv
+    unmatched_idx = np.where(matched_adv == False)[0]
+    # Two situations for unmatched samples:
+    # 1. false positive (FP): Mislabel benign samples as advasarial examples.
+    # 2. false negative (FN): Fail to reject the sample.
+    # FP is always wrong. FN is ok, only if the prediction matches the true
+    # label.
+    fn_idx = unmatched_idx[np.where(labels_adv[unmatched_idx] == 1)[0]]
+    if len(fn_idx) == 0:
+        matched_label = 0
+    else:
+        matched_label = np.sum(y[fn_idx] == pred[fn_idx])
+    total_correct = np.sum(matched_adv) + matched_label
+    success_rate = total_correct / n
+    return success_rate

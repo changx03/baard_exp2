@@ -40,9 +40,9 @@ def load_csv(file_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, choices=DATA_NAMES)
+    parser.add_argument('--data', type=str, required=True, choices=DATA_NAMES)
     parser.add_argument('--data_path', type=str, default='data')
-    parser.add_argument('--model_path', type=str, default='results')
+    parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--epochs', type=int, default=5)
     args = parser.parse_args()
@@ -106,7 +106,7 @@ def main():
 
     # Save model
     file_name = os.path.join(
-        args.model_path, '{}_{}.pt'.format(args.data, args.epochs))
+        args.output_path, '{}_{}.pt'.format(args.data, args.epochs))
     print('Output file name: {}'.format(file_name))
     torch.save(model.state_dict(), file_name)
 

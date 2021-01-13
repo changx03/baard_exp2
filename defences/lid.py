@@ -263,6 +263,9 @@ class LidDetector(BaseEstimator, ClassifierMixin):
         )
         characteristics = self.scaler_.transform(characteristics)
         return self.detector_.predict(characteristics)
+    
+    def detect(self, X, y=None):
+        return self.predict(X)
 
     def predict_proba(self, X):
         """Predict probability estimates of adversarial examples for samples in

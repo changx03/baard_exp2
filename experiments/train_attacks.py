@@ -55,10 +55,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', type=str, choices=DATA_NAMES)
     parser.add_argument('--data_path', type=str, default='data')
-    parser.add_argument('--model_path', type=str, default='results')
-    parser.add_argument('--pretrained', type=str)
+    parser.add_argument('--output_path', type=str, default='results')
+    parser.add_argument('--pretrained', type=str, required=True)
     parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--attack', type=str, choices=ATTACKS)
+    parser.add_argument('--attack', type=str, required=True, choices=ATTACKS)
     parser.add_argument('--eps', type=float, default=0.3)
     # NOTE: In CW_L2 attack, eps is the upper bound of c.
     parser.add_argument('--n_samples', type=int, default=2000)
@@ -140,7 +140,7 @@ def main():
     optimizer = optim.SGD(model.parameters(), lr=0.01,
                           momentum=0.9, weight_decay=5e-4)
     loss = nn.CrossEntropyLoss()
-    pretrained_path = os.path.join(args.model_path, args.pretrained)
+    pretrained_path = os.path.join(args.output_path, args.pretrained)
     model.load_state_dict(torch.load(pretrained_path))
 
     _, acc_train = validate(model, dataloader_train, loss, device)
@@ -251,13 +251,13 @@ def main():
 
     # Save results
     path_x = os.path.join(
-        args.model_path, '{}_{}_{}_{}_x.npy'.format(
+        args.output_path, '{}_{}_{}_{}_x.npy'.format(
             args.data, model_name, args.attack, str(args.eps)))
     path_y = os.path.join(
-        args.model_path, '{}_{}_{}_{}_y.npy'.format(
+        args.output_path, '{}_{}_{}_{}_y.npy'.format(
             args.data, model_name, args.attack, str(args.eps)))
     path_adv = os.path.join(
-        args.model_path, '{}_{}_{}_{}_adv.npy'.format(
+        args.output_path, '{}_{}_{}_{}_adv.npy'.format(
             args.data, model_name, args.attack, str(args.eps)))
     np.save(path_x, X_benign)
     np.save(path_y, y)

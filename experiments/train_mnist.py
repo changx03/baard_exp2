@@ -20,7 +20,7 @@ from train_pt import train, validate
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type=str, default='data')
-    parser.add_argument('--model_path', type=str, default='results')
+    parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--pretrained', type=str, nargs='?')
@@ -29,8 +29,8 @@ def main():
     if not os.path.exists(args.data_path):
         os.makedirs(args.data_path)
 
-    if not os.path.exists(args.model_path):
-        os.makedirs(args.model_path)
+    if not os.path.exists(args.output_path):
+        os.makedirs(args.output_path)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Device: {}'.format(device))
@@ -60,7 +60,7 @@ def main():
 
     # Load pre-trained model
     if args.pretrained is not None:
-        pretrained_path = os.path.join(args.model_path, args.pretrained)
+        pretrained_path = os.path.join(args.output_path, args.pretrained)
         model.load_state_dict(torch.load(pretrained_path))
 
     # Train model
@@ -81,7 +81,7 @@ def main():
             va_loss, va_acc*100.))
         if epoch % 50 == 0:
             file_name = os.path.join(
-                args.model_path, 
+                args.output_path, 
                 'temp_mnist_{:d}.pt'.format(epoch))
             torch.save(model.state_dict(), file_name)
             print('Saved temporary file: {}'.format(file_name))
@@ -93,7 +93,7 @@ def main():
 
     # Save model
     file_name = os.path.join(
-        args.model_path, 'mnist_{}.pt'.format(args.epochs))
+        args.output_path, 'mnist_{}.pt'.format(args.epochs))
     print('Output file name: {}'.format(file_name))
     torch.save(model.state_dict(), file_name)
 

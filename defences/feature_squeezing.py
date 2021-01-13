@@ -5,6 +5,7 @@ import time
 
 import numpy as np
 import torch
+import torch.optim as optim
 import torch.nn as nn
 from scipy import ndimage
 from sklearn.linear_model import LogisticRegressionCV
@@ -73,9 +74,9 @@ class DepthSqueezer(Squeezer):
 
 
 class FeatureSqueezingTorch:
-    def __init__(self, *, classifier=None, lr=0.001, momentum=0.9,
-                 loss=nn.CrossEntropyLoss(), batch_size=128, x_min=0.0,
-                 x_max=1.0, squeezers=[], n_classes=10, device='cuda'):
+    def __init__(self, *, classifier=None, lr=0.001, momentum=0.9, 
+                 weight_decay=5e-4, loss=nn.CrossEntropyLoss(), batch_size=128,
+                 x_min=0.0, x_max=1.0, squeezers=[], n_classes=10, device='cuda'):
         self.classifier = classifier
         self.lr = lr
         self.momentum = momentum
@@ -104,8 +105,13 @@ class FeatureSqueezingTorch:
             squeezer = self.squeezers[i]
             model = self.squeezed_models_[i]
             samples = squeezed_data[i]
-            optimizer = SGD(model.parameters(), lr=self.lr,
-                            momentum=self.momentum)
+            optimizer = SGD(
+                model.parameters(),
+                lr=self.lr,
+                momentum=self.momentum, 
+                weight_decay=self.weight_decay)
+            scheduler = optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=epochs)
             losses = []
             dataset = TensorDataset(
                 torch.from_numpy(samples.astype(np.float32)),
@@ -117,6 +123,7 @@ class FeatureSqueezingTorch:
                 time_start = time.time()
                 current_loss, accuracy = self.__train(
                     loader, model, self.loss, optimizer)
+                scheduler.step()
                 losses.append(current_loss)
                 time_elapsed = time.time() - time_start
 
@@ -164,6 +171,9 @@ class FeatureSqueezingTorch:
         l1_scores = self.get_l1_score(X)
         characteristics = self.scaler_.transform(l1_scores)
         return self.detector_.predict(characteristics)
+    
+    def detect(self, X, y=None):
+        return self.predict(X)
 
     def predict_proba(self, X):
         l1_scores = self.get_l1_score(X)

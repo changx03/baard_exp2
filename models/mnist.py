@@ -2,8 +2,10 @@ import torch.nn as nn
 
 
 class BaseModel(nn.Module):
-    def __init__(self):
+    def __init__(self, use_prob=True):
         super(BaseModel, self).__init__()
+        self.use_prob = use_prob
+
         self.conv1 = nn.Conv2d(1, 32, 3, 1)
         self.relu1 = nn.ReLU()
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
@@ -26,5 +28,6 @@ class BaseModel(nn.Module):
 
     def forward(self, x):
         x = self.before_softmax(x)
-        x = self.softmax(x)
+        if self.use_prob:
+            x = self.softmax(x)
         return x

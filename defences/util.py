@@ -54,7 +54,7 @@ def get_correct_examples(model, dataset, device='cuda',
     model.eval()
     shape = get_shape(dataset)
     X = torch.zeros(shape, dtype=torch.float32)
-    Y = torch.zeros(len(dataset), dtype=torch.int64)
+    Y = torch.zeros(len(dataset), dtype=torch.long)
     corrects = torch.zeros(len(dataset), dtype=torch.bool)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     start = 0
@@ -82,7 +82,7 @@ def dataset2tensor(dataset, batch_size=512):
     shape = get_shape(dataset=dataset)
     n_samples = shape[0]
     X = torch.zeros(shape, dtype=torch.float32)
-    Y = torch.zeros(n_samples, dtype=torch.int64)
+    Y = torch.zeros(n_samples, dtype=torch.long)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     start = 0
     for x, y in dataloader:

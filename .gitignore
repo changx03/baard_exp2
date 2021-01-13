@@ -146,3 +146,6 @@ nohup.out
 .vscode/
 baard_venv/
 test.py
+test.sh
+test.ipynb
+results/*

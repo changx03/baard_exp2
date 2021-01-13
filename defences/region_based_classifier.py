@@ -91,7 +91,7 @@ class RegionBasedClassifier:
         r = r0
         time_start = time.time()
         tensor_X = torch.tensor(X, dtype=torch.float32)
-        tensor_y = torch.tensor(y, dtype=torch.int64)
+        tensor_y = torch.tensor(y, dtype=torch.long)
         tensor_predictions_point = self.__predict(tensor_X)
         corrects = tensor_predictions_point.eq(
             tensor_y.view_as(tensor_predictions_point)).sum().item()
@@ -194,7 +194,7 @@ class RegionBasedClassifier:
         n = len(tensor_X)
         dataset = TensorDataset(tensor_X)
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
-        tensor_predictions = -torch.ones(n, dtype=torch.int64)
+        tensor_predictions = -torch.ones(n, dtype=torch.long)
         start = 0
 
         for x in loader:
@@ -202,7 +202,7 @@ class RegionBasedClassifier:
             n = x.size(0)
             end = start + n
             outputs = self.model(x)
-            pred = outputs.max(1)[1].type(torch.int64)
+            pred = outputs.max(1)[1].type(torch.long)
             tensor_predictions[start:end] = pred
             start += n
 

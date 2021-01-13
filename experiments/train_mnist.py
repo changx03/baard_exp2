@@ -11,57 +11,10 @@ import torchvision as tv
 import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 
-# Adding the parent directory.
 sys.path.append(os.getcwd())
+# Adding the parent directory.
 from models.mnist import BaseModel
-
-def train(model, loader, loss, optimizer, device):
-    model.train()
-    total_loss = .0
-    corrects = .0
-
-    for x, y in loader:
-        x = x.to(device)
-        y = y.to(device)
-        batch_size = x.size(0)
-
-        optimizer.zero_grad()
-        outputs = model(x)
-        l = loss(outputs, y)
-        l.backward()
-        optimizer.step()
-
-        # for display
-        total_loss += l.item() * batch_size
-        preds = outputs.max(1, keepdim=True)[1]
-        corrects += preds.eq(y.view_as(preds)).sum().item()
-
-    n = len(loader.dataset)
-    total_loss = total_loss / n
-    accuracy = corrects / n
-    return total_loss, accuracy
-
-
-def validate(model, loader, loss, device):
-    model.eval()
-    total_loss = .0
-    corrects = .0
-
-    with torch.no_grad():
-        for x, y in loader:
-            x = x.to(device)
-            y = y.to(device)
-            batch_size = x.size(0)
-            outputs = model(x)
-            l = loss(outputs, y)
-            total_loss += l.item() * batch_size
-            preds = outputs.max(1, keepdim=True)[1]
-            corrects += preds.eq(y.view_as(preds)).sum().item()
-
-    n = len(loader.dataset)
-    total_loss = total_loss / n
-    accuracy = corrects / n
-    return total_loss, accuracy
+from train_pt import train, validate
 
 
 def main():
@@ -69,7 +22,8 @@ def main():
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--model_path', type=str, default='results')
     parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--epochs', type=int, default=5)
+    parser.add_argument('--pretrained', type=str, nargs='?')
     args = parser.parse_args()
 
     if not os.path.exists(args.data_path):
@@ -98,8 +52,16 @@ def main():
 
     # Prepare model
     model = BaseModel().to(device)
-    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    optimizer = optim.SGD(model.parameters(), lr=0.01,
+                          momentum=0.9, weight_decay=5e-4)
     loss = nn.CrossEntropyLoss()
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=args.epochs)
+
+    # Load pre-trained model
+    if args.pretrained is not None:
+        pretrained_path = os.path.join(args.model_path, args.pretrained)
+        model.load_state_dict(torch.load(pretrained_path))
 
     # Train model
     since = time.time()
@@ -108,14 +70,21 @@ def main():
         tr_loss, tr_acc = train(model, dataloader_train,
                                 loss, optimizer, device)
         va_loss, va_acc = validate(model, dataloader_test, loss, device)
+        scheduler.step()
 
         time_elapsed = time.time() - start
         print(('{:2d}/{:d}[{:s}] Train Loss: {:.4f} Acc: {:.4f}%, ' +
                'Test Loss: {:.4f} Acc: {:.4f}%').format(
-            epoch +
-            1, args.epochs, str(datetime.timedelta(seconds=time_elapsed)),
+            epoch + 1, args.epochs, 
+            str(datetime.timedelta(seconds=time_elapsed)),
             tr_loss, tr_acc*100.,
             va_loss, va_acc*100.))
+        if epoch % 50 == 0:
+            file_name = os.path.join(
+                args.model_path, 
+                'temp_mnist_{:d}.pt'.format(epoch))
+            torch.save(model.state_dict(), file_name)
+            print('Saved temporary file: {}'.format(file_name))
 
     time_elapsed = time.time() - since
     print('Total run time: {:.0f}m {:.1f}s'.format(

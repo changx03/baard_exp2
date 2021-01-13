@@ -518,7 +518,7 @@ class MagNetOperator:
         tensor_X = torch.from_numpy(X).type(torch.float32)
         dataset = TensorDataset(tensor_X)
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
-        tensor_pred = -torch.ones(n, dtype=torch.int64)
+        tensor_pred = -torch.ones(n, dtype=torch.long)
 
         start = 0
         with torch.no_grad():
@@ -526,7 +526,7 @@ class MagNetOperator:
                 x = x[0].to(self.device)
                 end = start + x.size(0)
                 outputs = self.classifier(x)
-                pred = outputs.max(1)[1].type(torch.int64)
+                pred = outputs.max(1)[1].type(torch.long)
                 tensor_pred[start:end] = pred.cpu()
                 start = end
         return tensor_pred.detach().numpy()

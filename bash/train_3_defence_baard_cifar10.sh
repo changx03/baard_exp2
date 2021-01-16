@@ -1,6 +1,6 @@
 #!/bin/bash
-# chmod +x train_3_defence_baard_cifar10.sh
-# ./train_3_defence_baard_cifar10.sh | tee -a defence_baard_cifar.log
+# chmod +x ./bash/train_3_defence_baard_cifar10.sh
+# ./bash/train_3_defence_baard_cifar10.sh | tee -a ./log/train_3_defence_baard_cifar10.log
 
 # cifar10
 #resnet

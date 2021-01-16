@@ -1,6 +1,6 @@
 #!/bin/bash
-# chmod +x train_3_defence_baard_mnist.sh
-# ./train_3_defence_baard_mnist.sh | tee -a defence_baard_mnist.log
+# chmod +x ./bash/train_3_defence_baard_mnist.sh
+# ./bash/train_3_defence_baard_mnist.sh | tee -a ./log/train_3_defence_baard_mnist.log
 
 # mnist
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --adv mnist_basic_apgd_0.3 --defence baard --param baard_param_2.json --suffix 2tages

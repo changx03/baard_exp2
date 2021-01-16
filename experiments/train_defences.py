@@ -18,6 +18,8 @@ from torch.utils.data import DataLoader, TensorDataset
 sys.path.append(os.getcwd())
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
+from defences.feature_squeezing import (GaussianSqueezer, MedianSqueezer, 
+                                        DepthSqueezer, FeatureSqueezingTorch)
 from defences.util import (get_correct_examples, get_shape, 
                            merge_and_generate_labels, score)
 from experiments.train_pt import validate, predict
@@ -63,7 +65,7 @@ def main():
         param = json.load(param_json)
     param['n_classes'] = DATA[args.data]['n_classes']
     print('Param:', param)
-    
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Device: {}'.format(device))
 
@@ -200,6 +202,8 @@ def main():
     # The predictions for benign samples are exactly same as the true labels.
     pred_val = np.concatenate((pred_adv[n:], y_true[n:]))
 
+    X_train = tensor_train_X.cpu().detach().numpy()
+    y_train = tensor_train_y.cpu().detach().numpy()
     # Train defence
     time_start = time.time()
     if args.defence == 'baard':
@@ -219,12 +223,35 @@ def main():
         detector = BAARDOperator(stages=stages)
 
         # Fit the model with the filtered the train set.
-        detector.fit(tensor_train_X.cpu().detach().numpy(),
-            tensor_train_y.cpu().detach().numpy())
+        detector.fit(X_train, y_train)
         detector.search_thresholds(X_val, pred_val, labels_val)
-        
-    else:
+    elif args.defence == 'fs':
+        squeezers = []
+        squeezers.append(GaussianSqueezer(x_min=0.0, x_max=1.0, noise_strength=0.025, std=1.0))
+        squeezers.append(DepthSqueezer(x_min=0.0, x_max=1.0, bit_depth=8))
+        if args.data in ['mnist', 'cifar10']:
+            squeezers.append(MedianSqueezer(x_min=0.0, x_max=1.0, kernel_size=3))
+        print('FS: # of squeezers:', len(squeezers))
+        detector = FeatureSqueezingTorch(
+            classifier=model,
+            lr=0.001,
+            momentum=0.9,
+            loss=loss,
+            batch_size=128,
+            x_min=0.0,
+            x_max=1.0,
+            squeezers=squeezers,
+            n_classes=param['n_classes'],
+            device=device)
+        detector.fit(X_train, y_train, epochs=param['epochs'], verbose=1)
+    elif args.defence == 'lid':
         raise NotImplementedError
+    elif args.defence == 'magnet':
+        raise NotImplementedError
+    elif args.defence == 'rc':
+        raise NotImplementedError
+    else:
+        raise ValueError('{} is not supported!'.format(args.defence))
     time_elapsed = time.time() - time_start
     print('Total training time:', str(datetime.timedelta(seconds=time_elapsed)))
 

@@ -58,11 +58,12 @@ def main():
     print('Pretrained model:', args.pretrained)
     print('Pretrained samples:', args.adv + '_adv.npy')
     print('Defence:', args.defence)
-    json_path = os.path.join(args.output_path, args.param)
-    with open(json_path) as param_json:
+
+    with open(args.param) as param_json:
         param = json.load(param_json)
     param['n_classes'] = DATA[args.data]['n_classes']
     print('Param:', param)
+    
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Device: {}'.format(device))
 

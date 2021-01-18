@@ -114,6 +114,8 @@ def main():
 
     # Load model
     use_prob = True
+    if args.defence == 'lid':  # Handle divide by zero issue
+        use_prob = False
     print('Using softmax layer:', use_prob)
     if args.data == 'mnist':
         model = BaseModel(use_prob=use_prob).to(device)
@@ -200,7 +202,6 @@ def main():
     # This labels indicate a sample is an adversarial example or not.
     X_val, labels_val = merge_and_generate_labels(
         adv[n:], X_benign[n:], flatten=False)
-    print(X_val.shape)
     # The predictions for benign samples are exactly same as the true labels.
     pred_val = np.concatenate((pred_adv[n:], y_true[n:]))
 
@@ -249,8 +250,18 @@ def main():
         detector.fit(X_train, y_train, epochs=param['epochs'], verbose=1)
         detector.search_thresholds(X_val, pred_val, labels_val)
     elif args.defence == 'lid':
-        # detector = 
-        raise NotImplementedError
+        # This batch_size is not same as the mini batch size for the neural network.
+        detector = LidDetector(
+            model, 
+            k=param['k'], 
+            batch_size=param['batch_size'], 
+            x_min=0.0,
+            x_max=1.0,
+            device=device)
+        # LID uses different training set
+        X_train, y_train = detector.get_train_set(
+            X_benign[n:], adv[n:], std_dominator=param['std_dominator'])
+        detector.fit(X_train, y_train, verbose=1)
     elif args.defence == 'magnet':
         raise NotImplementedError
     elif args.defence == 'rc':

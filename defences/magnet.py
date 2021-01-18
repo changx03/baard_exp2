@@ -145,7 +145,7 @@ class MagNetDetector:
         self.encoder = self.encoder.to(device)
         self.threshold = None
 
-    def fit(self, X, y=None, epochs=100, disable_progress_bar=True):
+    def fit(self, X, y=None, epochs=100, verbose=1):
         """Fits the model according to the given training data.
 
         Parameters
@@ -159,7 +159,7 @@ class MagNetDetector:
         epochs : int, default=100
             Number of epochs to train.
 
-        disable_progress_bar : bool, default=True
+        verbose : int, default=1
             Show progress bar.
 
         Returns
@@ -178,7 +178,7 @@ class MagNetDetector:
         loss = nn.MSELoss()
         temp_train_loss = np.zeros(epochs, dtype=np.float32)
 
-        for e in tqdm(range(epochs), disable=disable_progress_bar):
+        for e in tqdm(range(epochs), disable=(verbose==0)):
             temp_train_loss[e] = self.__train(loader, loss, optimizer)
 
         self.history_train_loss += temp_train_loss.tolist()

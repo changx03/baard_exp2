@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 from scipy.spatial.distance import cdist
-from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.metrics import roc_auc_score
 from sklearn.neighbors import BallTree
@@ -40,7 +39,7 @@ def mle_batch(data, batch, k):
 
 
 def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device,
-                         disable_progress_bar=True):
+                         verbose=1):
     """Trains the local intrinsic dimensionality (LID) using samples in X and 
     its coresponding noisy and adversarial examples.
     Estimated by k close neighbours in the random batch it lies in.
@@ -85,7 +84,7 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device,
     lid_noisy = []
     n_batches = int(np.ceil(X.shape[0] / batch_size))
     with torch.no_grad():
-        for i_batch in tqdm(range(n_batches), disable=disable_progress_bar):
+        for i_batch in tqdm(range(n_batches), disable=(verbose==0)):
             batch_benign, batch_noisy, batch_adv = estimate(i_batch)
             lid_benign.extend(batch_benign)
             lid_noisy.extend(batch_noisy)
@@ -98,11 +97,11 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device,
 
 
 def train_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu',
-              disable_progress_bar=True):
+              verbose=1):
     """Gets local intrinsic dimensionality (LID)."""
     lid_benign, lid_noisy, lid_adv = get_lid_random_batch(
         sequence, X, X_noisy, X_adv, k, batch_size, device,
-        disable_progress_bar=disable_progress_bar)
+        verbose=verbose)
     lid_pos = lid_adv
     lid_neg = np.concatenate((lid_benign, lid_noisy))
     artifacts, labels = merge_and_generate_labels(lid_pos, lid_neg)
@@ -110,7 +109,7 @@ def train_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu',
 
 
 def eval_lid(sequence, X_train, X_eval, k=20, batch_size=100,
-             device='cpu', disable_progress_bar=True):
+             device='cpu', verbose=1):
     """Evaluates samples in X using LID characteristics.
     TODO: Consider multithreading
     """
@@ -121,7 +120,7 @@ def eval_lid(sequence, X_train, X_eval, k=20, batch_size=100,
     hidden_layers, n_hidden_layers = get_hidden_layers(sequence, device)
     results = np.zeros((n_examples, n_hidden_layers), dtype=np.float32)
 
-    for j in tqdm(range(n_examples), disable=disable_progress_bar):
+    for j in tqdm(range(n_examples), disable=(verbose==0)):
         x = X_eval[j]
         indices = np.random.choice(
             len(X_train), size=batch_size, replace=False)
@@ -163,7 +162,7 @@ def merge_adv_data(X_benign, X_noisy, X_adv):
     return output, Y
 
 
-class LidDetector(BaseEstimator, ClassifierMixin):
+class LidDetector:
     """LID Detector for detecting adversarial examples.
 
     Parameters
@@ -181,13 +180,30 @@ class LidDetector(BaseEstimator, ClassifierMixin):
         The device for PyTorch. Using 'cuda' is recommended.
     """
 
-    def __init__(self, *, model=None, k=20, batch_size=100, device='cpu'):
+    def __init__(self, model=None, k=20, x_min=0.0,
+                 x_max=1.0, batch_size=100, device='cpu'):
         self.model = model
         self.k = k
+        self.x_min = x_min
+        self.x_max = x_max
         self.batch_size = batch_size
         self.device = device
 
-    def fit(self, X, y=None, disable_progress_bar=True):
+    def get_train_set(self, X, adv, std_dominator=20.0):
+        """Generate training set for fitting LID. 
+
+        The std for noise is computed by l2_distance / std_dominator.
+        """
+        # Compute noise std
+        l2_adv = np.mean([np.linalg.norm(dif) for dif in (X - adv)])
+        std = l2_adv / std_dominator
+        print('Noise std:', std)
+        noise = np.random.normal(0, scale=std, size=X.shape)
+        X_noisy = np.minimum(np.maximum(X + noise, self.x_min), self.x_max)
+        X_merged, y_merged = merge_adv_data(X, X_noisy, adv)
+        return X_merged, y_merged
+
+    def fit(self, X, y=None, verbose=1):
         """Fits the model according to the given training data.
         Expecting each X contains bengin, noisy and adversarial examples.
 
@@ -200,7 +216,7 @@ class LidDetector(BaseEstimator, ClassifierMixin):
         y : None
             Dummy variable.
 
-        disable_progress_bar : bool, default=True
+        verbose : int, default=1
             Show progress bar.
 
         Returns
@@ -227,8 +243,7 @@ class LidDetector(BaseEstimator, ClassifierMixin):
             k=self.k,
             batch_size=self.batch_size,
             device=self.device,
-            disable_progress_bar=disable_progress_bar
-        )
+            verbose=verbose)
         self.scaler_ = MinMaxScaler().fit(self.characteristics_)
         self.characteristics_ = self.scaler_.transform(self.characteristics_)
         self.X_train_ = X_benign

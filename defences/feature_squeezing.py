@@ -135,6 +135,9 @@ class FeatureSqueezingTorch:
                         squeezer.name,
                         current_loss,
                         accuracy*100))
+                if accuracy >= 0.9999 and e >= 10:
+                    print('Training set is converged at:', e)
+                    break
             self.__history_losses[i] = losses
         return self
 

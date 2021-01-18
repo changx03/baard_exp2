@@ -197,8 +197,12 @@ def main():
     n = len(X_benign) // 2
     # Merge benign samples and adversarial examples into one set.
     # This labels indicate a sample is an adversarial example or not.
+    if args.defence == 'baard':
+        flatten = True
+    else:
+        flatten = False
     X_val, labels_val = merge_and_generate_labels(
-        adv[n:], X_benign[n:], flatten=True)
+        adv[n:], X_benign[n:], flatten=flatten)
     # The predictions for benign samples are exactly same as the true labels.
     pred_val = np.concatenate((pred_adv[n:], y_true[n:]))
 

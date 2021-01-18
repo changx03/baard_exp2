@@ -236,6 +236,7 @@ def main():
             classifier=model,
             lr=0.001,
             momentum=0.9,
+            weight_decay=5e-4,
             loss=loss,
             batch_size=128,
             x_min=0.0,
@@ -244,6 +245,7 @@ def main():
             n_classes=param['n_classes'],
             device=device)
         detector.fit(X_train, y_train, epochs=param['epochs'], verbose=1)
+        detector.search_thresholds(X_val, pred_val, labels_val)
     elif args.defence == 'lid':
         raise NotImplementedError
     elif args.defence == 'magnet':

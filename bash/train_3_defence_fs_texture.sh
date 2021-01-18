@@ -11,4 +11,4 @@ python3 ./experiments/train_defences.py --data texture --pretrained texture_400.
 python3 ./experiments/train_defences.py --data texture --pretrained texture_400.pt --adv texture_basic160_deepfool_1e-06 --defence fs --param fs_param.json
 python3 ./experiments/train_defences.py --data texture --pretrained texture_400.pt --adv texture_basic160_fgsm_0.2 --defence fs --param fs_param.json
 python3 ./experiments/train_defences.py --data texture --pretrained texture_400.pt --adv texture_basic160_fgsm_0.05 --defence fs --param fs_param.json
-python3 ./experiments/train_defences.py --data texture --pretrained texture_400.pt --adv texture_basic160_boundary_0.3--defence fs --param fs_param.json
+python3 ./experiments/train_defences.py --data texture --pretrained texture_400.pt --adv texture_basic160_boundary_0.3 --defence fs --param fs_param.json

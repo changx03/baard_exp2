@@ -80,6 +80,7 @@ class FeatureSqueezingTorch:
         self.classifier = classifier
         self.lr = lr
         self.momentum = momentum
+        self.weight_decay = weight_decay
         self.loss = loss
         self.batch_size = batch_size
         self.x_min = x_min
@@ -137,7 +138,7 @@ class FeatureSqueezingTorch:
             self.__history_losses[i] = losses
         return self
 
-    def search_threshold(self, X, labels_adv):
+    def search_thresholds(self, X, y=None, labels_adv=None):
         """Train a logistic regression model to find the threshold"""
         l1_scores = self.get_l1_score(X)
         self.scaler_ = MinMaxScaler().fit(l1_scores)

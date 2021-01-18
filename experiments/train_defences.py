@@ -20,6 +20,7 @@ from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
 from defences.feature_squeezing import (GaussianSqueezer, MedianSqueezer, 
                                         DepthSqueezer, FeatureSqueezingTorch)
+from defences.lid import LidDetector
 from defences.util import (get_correct_examples, get_shape, 
                            merge_and_generate_labels, score)
 from experiments.train_pt import validate, predict
@@ -197,12 +198,9 @@ def main():
     n = len(X_benign) // 2
     # Merge benign samples and adversarial examples into one set.
     # This labels indicate a sample is an adversarial example or not.
-    if args.defence == 'baard':
-        flatten = True
-    else:
-        flatten = False
     X_val, labels_val = merge_and_generate_labels(
-        adv[n:], X_benign[n:], flatten=flatten)
+        adv[n:], X_benign[n:], flatten=False)
+    print(X_val.shape)
     # The predictions for benign samples are exactly same as the true labels.
     pred_val = np.concatenate((pred_adv[n:], y_true[n:]))
 
@@ -251,6 +249,7 @@ def main():
         detector.fit(X_train, y_train, epochs=param['epochs'], verbose=1)
         detector.search_thresholds(X_val, pred_val, labels_val)
     elif args.defence == 'lid':
+        # detector = 
         raise NotImplementedError
     elif args.defence == 'magnet':
         raise NotImplementedError
@@ -264,7 +263,7 @@ def main():
     # Test defence
     time_start = time.time()
     X_test, labels_test = merge_and_generate_labels(
-        adv[:n], X_benign[:n], flatten=True)
+        adv[:n], X_benign[:n], flatten=False)
     pred_test = np.concatenate((pred_adv[:n], y_true[:n]))
     y_test = np.concatenate((y_true[:n], y_true[:n]))
 

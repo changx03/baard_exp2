@@ -21,6 +21,7 @@ from defences.baard import (ApplicabilityStage, BAARDOperator,
 from defences.feature_squeezing import (GaussianSqueezer, MedianSqueezer, 
                                         DepthSqueezer, FeatureSqueezingTorch)
 from defences.lid import LidDetector
+from defences.region_based_classifier import RegionBasedClassifier
 from defences.util import (get_correct_examples, get_shape, 
                            merge_and_generate_labels, score)
 from experiments.train_pt import validate, predict
@@ -114,8 +115,6 @@ def main():
 
     # Load model
     use_prob = True
-    if args.defence == 'lid':  # Handle divide by zero issue
-        use_prob = False
     print('Using softmax layer:', use_prob)
     if args.data == 'mnist':
         model = BaseModel(use_prob=use_prob).to(device)
@@ -187,11 +186,6 @@ def main():
         len(dataset), acc*100))
 
     # Do NOT shuffle the indices, so different defences can use the same test set.
-    # shuffle_idx = np.random.permutation(len(X_benign))
-    # X_benign = X_benign[shuffle_idx]
-    # y_true = y_true[shuffle_idx]
-    # adv = adv[shuffle_idx]
-
     dataset = TensorDataset(torch.from_numpy(adv))
     loader = DataLoader(dataset, batch_size=512, shuffle=False)
     pred_adv = predict(model, loader, device).cpu().detach().numpy()
@@ -207,6 +201,7 @@ def main():
 
     X_train = tensor_train_X.cpu().detach().numpy()
     y_train = tensor_train_y.cpu().detach().numpy()
+
     # Train defence
     time_start = time.time()
     if args.defence == 'baard':
@@ -265,7 +260,21 @@ def main():
     elif args.defence == 'magnet':
         raise NotImplementedError
     elif args.defence == 'rc':
-        raise NotImplementedError
+        detector = RegionBasedClassifier(
+            model=model,
+            r=param['r'],
+            sample_size=param['sample_size'],
+            n_classes=param['n_classes'],
+            x_min=0.0,
+            x_max=1.0,
+            batch_size=param['batch_size'],
+            r0=param['r0'],
+            step_size=param['step_size'],
+            stop_value=param['stop_value'],
+            device=device)
+        # Region-based classifier only uses benign samples to search threshold.
+        # The r value is already set to the optimal. We don't need to search it.
+        # detector.search_thresholds(X_val, pred_val, labels_val, verbose=0)
     else:
         raise ValueError('{} is not supported!'.format(args.defence))
     time_elapsed = time.time() - time_start

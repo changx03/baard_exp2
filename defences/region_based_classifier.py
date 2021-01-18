@@ -40,12 +40,22 @@ class RegionBasedClassifier:
     batch_size : int, default=128
         Mini batch size for training the autoencoder.
 
+    r0 : float, default=0.0
+        The initial radius for the binary search.
+
+    step_size : float, default=0.01
+            Step size for each iteration.
+
+    stop_value : float, default=None
+        Maximum searching radius.
+
     device : torch.device, default='cpu'
         The device for PyTorch. Using 'cuda' is recommended.
     """
 
     def __init__(self, *, model=None, r=0.2, sample_size=1000, n_classes=10,
-                 x_min=0.0, x_max=1.0, batch_size=128, device='gpu'):
+                 x_min=0.0, x_max=1.0, batch_size=128, r0=0.0, step_size=0.01,
+                 stop_value=0.4, device='gpu'):
         self.model = model
         self.r = r
         self.sample_size = sample_size
@@ -53,40 +63,13 @@ class RegionBasedClassifier:
         self.x_min = x_min
         self.x_max = x_max
         self.batch_size = batch_size
+        self.r0 = r0
+        self.step_size = step_size
+        self.stop_value = stop_value
         self.device = device
 
     def search_r(self, X, y, r0=0.0, step_size=0.01, stop=None, update=True,
                  verbose=0):
-        """Search optimal radius.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Training data.
-
-        y : array-like of shape (n_samples,)
-            Target labels.
-
-        r0 : float, default=0.0
-            Start radius
-
-        step_size : float, default=0.01
-            Step size for each iteration.
-
-        stop : float, default=None
-            Maximum searching radius.
-
-        update : bool, default=True
-            Update internal radius.
-
-        Returns
-        -------
-        r_best : float
-            Optimal radius.
-
-        results : array of shape (r, accuracy)
-            History of results.
-        """
         n = len(X)
         r = r0
         time_start = time.time()
@@ -132,6 +115,21 @@ class RegionBasedClassifier:
         logger.info('Region-based classifier does not require retraining.')
         return self
 
+    def search_thresholds(self, X, y=None, labels_adv=None, verbose=1):
+        # find all indices are not adversarial examples
+        indices = np.where(labels_adv == 0)[0]
+        X = X[indices]
+        y = y[indices]
+        r_best, _ = self.search_r(
+            X,
+            y,
+            r0=self.r0,
+            step_size=self.step_size,
+            stop=self.stop_value,
+            update=True,
+            verbose=verbose)
+        print('Best r =', r_best)
+
     def predict(self, X, r=None):
         """Predicts class labels for samples in X."""
         if self.model is None:
@@ -155,6 +153,9 @@ class RegionBasedClassifier:
                 pred[i] = np.bincount(pred_rng).argmax()
 
         return pred
+
+    def detect(self, X, y):
+        return self.predict(X)
 
     def predict_proba(self, X, r=None):
         """Returns probability estimates."""

@@ -1,0 +1,8 @@
+{
+    "lr": 0.001,
+    "batch_size": 256,
+    "weight_decay": 1e-09,
+    "noise_strength": 0.025,
+    "epochs": 200,
+    "fp": 0.001
+}

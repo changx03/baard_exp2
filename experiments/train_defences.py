@@ -21,8 +21,10 @@ from defences.baard import (ApplicabilityStage, BAARDOperator,
 from defences.feature_squeezing import (GaussianSqueezer, MedianSqueezer, 
                                         DepthSqueezer, FeatureSqueezingTorch)
 from defences.lid import LidDetector
+from defences.magnet import (Autoencoder1, Autoencoder2, MagNetDetector, 
+                             MagNetAutoencoderReformer, MagNetOperator)
 from defences.region_based_classifier import RegionBasedClassifier
-from defences.util import (get_correct_examples, get_shape, 
+from defences.util import (dataset2tensor, get_correct_examples, get_shape, 
                            merge_and_generate_labels, score)
 from experiments.train_pt import validate, predict
 from experiments.util import load_csv
@@ -258,7 +260,67 @@ def main():
             X_benign[n:], adv[n:], std_dominator=param['std_dominator'])
         detector.fit(X_train, y_train, verbose=1)
     elif args.defence == 'magnet':
-        raise NotImplementedError
+        # Different datasets require different autoencoders.
+        if args.data == 'mnist':
+            # autoencoder1 and autoencoder2
+            autoencoder1 = MagNetDetector(
+                encoder=Autoencoder1(n_channel=1),
+                classifier=model,
+                lr=param['lr'],
+                batch_size=param['batch_size'],
+                weight_decay=param['weight_decay'],
+                x_min=0.0,
+                x_max=1.0,
+                noise_strength=param['noise_strength'],
+                algorithm='error',
+                p=1,
+                device=device)
+            autoencoder1.load(os.path.join(
+                args.output_path,
+                'autoencoder_{}_1.pt'.format(args.data)))
+            autoencoder2 = MagNetDetector(
+                encoder=Autoencoder2(n_channel=1),
+                classifier=model,
+                lr=param['lr'],
+                batch_size=param['batch_size'],
+                weight_decay=param['weight_decay'],
+                x_min=0.0,
+                x_max=1.0,
+                noise_strength=param['noise_strength'],
+                algorithm='error',
+                p=2,
+                device=device)
+            autoencoder1.load(os.path.join(
+                args.output_path,
+                'autoencoder_{}_1.pt'.format(args.data)))
+            autoencoders = [autoencoder1, autoencoder2]
+            for i, ae in enumerate(autoencoders, start=1):
+                ae_path = os.path.join(
+                    args.output_path,
+                    'autoencoder_{}_{}.pt'.format(args.data, i))
+                ae.load(ae_path)
+                tensor_X_test, _ = dataset2tensor(dataset_test)
+                X_test = tensor_X_test.cpu().detach().numpy()
+                print('Autoencoder {} MSE training set: {:.6f}, test set: {:.6f}'.format(
+                    i, ae.score(X_train), ae.score(X_test)))
+                print('Autoencoder {} threshold: {}'.format(i, ae.threshold))
+
+        elif args.data == 'cifar10':
+            raise NotImplementedError
+        else:
+            raise ValueError('Magnet requires autoencoder.')
+
+        reformer = MagNetAutoencoderReformer(
+            encoder=autoencoder1.encoder,
+            batch_size=param['batch_size'],
+            device=device)
+        
+        detector = MagNetOperator(
+            classifier=model,
+            detectors=autoencoders,
+            reformer=reformer,
+            batch_size=param['batch_size'],
+            device=device)
     elif args.defence == 'rc':
         detector = RegionBasedClassifier(
             model=model,
@@ -287,8 +349,14 @@ def main():
     pred_test = np.concatenate((pred_adv[:n], y_true[:n]))
     y_test = np.concatenate((y_true[:n], y_true[:n]))
 
-    res_test = detector.detect(X_test, pred_test)
-    acc = score(res_test, y_test, pred_test, labels_test)
+    # Only MegNet uses reformer.
+    if args.defence == 'magnet':
+        X_reformed, res_test = detector.detect(X_test, pred_test)
+        acc = detector.score(X_test, y_test, labels_test)
+    else:
+        X_reformed = None
+        res_test = detector.detect(X_test, pred_test)
+        acc = score(res_test, y_test, pred_test, labels_test)
     print('Success rate: {:.4f}%'.format(acc*100))
     time_elapsed = time.time() - time_start
     print('Total test time:', str(datetime.timedelta(seconds=time_elapsed)))
@@ -306,6 +374,7 @@ def main():
         'y_test': y_test,
         'labels_test': labels_test,
         'res_test': res_test,
+        'X_reformed': X_reformed,
         'param': param}, path_result)
     print('Saved to:', path_result)
     print()

@@ -3,7 +3,7 @@
 # ./bash/train_3_defence_magnet_cifar10.sh | tee -a ./log/train_3_defence_magnet_cifar10.log
 
 # cifar10
-#resnet
+# resnet
 python3 ./experiments/train_magnet_autoencoder.py --data cifar10 --pretrained cifar10_resnet_200.pt --param magnet_param.json
 python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_resnet_200.pt --adv cifar10_resnet_apgd_0.2 --defence magnet --param magnet_param.json
 python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_resnet_200.pt --adv cifar10_resnet_apgd_0.031 --defence magnet --param magnet_param.json

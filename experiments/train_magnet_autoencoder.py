@@ -182,7 +182,7 @@ def main():
     for i, ae in enumerate(detectors, start=1):
         encoder_path = os.path.join(
             args.output_path,
-            'autoencoder_{}_{}.pt'.format(args.pretrained, i))
+            'autoencoder_{}_{}_{}.pt'.format(args.data, model_name, i))
         ae.save(encoder_path)
         print('File is saved to:', encoder_path)
 

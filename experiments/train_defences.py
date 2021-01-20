@@ -336,7 +336,7 @@ def main():
         for i, ae in enumerate(magnet_detectors, start=1):
             ae_path = os.path.join(
                 args.output_path,
-                'autoencoder_{}_{}.pt'.format(args.pretrained, i))
+                'autoencoder_{}_{}_{}.pt'.format(args.data, model_name, i))
             ae.load(ae_path)
             tensor_X_test, _ = dataset2tensor(dataset_test)
             X_test = tensor_X_test.cpu().detach().numpy()

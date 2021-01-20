@@ -16,21 +16,21 @@ from torch.utils.data import DataLoader, TensorDataset
 
 # Adding the parent directory.
 sys.path.append(os.getcwd())
+from defences.util import (dataset2tensor, get_correct_examples, get_shape,
+                           merge_and_generate_labels, score)
+from defences.magnet import (Autoencoder1, Autoencoder2, MagNetDetector,
+                             MagNetAutoencoderReformer, MagNetOperator)
+from defences.feature_squeezing import (GaussianSqueezer, MedianSqueezer,
+                                        DepthSqueezer, FeatureSqueezingTorch)
+from models.numeric import NumericModel
+from models.mnist import BaseModel
+from models.cifar10 import Resnet, Vgg
+from experiments.util import load_csv
+from experiments.train_pt import validate, predict
+from defences.region_based_classifier import RegionBasedClassifier
+from defences.lid import LidDetector
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
-from defences.feature_squeezing import (GaussianSqueezer, MedianSqueezer, 
-                                        DepthSqueezer, FeatureSqueezingTorch)
-from defences.lid import LidDetector
-from defences.magnet import (Autoencoder1, Autoencoder2, MagNetDetector, 
-                             MagNetAutoencoderReformer, MagNetOperator)
-from defences.region_based_classifier import RegionBasedClassifier
-from defences.util import (dataset2tensor, get_correct_examples, get_shape, 
-                           merge_and_generate_labels, score)
-from experiments.train_pt import validate, predict
-from experiments.util import load_csv
-from models.cifar10 import Resnet, Vgg
-from models.mnist import BaseModel
-from models.numeric import NumericModel
 
 # This seed ensures the pre-trained models have the same train and test sets.
 RANDOM_STATE = int(2**12)
@@ -114,10 +114,10 @@ def main():
     shape_test = get_shape(loader_test.dataset)
     print('Train set:', shape_train)
     print('Test set:', shape_test)
-
-    # Load model
     use_prob = True
     print('Using softmax layer:', use_prob)
+
+    # Load model
     if args.data == 'mnist':
         model = BaseModel(use_prob=use_prob).to(device)
         model_name = 'basic'
@@ -217,7 +217,7 @@ def main():
                 n_classes=param['n_classes'], k=param['k_re']))
         if sequence[2]:
             stages.append(DecidabilityStage(
-                n_classes=param['n_classes'], k=param['k_de'], 
+                n_classes=param['n_classes'], k=param['k_de'],
                 n_bins=param['n_bins']))
         print('BAARD: # of stages:', len(stages))
         detector = BAARDOperator(stages=stages)
@@ -227,10 +227,12 @@ def main():
         detector.search_thresholds(X_val, pred_val, labels_val)
     elif args.defence == 'fs':
         squeezers = []
-        squeezers.append(GaussianSqueezer(x_min=0.0, x_max=1.0, noise_strength=0.025, std=1.0))
+        squeezers.append(GaussianSqueezer(
+            x_min=0.0, x_max=1.0, noise_strength=0.025, std=1.0))
         squeezers.append(DepthSqueezer(x_min=0.0, x_max=1.0, bit_depth=8))
         if args.data in ['mnist', 'cifar10']:
-            squeezers.append(MedianSqueezer(x_min=0.0, x_max=1.0, kernel_size=3))
+            squeezers.append(MedianSqueezer(
+                x_min=0.0, x_max=1.0, kernel_size=3))
         print('FS: # of squeezers:', len(squeezers))
         detector = FeatureSqueezingTorch(
             classifier=model,
@@ -249,9 +251,9 @@ def main():
     elif args.defence == 'lid':
         # This batch_size is not same as the mini batch size for the neural network.
         detector = LidDetector(
-            model, 
-            k=param['k'], 
-            batch_size=param['batch_size'], 
+            model,
+            k=param['k'],
+            batch_size=param['batch_size'],
             x_min=0.0,
             x_max=1.0,
             device=device)
@@ -260,10 +262,11 @@ def main():
             X_benign[n:], adv[n:], std_dominator=param['std_dominator'])
         detector.fit(X_train, y_train, verbose=1)
     elif args.defence == 'magnet':
+        magnet_detectors = []
         # Different datasets require different autoencoders.
         if args.data == 'mnist':
             # autoencoder1 and autoencoder2
-            autoencoder1 = MagNetDetector(
+            magnet_detectors.append(MagNetDetector(
                 encoder=Autoencoder1(n_channel=1),
                 classifier=model,
                 lr=param['lr'],
@@ -274,11 +277,8 @@ def main():
                 noise_strength=param['noise_strength'],
                 algorithm='error',
                 p=1,
-                device=device)
-            autoencoder1.load(os.path.join(
-                args.output_path,
-                'autoencoder_{}_1.pt'.format(args.data)))
-            autoencoder2 = MagNetDetector(
+                device=device))
+            magnet_detectors.append(MagNetDetector(
                 encoder=Autoencoder2(n_channel=1),
                 classifier=model,
                 lr=param['lr'],
@@ -289,35 +289,69 @@ def main():
                 noise_strength=param['noise_strength'],
                 algorithm='error',
                 p=2,
-                device=device)
-            autoencoder1.load(os.path.join(
-                args.output_path,
-                'autoencoder_{}_1.pt'.format(args.data)))
-            autoencoders = [autoencoder1, autoencoder2]
-            for i, ae in enumerate(autoencoders, start=1):
-                ae_path = os.path.join(
-                    args.output_path,
-                    'autoencoder_{}_{}.pt'.format(args.data, i))
-                ae.load(ae_path)
-                tensor_X_test, _ = dataset2tensor(dataset_test)
-                X_test = tensor_X_test.cpu().detach().numpy()
-                print('Autoencoder {} MSE training set: {:.6f}, test set: {:.6f}'.format(
-                    i, ae.score(X_train), ae.score(X_test)))
-                print('Autoencoder {} threshold: {}'.format(i, ae.threshold))
-
+                device=device))
         elif args.data == 'cifar10':
-            raise NotImplementedError
+            autoencoder = Autoencoder2(
+                n_channel=DATA[args.data]['n_features'][0])
+            # There are 3 autoencoder based detectors, but they use the same architecture.
+            magnet_detectors.append(MagNetDetector(
+                encoder=autoencoder,
+                classifier=model,
+                lr=param['lr'],
+                batch_size=param['batch_size'],
+                weight_decay=param['weight_decay'],
+                x_min=0.0,
+                x_max=1.0,
+                noise_strength=param['noise_strength'],
+                algorithm='error',
+                p=2,
+                device=device))
+            magnet_detectors.append(MagNetDetector(
+                encoder=autoencoder,
+                classifier=model,
+                lr=param['lr'],
+                batch_size=param['batch_size'],
+                weight_decay=param['weight_decay'],
+                x_min=0.0,
+                x_max=1.0,
+                noise_strength=param['noise_strength'],
+                algorithm='prob',
+                temperature=10,
+                device=device))
+            magnet_detectors.append(MagNetDetector(
+                encoder=autoencoder,
+                classifier=model,
+                lr=param['lr'],
+                batch_size=param['batch_size'],
+                weight_decay=param['weight_decay'],
+                x_min=0.0,
+                x_max=1.0,
+                noise_strength=param['noise_strength'],
+                algorithm='prob',
+                temperature=40,
+                device=device))
         else:
             raise ValueError('Magnet requires autoencoder.')
 
+        for i, ae in enumerate(magnet_detectors, start=1):
+            ae_path = os.path.join(
+                args.output_path,
+                'autoencoder_{}_{}.pt'.format(args.pretrained, i))
+            ae.load(ae_path)
+            tensor_X_test, _ = dataset2tensor(dataset_test)
+            X_test = tensor_X_test.cpu().detach().numpy()
+            print('Autoencoder {} MSE training set: {:.6f}, test set: {:.6f}'.format(
+                i, ae.score(X_train), ae.score(X_test)))
+            print('Autoencoder {} threshold: {}'.format(i, ae.threshold))
+
         reformer = MagNetAutoencoderReformer(
-            encoder=autoencoder1.encoder,
+            encoder=magnet_detectors[0].encoder,
             batch_size=param['batch_size'],
             device=device)
-        
+
         detector = MagNetOperator(
             classifier=model,
-            detectors=autoencoders,
+            detectors=magnet_detectors,
             reformer=reformer,
             batch_size=param['batch_size'],
             device=device)
@@ -360,10 +394,10 @@ def main():
     print('Success rate: {:.4f}%'.format(acc*100))
     time_elapsed = time.time() - time_start
     print('Total test time:', str(datetime.timedelta(seconds=time_elapsed)))
-    
+
     # Save results
     suffix = '_' + args.suffix if args.suffix is not None else ''
-    
+
     path_result = os.path.join(args.output_path, '{}_{}{}.pt'.format(
         args.adv, args.defence, suffix))
     torch.save({

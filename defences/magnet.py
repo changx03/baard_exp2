@@ -294,11 +294,7 @@ class MagNetDetector:
         self.temperature = checkpoint['temperature']
         self.history_train_loss = checkpoint['history_train_loss']
         self.threshold = checkpoint['threshold']
-
         self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
-        if self.algorithm == 'prob':
-            self.classifier.load_state_dict(
-                checkpoint['classifier_state_dict'])
 
     def __train(self, loader, loss, optimizer):
         n = len(loader.dataset)

@@ -6,6 +6,7 @@ import json
 import os
 import sys
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torchvision as tv
@@ -94,7 +95,7 @@ def main():
     print('Accuracy on test set: {:.4f}%'.format(acc_test*100))
 
     if args.data == 'mnist':
-        autoencoder1 = MagNetDetector(
+        detector1 = MagNetDetector(
             encoder=Autoencoder1(n_channel=DATA[args.data]['n_features'][0]),
             classifier=model,
             lr=param['lr'],
@@ -106,7 +107,9 @@ def main():
             algorithm='error',
             p=1,
             device=device)
-        autoencoder2 = MagNetDetector(
+        detector1.fit(X_train, y_train, epochs=param['epochs'])
+
+        detector2 = MagNetDetector(
             encoder=Autoencoder2(n_channel=DATA[args.data]['n_features'][0]),
             classifier=model,
             lr=param['lr'],
@@ -118,27 +121,70 @@ def main():
             algorithm='error',
             p=2,
             device=device)
-        autoencoders = [autoencoder1, autoencoder2]
+        detector2.fit(X_train, y_train, epochs=param['epochs'])
+
+        detectors = [detector1, detector2]
     elif args.data == 'cifar10':
-        raise NotImplementedError
+        autoencoder = Autoencoder2(n_channel=DATA[args.data]['n_features'][0])
+        detectors = []
+        detector = MagNetDetector(
+            encoder=autoencoder,
+            classifier=model,
+            lr=param['lr'],
+            batch_size=param['batch_size'],
+            weight_decay=param['weight_decay'],
+            x_min=0.0,
+            x_max=1.0,
+            noise_strength=param['noise_strength'],
+            algorithm='error',
+            p=2,
+            device=device)
+        detector.fit(X_train, y_train, epochs=param['epochs'])
+        detectors.append(detector)
+        detectors.append(MagNetDetector(
+            encoder=autoencoder,
+            classifier=model,
+            lr=param['lr'],
+            batch_size=param['batch_size'],
+            weight_decay=param['weight_decay'],
+            x_min=0.0,
+            x_max=1.0,
+            noise_strength=param['noise_strength'],
+            algorithm='prob',
+            temperature=10,
+            device=device))
+        detectors.append(MagNetDetector(
+            encoder=autoencoder,
+            classifier=model,
+            lr=param['lr'],
+            batch_size=param['batch_size'],
+            weight_decay=param['weight_decay'],
+            x_min=0.0,
+            x_max=1.0,
+            noise_strength=param['noise_strength'],
+            algorithm='prob',
+            temperature=40,
+            device=device))
     else:
-        raise ValueError('Magnet requires autoencoder.')
+        raise ValueError('Unsupported dataset.')
     
     # Train autoencoders
-    for ae in autoencoders:
-        ae.fit(X_train, param['epochs'])
+    for ae in detectors:
         mse = ae.score(X_val)
         print('MSE training set: {:.6f}, validation set: {:.6f}'.format(
-            ae.history_train_loss[-1], mse))
+            ae.history_train_loss[-1] if len(ae.history_train_loss) > 0 else np.inf, 
+            mse))
+
         ae.search_threshold(X_val, fp=param['fp'], update=True)
+        print('Threshold:', ae.threshold)
 
     # Save autoencoders
-    for i, ae in enumerate(autoencoders, start=1) :
+    for i, ae in enumerate(detectors, start=1):
         encoder_path = os.path.join(
             args.output_path,
-            'autoencoder_{}_{}.pt'.format(args.data, i))
+            'autoencoder_{}_{}.pt'.format(args.pretrained, i))
         ae.save(encoder_path)
-
+        print('File is saved to:', encoder_path)
 
 if __name__ == '__main__':
     main()

@@ -1,4 +1,13 @@
 {
+    "datasets":[
+        "mnist",
+        "cifar10",
+        "banknote",
+        "htru2",
+        "segment",
+        "texture",
+        "breastcancer"
+    ],
     "attacks": [
         "apgd",
         "bim",
@@ -55,6 +64,12 @@
             "n_features": 40,
             "n_test": 600,
             "n_classes": 10
+        },
+        "breastcancer": {
+            "file_name": "breastcancer_preprocessed.csv",
+            "n_features": 30,
+            "n_test": 200,
+            "n_classes": 2
         }
     }
 }

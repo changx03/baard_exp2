@@ -4,6 +4,8 @@
 
 # cifar10
 #resnet
+python3 ./experiments/train_fs_image.py --data cifar10 --pretrained cifar10_resnet_200.pt --param ./params/fs_param.json
+
 python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_resnet_200.pt --adv cifar10_resnet_apgd_0.2 --defence fs --param ./params/fs_param.json
 python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_resnet_200.pt --adv cifar10_resnet_apgd_0.031 --defence fs --param ./params/fs_param.json
 python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_resnet_200.pt --adv cifar10_resnet_cw2_0.01 --defence fs --param ./params/fs_param.json
@@ -14,6 +16,8 @@ python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_resn
 python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_resnet_200.pt --adv cifar10_resnet_fgsm_0.031 --defence fs --param ./params/fs_param.json
 
 # vgg
+python3 ./experiments/train_fs_image.py --data cifar10 --pretrained cifar10_vgg_200.pt --param ./params/fs_param.json
+
 python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_vgg_200.pt --adv cifar10_vgg_apgd_0.2 --defence fs --param ./params/fs_param.json
 python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_vgg_200.pt --adv cifar10_vgg_apgd_0.031 --defence fs --param ./params/fs_param.json
 python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_vgg_200.pt --adv cifar10_vgg_cw2_0.01 --defence fs --param ./params/fs_param.json

@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 sys.path.append(os.getcwd())
 # Adding the parent directory.
 from models.mnist import BaseModel
-from train_pt import train, validate
+from experiments.train_pt import train, validate
 
 
 def main():

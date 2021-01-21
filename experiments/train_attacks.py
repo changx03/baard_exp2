@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import json
 import os
 import sys
 import time
@@ -28,20 +29,6 @@ from models.numeric import NumericModel
 from experiments.train_pt import validate
 from defences.util import get_shape, get_correct_examples
 
-# This seed ensures the pre-trained models have the same train and test sets.
-RANDOM_STATE = int(2**12)
-
-DATA_NAMES = ['mnist', 'cifar10', 'banknote', 'htru2', 'segment', 'texture']
-DATA = {
-    'mnist': {'n_features': (1, 28, 28), 'n_classes': 10},
-    'cifar10': {'n_features': (3, 32, 32), 'n_classes': 10},
-    'banknote': {'file_name': 'banknote_preprocessed.csv', 'n_features': 4, 'n_test': 400, 'n_classes': 2},
-    'htru2': {'file_name': 'htru2_preprocessed.csv', 'n_features': 8, 'n_test': 4000, 'n_classes': 2},
-    'segment': {'file_name': 'segment_preprocessed.csv', 'n_features': 18, 'n_test': 400, 'n_classes': 7},
-    'texture': {'file_name': 'texture_preprocessed.csv', 'n_features': 40, 'n_test': 600, 'n_classes': 11},
-}
-ATTACKS = ['apgd', 'bim', 'boundary', 'cw2', 'deepfool', 'fgsm', 'jsma']
-
 
 def load_csv(file_path):
     """Load a pre-processed CSV file."""
@@ -52,16 +39,20 @@ def load_csv(file_path):
 
 
 def main():
+    with open('data.json') as data_json:
+        data_params = json.load(data_json)
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, choices=DATA_NAMES)
+    parser.add_argument('--data', type=str)
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--pretrained', type=str, required=True)
     parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--attack', type=str, required=True, choices=ATTACKS)
+    parser.add_argument('--attack', type=str, required=True, choices=data_params['attacks'])
     parser.add_argument('--eps', type=float, default=0.3)
     # NOTE: In CW_L2 attack, eps is the upper bound of c.
     parser.add_argument('--n_samples', type=int, default=2000)
+    parser.add_argument('--random_state', type=int, default=int(2**12))
     args = parser.parse_args()
 
     print('Dataset:', args.data)
@@ -74,13 +65,20 @@ def main():
     transforms = tv.transforms.Compose([tv.transforms.ToTensor()])
 
     if args.data in ['banknote', 'htru2', 'segment', 'texture', 'yeast']:
-        data_path = os.path.join(args.data_path, DATA[args.data]['file_name'])
+        data_path = os.path.join(args.data_path, data_params['data'][args.data]['file_name'])
         print('Read file:', data_path)
         X, y = load_csv(data_path)
+
+        # The label 10 is very strange.
+        if args.data == 'texture':
+            idx_not10 = np.where(y != 10)[0]
+            X = X[idx_not10]
+            y = y[idx_not10]
+
         X_train, X_test, y_train, y_test = train_test_split(
             X, y,
-            test_size=DATA[args.data]['n_test'],
-            random_state=RANDOM_STATE)
+            test_size=data_params['data'][args.data]['n_test'],
+            random_state=args.random_state)
         scaler = MinMaxScaler().fit(X_train)
         X_train = scaler.transform(X_train)
         X_test = scaler.transform(X_test)
@@ -128,8 +126,8 @@ def main():
         else:
             raise ValueError('Unknown model: {}'.format(model_name))
     else:
-        n_features = DATA[args.data]['n_features']
-        n_classes = DATA[args.data]['n_classes']
+        n_features = data_params['data'][args.data]['n_features']
+        n_classes = data_params['data'][args.data]['n_classes']
         model = NumericModel(
             n_features,
             n_hidden=n_features * 4,
@@ -158,8 +156,8 @@ def main():
         len(dataset_perfect), acc_perfect*100))
 
     # Generate adversarial examples
-    n_features = DATA[args.data]['n_features']
-    n_classes = DATA[args.data]['n_classes']
+    n_features = data_params['data'][args.data]['n_features']
+    n_classes = data_params['data'][args.data]['n_classes']
     if isinstance(n_features, int):
         n_features = (n_features,)
     classifier = PyTorchClassifier(

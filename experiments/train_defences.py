@@ -32,32 +32,23 @@ from defences.lid import LidDetector
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
 
-# This seed ensures the pre-trained models have the same train and test sets.
-RANDOM_STATE = int(2**12)
-
-DATA_NAMES = ['mnist', 'cifar10', 'banknote', 'htru2', 'segment', 'texture']
-DATA = {
-    'mnist': {'n_features': (1, 28, 28), 'n_classes': 10},
-    'cifar10': {'n_features': (3, 32, 32), 'n_classes': 10},
-    'banknote': {'file_name': 'banknote_preprocessed.csv', 'n_features': 4, 'n_test': 400, 'n_classes': 2},
-    'htru2': {'file_name': 'htru2_preprocessed.csv', 'n_features': 8, 'n_test': 4000, 'n_classes': 2},
-    'segment': {'file_name': 'segment_preprocessed.csv', 'n_features': 18, 'n_test': 400, 'n_classes': 7},
-    'texture': {'file_name': 'texture_preprocessed.csv', 'n_features': 40, 'n_test': 600, 'n_classes': 11}}
-ATTACKS = ['apgd', 'bim', 'boundary', 'cw2', 'deepfool', 'fgsm', 'jsma']
-DEFENCES = ['baard', 'fs', 'lid', 'magnet', 'rc']
-
 
 def main():
+    with open('data.json') as data_json:
+        data_params = json.load(data_json)
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, required=True, choices=DATA_NAMES)
+    parser.add_argument('--data', type=str, required=True)
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--pretrained', type=str, required=True)
     parser.add_argument('--adv', type=str, required=True,
                         help="Example: 'mnist_basic_apgd_0.3'")
-    parser.add_argument('--defence', type=str, required=True, choices=DEFENCES)
+    parser.add_argument('--defence', type=str, required=True,
+                        choices=data_params['defences'])
     parser.add_argument('--param', type=str, required=True)
     parser.add_argument('--suffix', type=str)
+    parser.add_argument('--random_state', type=int, default=int(2**12))
     args = parser.parse_args()
 
     print('Dataset:', args.data)
@@ -67,7 +58,7 @@ def main():
 
     with open(args.param) as param_json:
         param = json.load(param_json)
-    param['n_classes'] = DATA[args.data]['n_classes']
+    param['n_classes'] = data_params['data'][args.data]['n_classes']
     print('Param:', param)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -77,13 +68,21 @@ def main():
     transforms = tv.transforms.Compose([tv.transforms.ToTensor()])
 
     if args.data in ['banknote', 'htru2', 'segment', 'texture', 'yeast']:
-        data_path = os.path.join(args.data_path, DATA[args.data]['file_name'])
+        data_path = os.path.join(args.data_path, 
+            data_params['data'][args.data]['file_name'])
         print('Read file:', data_path)
         X, y = load_csv(data_path)
+
+        # The label 10 is very strange.
+        if args.data == 'texture':
+            idx_not10 = np.where(y != 10)[0]
+            X = X[idx_not10]
+            y = y[idx_not10]
+            
         X_train, X_test, y_train, y_test = train_test_split(
             X, y,
-            test_size=DATA[args.data]['n_test'],
-            random_state=RANDOM_STATE)
+            test_size=data_params['data'][args.data]['n_test'],
+            random_state=args.random_state)
         scaler = MinMaxScaler().fit(X_train)
         X_train = scaler.transform(X_train)
         X_test = scaler.transform(X_test)
@@ -130,8 +129,8 @@ def main():
         else:
             raise ValueError('Unknown model: {}'.format(model_name))
     else:
-        n_features = DATA[args.data]['n_features']
-        n_classes = DATA[args.data]['n_classes']
+        n_features = data_params['data'][args.data]['n_features']
+        n_classes = data_params['data'][args.data]['n_classes']
         model = NumericModel(
             n_features,
             n_hidden=n_features * 4,
@@ -292,7 +291,7 @@ def main():
                 device=device))
         elif args.data == 'cifar10':
             autoencoder = Autoencoder2(
-                n_channel=DATA[args.data]['n_features'][0])
+                n_channel=data_params['data'][args.data]['n_features'][0])
             # There are 3 autoencoder based detectors, but they use the same architecture.
             magnet_detectors.append(MagNetDetector(
                 encoder=autoencoder,

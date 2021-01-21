@@ -60,8 +60,8 @@ class ApplicabilityStage:
         for i in range(self.n_classes):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
-                raise ValueError(
-                    'Class {:d} has no training samples!'.format(i))
+                print('Class {:d} has no training samples!'.format(i))
+                continue
             x_subset = X[idx]
             thresholds.append(np.quantile(x_subset, [low, high], axis=0))
         self.thresholds_ = np.array(thresholds)
@@ -168,8 +168,8 @@ class ReliabilityStage:
         for i in range(self.n_classes):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
-                raise ValueError(
-                    'Class {:d} has no training samples!'.format(i))
+                print('Class {:d} has no training samples!'.format(i))
+                continue
             x_subset = X[idx]
             tree = BallTree(x_subset, leaf_size=64)
             self.trees_.append(tree)
@@ -193,18 +193,22 @@ class ReliabilityStage:
         for i in range(self.n_classes):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
-                raise ValueError(
-                    'Class {:d} has no training samples!'.format(i))
+                print('Class {:d} has no training samples!'.format(i))
+                continue
             x_subset = X[idx]
             label_subset = labels_adv[idx]
             tree = self.trees_[i]
             dist, _ = tree.query(x_subset, k=self.k)
             avg_dist = np.sum(dist, axis=1) / self.k
+
+            if not np.any(label_subset == 1):  # No positive sample
+                print('Label {} has no positive sample!'.format(i))
+                avg_dist = np.concatenate((avg_dist, [avg_dist.max()*1.01]))
+                label_subset = np.concatenate((label_subset, [1]))
+            
             avg_dist = np.expand_dims(avg_dist, axis=1)
             detector = LogisticRegressionCV(cv=5)
-            shuffle_idx = np.random.permutation(avg_dist.shape[0])
-            detector.fit(avg_dist[shuffle_idx],
-                         label_subset[shuffle_idx])
+            detector.fit(avg_dist, label_subset)
             self.detectors_.append(detector)
 
     def predict(self, X, y):
@@ -367,11 +371,21 @@ class DecidabilityStage:
         for i in range(self.n_classes):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
-                raise ValueError(
-                    'Class {:d} has no training samples!'.format(i))
+                print('Class {:d} has no training samples!'.format(i))
+                continue
             label_subset = labels_adv[idx]
+            likelihoods_subset = likelihoods[idx]
+
+            if not np.any(label_subset == 1):  # No positive sample
+                print('Label {} has no positive sample!'.format(i))
+                likelihoods_subset = np.concatenate((
+                    likelihoods_subset, 
+                    [likelihoods_subset.min(axis=0)*0.99]
+                ))
+                label_subset = np.concatenate((label_subset, [1]))
+
             detector = LogisticRegressionCV(cv=5)
-            detector.fit(likelihoods[idx], label_subset)
+            detector.fit(likelihoods_subset, label_subset)
             self.detectors_.append(detector)
 
     def predict(self, X, y=None):

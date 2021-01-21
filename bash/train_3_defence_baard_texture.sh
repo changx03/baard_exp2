@@ -20,3 +20,4 @@ python3 ./experiments/train_defences.py --data texture --pretrained texture_400.
 python3 ./experiments/train_defences.py --data texture --pretrained texture_400.pt --adv texture_basic160_fgsm_0.05 --defence baard --param ./params/baard_param_2s.json --suffix 2stage
 python3 ./experiments/train_defences.py --data texture --pretrained texture_400.pt --adv texture_basic160_fgsm_0.05 --defence baard --param ./params/baard_param_3s.json --suffix 3stage
 python3 ./experiments/train_defences.py --data texture --pretrained texture_400.pt --adv texture_basic160_boundary_0.3 --defence baard --param ./params/baard_param_2s.json --suffix 2stage
+python3 ./experiments/train_defences.py --data texture --pretrained texture_400.pt --adv texture_basic160_boundary_0.3 --defence baard --param ./params/baard_param_3s.json --suffix 3stage

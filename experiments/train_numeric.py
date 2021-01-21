@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader, TensorDataset
 sys.path.append(os.getcwd())
 # # Adding the parent directory.
 from models.numeric import NumericModel
-from train_pt import train, validate
+from experiments.train_pt import train, validate
 
 DATA_NAMES = ['banknote', 'htru2', 'segment', 'texture']
 DATA = {

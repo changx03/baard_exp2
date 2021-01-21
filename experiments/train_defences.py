@@ -110,6 +110,10 @@ def main():
         dataset_train, batch_size=512, shuffle=False)
     loader_test = DataLoader(dataset_test, batch_size=512, shuffle=False)
 
+    # DEBUG
+    for i in range(11):
+        print(i, np.sum(y==i))
+
     shape_train = get_shape(loader_train.dataset)
     shape_test = get_shape(loader_test.dataset)
     print('Train set:', shape_train)
@@ -157,6 +161,10 @@ def main():
     _, acc_perfect = validate(model, loader_train, loss, device)
     print('Accuracy on {} filtered train set: {:.4f}%'.format(
         len(dataset_train), acc_perfect*100))
+    
+    # DEBUG
+    for i in range(11):
+            print(i, (tensor_train_y==i).sum())
 
     tensor_test_X, tensor_test_y = get_correct_examples(
         model, dataset_test, device=device, return_tensor=True)
@@ -223,6 +231,10 @@ def main():
         detector = BAARDOperator(stages=stages)
 
         # Fit the model with the filtered the train set.
+        # DEBUG
+        for i in range(11):
+            print(i, np.sum(y_train == i))
+
         detector.fit(X_train, y_train)
         detector.search_thresholds(X_val, pred_val, labels_val)
     elif args.defence == 'fs':

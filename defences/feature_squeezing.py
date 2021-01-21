@@ -74,7 +74,7 @@ class DepthSqueezer(Squeezer):
 
 
 class FeatureSqueezingTorch:
-    def __init__(self, *, classifier=None, lr=0.001, momentum=0.9, 
+    def __init__(self, *, classifier=None, lr=0.001, momentum=0.9,
                  weight_decay=5e-4, loss=nn.CrossEntropyLoss(), batch_size=128,
                  x_min=0.0, x_max=1.0, squeezers=[], n_classes=10, device='cuda'):
         self.classifier = classifier
@@ -109,7 +109,7 @@ class FeatureSqueezingTorch:
             optimizer = SGD(
                 model.parameters(),
                 lr=self.lr,
-                momentum=self.momentum, 
+                momentum=self.momentum,
                 weight_decay=self.weight_decay)
             scheduler = optim.lr_scheduler.CosineAnnealingLR(
                 optimizer, T_max=epochs)
@@ -130,11 +130,11 @@ class FeatureSqueezingTorch:
 
                 if verbose > 0:
                     print('{:2d}/{:2d} [{:s}] Squeezer: {:s} Train loss: {:.4f} acc: {:.4f}%'.format(
-                        e+1, epochs,
+                        e + 1, epochs,
                         str(datetime.timedelta(seconds=time_elapsed)),
                         squeezer.name,
                         current_loss,
-                        accuracy*100))
+                        accuracy * 100))
                 if accuracy >= 0.9999 and e >= 10:
                     print('Training set is converged at:', e)
                     break
@@ -175,7 +175,7 @@ class FeatureSqueezingTorch:
         l1_scores = self.get_l1_score(X)
         characteristics = self.scaler_.transform(l1_scores)
         return self.detector_.predict(characteristics)
-    
+
     def detect(self, X, y=None):
         return self.predict(X)
 
@@ -188,6 +188,17 @@ class FeatureSqueezingTorch:
         """Returns the ROC AUC score"""
         prob = self.predict_proba(X)[:, 1]
         return roc_auc_score(y, prob)
+
+    def save(self, path):
+        data = []
+        for model in self.squeezed_models_:
+            data.append(model.state_dict())
+        torch.save(data, path)
+
+    def load(self, path):
+        checkpoint = torch.load(path)
+        for i in range(len(self.squeezed_models_)):
+            self.squeezed_models_[i].load_state_dict(checkpoint[i])
 
     def __get_squeezed_data(self, X):
         squeezed_data = []

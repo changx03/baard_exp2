@@ -15,9 +15,9 @@ from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import DataLoader, TensorDataset
 
 sys.path.append(os.getcwd())
-# # Adding the parent directory.
+from defences.util import dataset2tensor
 from models.numeric import NumericModel
-from experiments.train_pt import train, validate
+from models.torch_util import print_acc_per_label, train, validate
 
 
 def load_csv(file_path):
@@ -38,7 +38,7 @@ def main():
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--epochs', type=int, default=5)
-    parser.add_argument('--random_state', type=int, default=int(2**12))
+    parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -49,17 +49,14 @@ def main():
     print('Read file: {}'.format(data_path))
     X, y = load_csv(data_path)
 
-    # The label 10 is very strange.
-    if args.data == 'texture':
-        idx_not10 = np.where(y != 10)[0]
-        X = X[idx_not10]
-        y = y[idx_not10]
+    # Normalize data
+    scaler = MinMaxScaler().fit(X)
+    X = scaler.transform(X)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=data_params['data'][args.data]['n_test'], random_state=args.random_state)
-    scaler = MinMaxScaler().fit(X_train)
-    X_train = scaler.transform(X_train)
-    X_test = scaler.transform(X_test)
+    n_test = data_params['data'][args.data]['n_test']
+    random_state = args.random_state
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=n_test, random_state=random_state)
+    
     dataset_train = TensorDataset(
         torch.from_numpy(X_train).type(torch.float32),
         torch.from_numpy(y_train).type(torch.long))
@@ -93,12 +90,15 @@ def main():
         scheduler.step()
 
         time_elapsed = time.time() - start
-        print(('{:2d}/{:d}[{:s}] Train Loss: {:.4f} Acc: {:.4f}%, ' +
-               'Test Loss: {:.4f} Acc: {:.4f}%').format(
-            epoch + 1, args.epochs,
-            str(datetime.timedelta(seconds=time_elapsed)),
-            tr_loss, tr_acc*100.,
-            va_loss, va_acc*100.))
+        if epoch % 10 == 0:
+            print('{:2d}/{:d}[{:s}] Train Loss: {:.4f} Acc: {:.4f}%, Test Loss: {:.4f} Acc: {:.4f}%'.format(
+                epoch + 1,
+                args.epochs,
+                str(datetime.timedelta(seconds=time_elapsed)),
+                tr_loss,
+                tr_acc * 100,
+                va_loss,
+                va_acc * 100))
 
     time_elapsed = time.time() - since
     print('Total run time: {:.0f}m {:.1f}s'.format(
@@ -110,6 +110,19 @@ def main():
         args.output_path, '{}_{}.pt'.format(args.data, args.epochs))
     print('Output file name: {}'.format(file_name))
     torch.save(model.state_dict(), file_name)
+
+    # Test accuracy per class:
+    print('Training set:')
+    X, y = dataset2tensor(dataset_train)
+    X = X.cpu().detach().numpy()
+    y = y.cpu().detach().numpy()
+    print_acc_per_label(model, X, y, device)
+
+    print('Test set:')
+    X, y = dataset2tensor(dataset_test)
+    X = X.cpu().detach().numpy()
+    y = y.cpu().detach().numpy()
+    print_acc_per_label(model, X, y, device)
 
 
 if __name__ == '__main__':

@@ -8,5 +8,7 @@ python3 ./experiments/train_cifar.py --data_path data --output_path results --mo
 
 python3 ./experiments/train_numeric.py --data banknote --data_path data --output_path results --batch_size 128 --epochs 400
 python3 ./experiments/train_numeric.py --data htru2 --data_path data --output_path results --batch_size 128 --epochs 400
-python3 ./experiments/train_numeric.py --data segment --data_path data --output_path results --batch_size 128 --epochs 400
-python3 ./experiments/train_numeric.py --data texture --data_path data --output_path results --batch_size 128 --epochs 400
+python3 ./experiments/train_numeric.py --data breastcancer --data_path data --output_path results --batch_size 256 --epochs 400
+
+# python3 ./experiments/train_numeric.py --data segment --data_path data --output_path results --batch_size 128 --epochs 400
+# python3 ./experiments/train_numeric.py --data texture --data_path data --output_path results --batch_size 128 --epochs 400

@@ -20,7 +20,7 @@ from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
 from defences.lid import LidDetector
 from defences.region_based_classifier import RegionBasedClassifier
-from experiments.train_pt import validate, predict
+from models.torch_util import validate, predict
 from experiments.util import load_csv
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
@@ -46,7 +46,7 @@ def main():
     parser.add_argument('--defence', type=str, required=True, choices=data_params['defences'])
     parser.add_argument('--param', type=str, required=True)
     parser.add_argument('--suffix', type=str)
-    parser.add_argument('--random_state', type=int, default=int(2**12))
+    parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
 
     print('Dataset:', args.data)
@@ -69,12 +69,6 @@ def main():
         data_path = os.path.join(args.data_path, data_params['data'][args.data]['file_name'])
         print('Read file:', data_path)
         X, y = load_csv(data_path)
-
-        # The label 10 is very strange.
-        if args.data == 'texture':
-            idx_not10 = np.where(y != 10)[0]
-            X = X[idx_not10]
-            y = y[idx_not10]
 
         X_train, X_test, y_train, y_test = train_test_split(
             X, y,

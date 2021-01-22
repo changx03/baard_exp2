@@ -18,8 +18,8 @@ from sklearn.model_selection import train_test_split
 sys.path.append(os.getcwd())
 from models.mnist import BaseModel
 from models.cifar10 import Resnet, Vgg
-from experiments.train_pt import validate
 from defences.util import dataset2tensor
+from models.torch_util import validate
 from defences.magnet import Autoencoder1, Autoencoder2, MagNetDetector
 
 DATA_NAMES = ['mnist', 'cifar10']

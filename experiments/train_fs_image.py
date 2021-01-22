@@ -12,13 +12,12 @@ from torch.utils.data import DataLoader
 
 # Adding the parent directory.
 sys.path.append(os.getcwd())
-from defences.util import get_shape
-from experiments.train_pt import validate
+from defences.util import get_shape, dataset2tensor
+from models.torch_util import validate
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from defences.feature_squeezing import (GaussianSqueezer, MedianSqueezer,
                                         DepthSqueezer, FeatureSqueezingTorch)
-from defences.util import dataset2tensor
 
 
 def main():

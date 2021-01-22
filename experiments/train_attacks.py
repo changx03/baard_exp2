@@ -12,9 +12,10 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision as tv
 import torchvision.datasets as datasets
-from art.attacks.evasion import (AutoProjectedGradientDescent, BasicIterativeMethod,
-                                 BoundaryAttack, DeepFool,
-                                 FastGradientMethod, SaliencyMapMethod)
+from art.attacks.evasion import (AutoProjectedGradientDescent,
+                                 BasicIterativeMethod, BoundaryAttack,
+                                 DeepFool, FastGradientMethod,
+                                 SaliencyMapMethod, ShadowAttack)
 from art.estimators.classification import PyTorchClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
@@ -23,11 +24,11 @@ from torch.utils.data import DataLoader, TensorDataset
 # Adding the parent directory.
 sys.path.append(os.getcwd())
 from attacks.carlini import CarliniWagnerAttackL2
-from models.mnist import BaseModel
+from defences.util import get_correct_examples, get_shape
 from models.cifar10 import Resnet, Vgg
+from models.mnist import BaseModel
 from models.numeric import NumericModel
-from experiments.train_pt import validate
-from defences.util import get_shape, get_correct_examples
+from models.torch_util import validate
 
 
 def load_csv(file_path):
@@ -52,7 +53,7 @@ def main():
     parser.add_argument('--eps', type=float, default=0.3)
     # NOTE: In CW_L2 attack, eps is the upper bound of c.
     parser.add_argument('--n_samples', type=int, default=2000)
-    parser.add_argument('--random_state', type=int, default=int(2**12))
+    parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
 
     print('Dataset:', args.data)
@@ -68,12 +69,6 @@ def main():
         data_path = os.path.join(args.data_path, data_params['data'][args.data]['file_name'])
         print('Read file:', data_path)
         X, y = load_csv(data_path)
-
-        # The label 10 is very strange.
-        if args.data == 'texture':
-            idx_not10 = np.where(y != 10)[0]
-            X = X[idx_not10]
-            y = y[idx_not10]
 
         X_train, X_test, y_train, y_test = train_test_split(
             X, y,
@@ -101,9 +96,8 @@ def main():
     else:
         raise ValueError('{} is not supported.'.format(args.data))
 
-    dataloader_train = DataLoader(
-        dataset_train, args.batch_size, shuffle=False)
-    dataloader_test = DataLoader(dataset_test, args.batch_size, shuffle=False)
+    dataloader_train = DataLoader(dataset_train, 256, shuffle=False)
+    dataloader_test = DataLoader(dataset_test, 256, shuffle=False)
 
     shape_train = get_shape(dataloader_train.dataset)
     shape_test = get_shape(dataloader_test.dataset)
@@ -143,8 +137,8 @@ def main():
 
     _, acc_train = validate(model, dataloader_train, loss, device)
     _, acc_test = validate(model, dataloader_test, loss, device)
-    print('Accuracy on train set: {:.4f}%'.format(acc_train*100))
-    print('Accuracy on test set: {:.4f}%'.format(acc_test*100))
+    print('Accuracy on train set: {:.4f}%'.format(acc_train * 100))
+    print('Accuracy on test set: {:.4f}%'.format(acc_test * 100))
 
     # Create a subset which only contains recognisable samples.
     tensor_test_X, tensor_test_y = get_correct_examples(
@@ -153,13 +147,14 @@ def main():
     loader_perfect = DataLoader(dataset_perfect, batch_size=512, shuffle=True)
     _, acc_perfect = validate(model, loader_perfect, loss, device)
     print('Accuracy on {} filtered test examples: {:.4f}%'.format(
-        len(dataset_perfect), acc_perfect*100))
+        len(dataset_perfect), acc_perfect * 100))
 
     # Generate adversarial examples
     n_features = data_params['data'][args.data]['n_features']
     n_classes = data_params['data'][args.data]['n_classes']
     if isinstance(n_features, int):
         n_features = (n_features,)
+
     classifier = PyTorchClassifier(
         model=model,
         loss=loss,
@@ -168,6 +163,7 @@ def main():
         nb_classes=n_classes,
         clip_values=(0.0, 1.0),
         device_type='gpu')
+
     if args.attack == 'apgd':
         eps_step = args.eps / 10.0 if args.eps <= 0.1 else args.eps / 4.0
         max_iter = 1000 if args.eps <= 0.1 else 100
@@ -176,47 +172,53 @@ def main():
             eps=args.eps,
             eps_step=eps_step,
             max_iter=max_iter,
-            batch_size=args.batch_size)
+            batch_size=args.batch_size,
+            targeted=False)
     elif args.attack == 'bim':
         eps_step = args.eps / 10.0
         attack = BasicIterativeMethod(
             estimator=classifier,
             eps=args.eps,
             eps_step=eps_step,
-            max_iter=1000)
+            max_iter=1000,
+            batch_size=args.batch_size,
+            targeted=False)
     elif args.attack == 'boundary':
         attack = BoundaryAttack(
             estimator=classifier,
-            targeted=False,
-            max_iter=1000)
+            max_iter=1000,
+            batch_size=args.batch_size,
+            targeted=False)
     elif args.attack == 'cw2':
+        # NOTE: Do NOT increase the batch size!
         attack = CarliniWagnerAttackL2(
             model=model,
             n_classes=n_classes,
-            targeted=False,
-            lr=1e-2,
-            binary_search_steps=9,
-            max_iter=1000,
-            confidence=0.0,
-            initial_const=1e-3,
-            c_range=(0, args.eps),
-            abort_early=True,
+            confidence=args.eps,
+            verbose=True,
+            check_prob=False,
             batch_size=args.batch_size,
-            clip_values=(0.0, 1.0),
-            check_prob=True,
-            verbose=True)
+            targeted=False)
     elif args.attack == 'deepfool':
         attack = DeepFool(
-            classifier=classifier, 
+            classifier=classifier,
             epsilon=args.eps,
             batch_size=args.batch_size)
     elif args.attack == 'fgsm':
-        attack = FastGradientMethod(estimator=classifier, eps=args.eps)
+        attack = FastGradientMethod(
+            estimator=classifier,
+            eps=args.eps,
+            batch_size=args.batch_size)
     elif args.attack == 'jsma':
         attack = SaliencyMapMethod(
             classifier=classifier,
             gamma=args.eps,
             batch_size=args.batch_size)
+    elif args.attack == 'shadow':
+        attack = ShadowAttack(
+            estimator=classifier,
+            batch_size=args.batch_size,
+            targeted=False)
     else:
         raise NotImplementedError
 
@@ -230,7 +232,6 @@ def main():
     X_benign = tensor_test_X[:n].cpu().detach().numpy()
     y = tensor_test_y[:n].cpu().detach().numpy()
 
-
     print('Creating {} adversarial examples with Epsilon={}'.format(n,
                                                                     args.eps))
     time_start = time.time()
@@ -243,8 +244,8 @@ def main():
     acc_benign = np.sum(pred_benign == y) / n
     pred_adv = np.argmax(classifier.predict(adv), axis=1)
     acc_adv = np.sum(pred_adv == y) / n
-    print("Accuracy on benign samples: {:.4f}%".format(acc_benign*100))
-    print("Accuracy on adversarial examples: {:.4f}%".format(acc_adv*100))
+    print("Accuracy on benign samples: {:.4f}%".format(acc_benign * 100))
+    print("Accuracy on adversarial examples: {:.4f}%".format(acc_adv * 100))
     print()
 
     # Save results

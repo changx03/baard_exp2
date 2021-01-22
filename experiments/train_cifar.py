@@ -13,9 +13,10 @@ import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 
 sys.path.append(os.getcwd())
-# Adding the parent directory.
-from experiments.train_pt import train, validate
+from defences.util import dataset2tensor
 from models.cifar10 import Resnet, Vgg
+from models.torch_util import print_acc_per_label, train, validate
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -89,11 +90,11 @@ def main():
                'Test Loss: {:.4f} Acc: {:.4f}%').format(
             epoch +
             1, args.epochs, str(datetime.timedelta(seconds=time_elapsed)),
-            tr_loss, tr_acc*100.,
-            va_loss, va_acc*100.))
+            tr_loss, tr_acc * 100.,
+            va_loss, va_acc * 100.))
         if epoch % 50 == 0:
             file_name = os.path.join(
-                args.output_path, 
+                args.output_path,
                 'temp_cifar10_{:s}_{:d}.pt'.format(args.model, epoch))
             torch.save(model.state_dict(), file_name)
             print('Saved temporary file: {}'.format(file_name))
@@ -108,6 +109,19 @@ def main():
         args.output_path, 'cifar10_{:s}_{:d}.pt'.format(args.model, args.epochs))
     print('Output file name: {}'.format(file_name))
     torch.save(model.state_dict(), file_name)
+
+    # Test accuracy per class:
+    print('Training set:')
+    X, y = dataset2tensor(dataset_train)
+    X = X.cpu().detach().numpy()
+    y = y.cpu().detach().numpy()
+    print_acc_per_label(model, X, y, device)
+
+    print('Test set:')
+    X, y = dataset2tensor(dataset_test)
+    X = X.cpu().detach().numpy()
+    y = y.cpu().detach().numpy()
+    print_acc_per_label(model, X, y, device)
 
 
 if __name__ == '__main__':

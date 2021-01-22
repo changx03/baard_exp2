@@ -15,7 +15,8 @@
         "cw2",
         "deepfool",
         "fgsm",
-        "jsma"
+        "jsma",
+        "shadow"
     ],
     "defences": [
         "baard",
@@ -62,7 +63,7 @@
         "texture": {
             "file_name": "texture_preprocessed.csv",
             "n_features": 40,
-            "n_test": 600,
+            "n_test": 1000,
             "n_classes": 10
         },
         "breastcancer": {

@@ -41,12 +41,11 @@ class CarliniWagnerAttackL2:
                  model,
                  n_classes=10,
                  targeted=False,
-                 lr=1e-2,
-                 binary_search_steps=9,
+                 lr=5e-3,
+                 binary_search_steps=5,
                  max_iter=1000,
                  confidence=0.0,
-                 initial_const=1e-3,
-                 c_range=(0, 1e10),
+                 initial_const=1e-2,
                  abort_early=True,
                  batch_size=32,
                  clip_values=(0.0, 1.0),
@@ -67,8 +66,6 @@ class CarliniWagnerAttackL2:
             How strong the adversarial example should be. The parameter kappa in the paper
         initial_const : float
             The initial constant c_multiplier to pick as a first guess
-        c_range : tuple, optional
-            The lower and upper bounds for c_multiplier
         abort_early : bool
             If we stop improving, abort gradient descent early
         batch_size : int
@@ -86,7 +83,6 @@ class CarliniWagnerAttackL2:
         self.max_iter = max_iter
         self.confidence = confidence
         self.initial_const = initial_const
-        self.c_range = c_range
         self.abort_early = abort_early
         self.batch_size = batch_size
         self.clip_values = clip_values
@@ -103,8 +99,8 @@ class CarliniWagnerAttackL2:
         Parameters
         ----------
         x : numpy.ndarray
-            The data for generating adversarial examples. If this parameter is not null, `count` and `use_testset` will
-            be ignored.
+            The data for generating adversarial examples. If this parameter is not null, 
+            `count` and `use_testset` will be ignored.
         targets : numpy.ndarray, optional
             The expected labels for targeted attack.
 
@@ -149,16 +145,14 @@ class CarliniWagnerAttackL2:
             batch_size = len(x)
 
             # c is the lagrange multiplier for optimization objective
-            lower_bounds_np = np.ones(
-                batch_size, dtype=np.float32) * self.c_range[0]
+            lower_bounds_np = np.zeros(batch_size, dtype=np.float32)
             c_np = np.ones(batch_size, dtype=np.float32) * self.initial_const
-            upper_bounds_np = np.ones(
-                batch_size, dtype=np.float32) * self.c_range[1]
+            upper_bounds_np = np.ones(batch_size, dtype=np.float32) * 1e10
 
             # overall results
             o_best_l2_np = np.ones(batch_size, dtype=np.float32) * INF
             o_best_pred_np = -np.ones(batch_size, dtype=np.int64)
-            o_best_adv = torch.zeros_like(x)  # uses same device as x
+            o_best_adv = x.detach().clone()  # uses same device as x
 
             # we optimize over the tanh-space
             x_tanh = self.__to_tanh(x, self.device)
@@ -195,9 +189,9 @@ class CarliniWagnerAttackL2:
                         optimizer, x_tanh, pert_tanh, targets_oh, c)
 
                     # check if we should abort search if we're getting nowhere
-                    if self.abort_early and ostep % (self.max_iter//10) == 0:
+                    if self.abort_early and ostep % (self.max_iter // 10) == 0:
                         loss = loss.cpu().detach().item()
-                        if loss > prev_batch_loss * (1-1e-4):
+                        if loss > prev_batch_loss * (1 - 1e-4):
                             break
                         prev_batch_loss = loss  # only check it 10 times
 
@@ -232,9 +226,8 @@ class CarliniWagnerAttackL2:
                         # update upper bound, and divide c by 2
                         upper_bounds_np[i] = min(upper_bounds_np[i], c_np[i])
                         # 1e9 was used in carlini's implementation
-                        if upper_bounds_np[i] < self.c_range[1] * 0.1:
-                            c_np[i] = (lower_bounds_np[i] +
-                                       upper_bounds_np[i]) / 2.
+                        if upper_bounds_np[i] < 1e9:
+                            c_np[i] = (lower_bounds_np[i] + upper_bounds_np[i]) / 2.
 
                     else:  # failure, try larger `c` value
                         # either multiply by 10 if no solution found yet
@@ -242,27 +235,26 @@ class CarliniWagnerAttackL2:
                         lower_bounds_np[i] = max(lower_bounds_np[i], c_np[i])
 
                         # 1e9 was used in carlini's implementation
-                        if upper_bounds_np[i] < self.c_range[1] * 0.1:
+                        if upper_bounds_np[i] < 1e9:
                             c_np[i] = (lower_bounds_np[i] +
                                        upper_bounds_np[i]) / 2.
                         else:
                             c_np[i] *= 10
 
             # save results
-            full_l2_np[count: count+batch_size] = o_best_l2_np
-            full_label_np[count: count+batch_size] = y.cpu().detach().numpy()
-            full_pred_np[count: count+batch_size] = o_best_pred_np
-            full_input_np[count: count+batch_size] = x.cpu().detach().numpy()
-            full_adv_np[count: count +
-                        batch_size] = o_best_adv.cpu().detach().numpy()
+            full_l2_np[count: count + batch_size] = o_best_l2_np
+            full_label_np[count: count + batch_size] = y.cpu().detach().numpy()
+            full_pred_np[count: count + batch_size] = o_best_pred_np
+            full_input_np[count: count + batch_size] = x.cpu().detach().numpy()
+            full_adv_np[count: count + batch_size] = o_best_adv.cpu().detach().numpy()
             count += batch_size
         return full_adv_np
 
     @staticmethod
     def __arctanh(x, epsilon=1e-6):
         # to enhance numeric stability. avoiding divide by zero
-        x = x * (1-epsilon)
-        return 0.5 * torch.log((1.+x) / (1.-x))
+        x = x * (1 - epsilon)
+        return 0.5 * torch.log((1. + x) / (1. - x))
 
     def __to_tanh(self, x, device=None):
         dmin = torch.tensor(self.clip_values[0], dtype=torch.float32)
@@ -282,7 +274,7 @@ class CarliniWagnerAttackL2:
             dmax = dmax.to(device)
         box_mul = (dmax - dmin) * .5
         box_plus = (dmax + dmin) * .5
-        return torch.tanh(w)*box_mul + box_plus
+        return torch.tanh(w) * box_mul + box_plus
 
     def __onehot_encoding(self, labels):
         labels_t = labels.unsqueeze(1)
@@ -299,37 +291,32 @@ class CarliniWagnerAttackL2:
     def __optimize(self, optimizer, inputs_tanh, pert_tanh, targets_oh, const):
         batch_size = inputs_tanh.size(0)
         is_targeted = self.targeted
-        confidence = self.confidence
-        device = self.device
 
         optimizer.zero_grad()
         # the adversarial examples in image space
-        advs = self.__from_tanh(inputs_tanh + pert_tanh, device)
+        advs = self.__from_tanh(inputs_tanh + pert_tanh, self.device)
         # the clean images converted back from tanh space
-        inputs = self.__from_tanh(inputs_tanh, device)
+        inputs = self.__from_tanh(inputs_tanh, self.device)
 
         # The softmax is stripped out from this model.
         adv_outputs = self.model(advs)
 
         if self.check_prob and torch.equal(
                 torch.round(adv_outputs.sum(1)),
-                torch.ones(len(adv_outputs)).to(device)):
-            raise ValueError(
-                'The score from the model should NOT be probability!')
+                torch.ones(len(adv_outputs)).to(self.device)):
+            raise ValueError('The score from the model should NOT be probability!')
 
         l2_norms = self.__get_l2_norm(advs, inputs)
         assert l2_norms.size() == (batch_size,)
 
         target_outputs = torch.sum(targets_oh * adv_outputs, 1)
         other_outputs = torch.max(
-            (1.0-targets_oh)*adv_outputs - targets_oh*INF, 1)[0]
+            (1.0 - targets_oh) * adv_outputs - targets_oh * INF, 1)[0]
 
         if is_targeted:
-            f_loss = torch.clamp(
-                other_outputs - target_outputs + confidence, min=0.)
+            f_loss = torch.clamp(other_outputs - target_outputs + self.confidence, min=0.)
         else:
-            f_loss = torch.clamp(
-                target_outputs - other_outputs + confidence, min=0.)
+            f_loss = torch.clamp(target_outputs - other_outputs + self.confidence, min=0.)
 
         loss = torch.sum(l2_norms + const * f_loss)
         loss.backward()
@@ -339,14 +326,13 @@ class CarliniWagnerAttackL2:
 
     def __compensate_confidence(self, outputs, targets):
         is_targeted = self.targeted
-        confidence = self.confidence
 
         outputs_comp = np.copy(outputs)
         indices = np.arange(targets.shape[0])
         if is_targeted:
-            outputs_comp[indices, targets] -= confidence
+            outputs_comp[indices, targets] -= self.confidence
         else:
-            outputs_comp[indices, targets] += confidence
+            outputs_comp[indices, targets] += self.confidence
 
         return outputs_comp
 

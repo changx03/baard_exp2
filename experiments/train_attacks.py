@@ -14,12 +14,14 @@ import torchvision as tv
 import torchvision.datasets as datasets
 from art.attacks.evasion import (AutoProjectedGradientDescent,
                                  BasicIterativeMethod, BoundaryAttack,
-                                 DeepFool, FastGradientMethod,
-                                 SaliencyMapMethod, ShadowAttack)
+                                 CarliniLInfMethod, DeepFool,
+                                 FastGradientMethod, SaliencyMapMethod,
+                                 ShadowAttack)
 from art.estimators.classification import PyTorchClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import DataLoader, TensorDataset
+from tqdm.auto import trange
 
 # Adding the parent directory.
 sys.path.append(os.getcwd())
@@ -105,7 +107,7 @@ def main():
     print('Test set:', shape_test)
 
     # Load model
-    use_prob = args.attack not in ['apgd', 'cw2']
+    use_prob = args.attack not in ['apgd', 'apgd1', 'apgd2', 'cw2', 'cwinf']
     print('Attack:', args.attack)
     print('Using softmax layer:', use_prob)
     if args.data == 'mnist':
@@ -174,6 +176,28 @@ def main():
             max_iter=max_iter,
             batch_size=args.batch_size,
             targeted=False)
+    elif args.attack == 'apgd1':
+        eps_step = args.eps / 10.0 if args.eps <= 0.1 else args.eps / 4.0
+        max_iter = 1000 if args.eps <= 0.1 else 100
+        attack = AutoProjectedGradientDescent(
+            estimator=classifier,
+            norm=1,
+            eps=args.eps,
+            eps_step=eps_step,
+            max_iter=max_iter,
+            batch_size=args.batch_size,
+            targeted=False)
+    elif args.attack == 'apgd2':
+        eps_step = args.eps / 10.0 if args.eps <= 0.1 else args.eps / 4.0
+        max_iter = 1000 if args.eps <= 0.1 else 100
+        attack = AutoProjectedGradientDescent(
+            estimator=classifier,
+            norm=2,
+            eps=args.eps,
+            eps_step=eps_step,
+            max_iter=max_iter,
+            batch_size=args.batch_size,
+            targeted=False)
     elif args.attack == 'bim':
         eps_step = args.eps / 10.0
         attack = BasicIterativeMethod(
@@ -199,6 +223,13 @@ def main():
             check_prob=False,
             batch_size=args.batch_size,
             targeted=False)
+    elif args.attack == 'cwinf':
+        attack = CarliniLInfMethod(
+            classifier=classifier,
+            confidence=args.eps,
+            max_iter=1000,
+            batch_size=args.batch_size,
+            targeted=False)
     elif args.attack == 'deepfool':
         attack = DeepFool(
             classifier=classifier,
@@ -218,7 +249,8 @@ def main():
         attack = ShadowAttack(
             estimator=classifier,
             batch_size=args.batch_size,
-            targeted=False)
+            targeted=False,
+            verbose=False)
     else:
         raise NotImplementedError
 
@@ -226,19 +258,22 @@ def main():
         n = args.n_samples
     else:
         n = len(dataset_perfect)
-    # idx_shuffle = torch.randperm(len(tensor_test_X))[:n]
-    # X_benign = tensor_test_X[idx_shuffle].cpu().detach().numpy()
-    # y = tensor_test_y[idx_shuffle].cpu().detach().numpy()
+
     X_benign = tensor_test_X[:n].cpu().detach().numpy()
     y = tensor_test_y[:n].cpu().detach().numpy()
 
-    print('Creating {} adversarial examples with Epsilon={}'.format(n,
-                                                                    args.eps))
+    print('Creating {} adversarial examples with eps={} (Not all attacks use eps)'.format(n,args.eps))
     time_start = time.time()
-    adv = attack.generate(x=X_benign)
+    # Shadow attack only takes single sample!
+    if args.attack == 'shadow':
+        adv = np.zeros_like(X_benign)
+
+        for i, in trange(len(X_benign)):
+            adv[i] = attack.generate(x=np.expand_dims(X_benign[i], axis=0))
+    else:
+        adv = attack.generate(x=X_benign)
     time_elapsed = time.time() - time_start
-    print('Total time spend: {}'.format(
-        str(datetime.timedelta(seconds=time_elapsed))))
+    print('Total time spend: {}'.format(str(datetime.timedelta(seconds=time_elapsed))))
 
     pred_benign = np.argmax(classifier.predict(X_benign), axis=1)
     acc_benign = np.sum(pred_benign == y) / n
@@ -246,21 +281,22 @@ def main():
     acc_adv = np.sum(pred_adv == y) / n
     print("Accuracy on benign samples: {:.4f}%".format(acc_benign * 100))
     print("Accuracy on adversarial examples: {:.4f}%".format(acc_adv * 100))
-    print()
 
     # Save results
-    path_x = os.path.join(
-        args.output_path, '{}_{}_{}_{}_x.npy'.format(
-            args.data, model_name, args.attack, str(args.eps)))
-    path_y = os.path.join(
-        args.output_path, '{}_{}_{}_{}_y.npy'.format(
-            args.data, model_name, args.attack, str(args.eps)))
-    path_adv = os.path.join(
-        args.output_path, '{}_{}_{}_{}_adv.npy'.format(
-            args.data, model_name, args.attack, str(args.eps)))
+    if args.n_samples < 2000:
+        output_file = '{}_{}_{}_{}_size{}'.format(args.data, model_name, args.attack, str(args.eps), args.n_samples)
+    else:
+        output_file = '{}_{}_{}_{}'.format(args.data, model_name, args.attack, str(args.eps))
+
+    path_x = os.path.join(args.output_path, '{}_x.npy'.format(output_file))
+    path_y = os.path.join(args.output_path, '{}_y.npy'.format(output_file))
+    path_adv = os.path.join(args.output_path, '{}_adv.npy'.format(output_file))
     np.save(path_x, X_benign)
     np.save(path_y, y)
     np.save(path_adv, adv)
+
+    print('Saved to:', '{}_adv.npy'.format(output_file))
+    print()
 
 
 if __name__ == '__main__':

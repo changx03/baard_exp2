@@ -50,7 +50,7 @@ def main():
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--pretrained', type=str, required=True)
-    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--attack', type=str, required=True, choices=data_params['attacks'])
     parser.add_argument('--eps', type=float, default=0.3)
     # NOTE: In CW_L2 attack, eps is the upper bound of c.
@@ -67,7 +67,17 @@ def main():
     # Prepare data
     transforms = tv.transforms.Compose([tv.transforms.ToTensor()])
 
-    if args.data in ['banknote', 'htru2', 'segment', 'texture', 'yeast']:
+    if args.data == 'mnist':
+        dataset_train = datasets.MNIST(
+            args.data_path, train=True, download=True, transform=transforms)
+        dataset_test = datasets.MNIST(
+            args.data_path, train=False, download=True, transform=transforms)
+    elif args.data == 'cifar10':
+        dataset_train = datasets.CIFAR10(
+            args.data_path, train=True, download=True, transform=transforms)
+        dataset_test = datasets.CIFAR10(
+            args.data_path, train=False, download=True, transform=transforms)
+    else:
         data_path = os.path.join(args.data_path, data_params['data'][args.data]['file_name'])
         print('Read file:', data_path)
         X, y = load_csv(data_path)
@@ -85,18 +95,6 @@ def main():
         dataset_test = TensorDataset(
             torch.from_numpy(X_test).type(torch.float32),
             torch.from_numpy(y_test).type(torch.long))
-    elif args.data == 'mnist':
-        dataset_train = datasets.MNIST(
-            args.data_path, train=True, download=True, transform=transforms)
-        dataset_test = datasets.MNIST(
-            args.data_path, train=False, download=True, transform=transforms)
-    elif args.data == 'cifar10':
-        dataset_train = datasets.CIFAR10(
-            args.data_path, train=True, download=True, transform=transforms)
-        dataset_test = datasets.CIFAR10(
-            args.data_path, train=False, download=True, transform=transforms)
-    else:
-        raise ValueError('{} is not supported.'.format(args.data))
 
     dataloader_train = DataLoader(dataset_train, 256, shuffle=False)
     dataloader_test = DataLoader(dataset_test, 256, shuffle=False)
@@ -211,7 +209,7 @@ def main():
         attack = BoundaryAttack(
             estimator=classifier,
             max_iter=1000,
-            batch_size=args.batch_size,
+            sample_size=args.batch_size,
             targeted=False)
     elif args.attack == 'cw2':
         # NOTE: Do NOT increase the batch size!

@@ -1,12 +1,12 @@
 {
     "datasets":[
-        "mnist",
-        "cifar10",
         "banknote",
+        "breastcancer",
+        "cifar10",
         "htru2",
+        "mnist",
         "segment",
-        "texture",
-        "breastcancer"
+        "texture"
     ],
     "attacks": [
         "apgd",

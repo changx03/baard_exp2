@@ -266,7 +266,7 @@ def main():
     if args.attack == 'shadow':
         adv = np.zeros_like(X_benign)
 
-        for i, in trange(len(X_benign)):
+        for i in trange(len(X_benign)):
             adv[i] = attack.generate(x=np.expand_dims(X_benign[i], axis=0))
     else:
         adv = attack.generate(x=X_benign)

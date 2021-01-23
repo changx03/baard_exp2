@@ -16,7 +16,6 @@ python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt -
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_2.json --suffix 2stage --adv mnist_basic_boundary_0.3
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_2.json --suffix 2stage --adv mnist_basic_cw2_0.0
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_2.json --suffix 2stage --adv mnist_basic_cw2_10.0
-python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_2.json --suffix 2stage --adv mnist_basic_cw2_100.0
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_2.json --suffix 2stage --adv mnist_basic_cw2_5.0
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_2.json --suffix 2stage --adv mnist_basic_cwinf_0.0
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_2.json --suffix 2stage --adv mnist_basic_cwinf_10.0
@@ -41,7 +40,6 @@ python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt -
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_3.json --suffix 3stage --adv mnist_basic_boundary_0.3
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_3.json --suffix 3stage --adv mnist_basic_cw2_0.0
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_3.json --suffix 3stage --adv mnist_basic_cw2_10.0
-python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_3.json --suffix 3stage --adv mnist_basic_cw2_100.0
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_3.json --suffix 3stage --adv mnist_basic_cw2_5.0
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_3.json --suffix 3stage --adv mnist_basic_cwinf_0.0
 python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_3.json --suffix 3stage --adv mnist_basic_cwinf_10.0

@@ -33,4 +33,4 @@ python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --
 python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack fgsm --eps 0.6
 python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack fgsm --eps 1.0
 
-python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack shadow --batch_size 400
+# python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack shadow --batch_size 400

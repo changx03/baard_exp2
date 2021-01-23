@@ -33,7 +33,7 @@ python3 ./experiments/train_attacks.py --data cifar10 --pretrained cifar10_resne
 python3 ./experiments/train_attacks.py --data cifar10 --pretrained cifar10_resnet_200.pt --attack fgsm --eps 0.6
 python3 ./experiments/train_attacks.py --data cifar10 --pretrained cifar10_resnet_200.pt --attack fgsm --eps 1.0
 
-python3 ./experiments/train_attacks.py --data cifar10 --pretrained cifar10_resnet_200.pt --attack shadow --batch_size 400
+# python3 ./experiments/train_attacks.py --data cifar10 --pretrained cifar10_resnet_200.pt --attack shadow --batch_size 400
 
 
 # cifar10 vgg
@@ -67,4 +67,4 @@ python3 ./experiments/train_attacks.py --data cifar10 --pretrained cifar10_vgg_2
 python3 ./experiments/train_attacks.py --data cifar10 --pretrained cifar10_vgg_200.pt --attack fgsm --eps 0.6
 python3 ./experiments/train_attacks.py --data cifar10 --pretrained cifar10_vgg_200.pt --attack fgsm --eps 1.0
 
-python3 ./experiments/train_attacks.py --data cifar10 --pretrained cifar10_vgg_200.pt --attack shadow --batch_size 400
+# python3 ./experiments/train_attacks.py --data cifar10 --pretrained cifar10_vgg_200.pt --attack shadow --batch_size 400

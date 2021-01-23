@@ -65,7 +65,13 @@ def main():
     # Prepare data
     transforms = tv.transforms.Compose([tv.transforms.ToTensor()])
 
-    if args.data in ['banknote', 'htru2', 'segment', 'texture', 'yeast']:
+    if args.data == 'mnist':
+        dataset_train = datasets.MNIST(args.data_path, train=True, download=True, transform=transforms)
+        dataset_test = datasets.MNIST(args.data_path, train=False, download=True, transform=transforms)
+    elif args.data == 'cifar10':
+        dataset_train = datasets.CIFAR10(args.data_path, train=True, download=True, transform=transforms)
+        dataset_test = datasets.CIFAR10(args.data_path, train=False, download=True, transform=transforms)
+    else:
         data_path = os.path.join(args.data_path, data_params['data'][args.data]['file_name'])
         print('Read file:', data_path)
         X, y = load_csv(data_path)
@@ -79,14 +85,6 @@ def main():
         X_test = scaler.transform(X_test)
         dataset_train = TensorDataset(torch.from_numpy(X_train).type(torch.float32), torch.from_numpy(y_train).type(torch.long))
         dataset_test = TensorDataset(torch.from_numpy(X_test).type(torch.float32), torch.from_numpy(y_test).type(torch.long))
-    elif args.data == 'mnist':
-        dataset_train = datasets.MNIST(args.data_path, train=True, download=True, transform=transforms)
-        dataset_test = datasets.MNIST(args.data_path, train=False, download=True, transform=transforms)
-    elif args.data == 'cifar10':
-        dataset_train = datasets.CIFAR10(args.data_path, train=True, download=True, transform=transforms)
-        dataset_test = datasets.CIFAR10(args.data_path, train=False, download=True, transform=transforms)
-    else:
-        raise ValueError('{} is not supported.'.format(args.data))
 
     loader_train = DataLoader(dataset_train, batch_size=512, shuffle=False)
     loader_test = DataLoader(dataset_test, batch_size=512, shuffle=False)

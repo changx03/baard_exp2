@@ -179,11 +179,11 @@ def main():
         sequence = param['sequence']
         stages = []
         if sequence[0]:
-            stages.append(ApplicabilityStage(n_classes=param['n_classes'], quantile=param['quantile']))
+            stages.append(ApplicabilityStage(n_classes=param['n_classes'], quantile=param['q1']))
         if sequence[1]:
-            stages.append(ReliabilityStage(n_classes=param['n_classes'], k=param['k_re']))
+            stages.append(ReliabilityStage(n_classes=param['n_classes'], k=param['k_re'], quantile=param['q2']))
         if sequence[2]:
-            stages.append(DecidabilityStage(n_classes=param['n_classes'], k=param['k_de'], n_bins=param['n_bins']))
+            stages.append(DecidabilityStage(n_classes=param['n_classes'], k=param['k_de'], quantile=param['q3']))
         print('BAARD: # of stages:', len(stages))
         detector = BAARDOperator(stages=stages)
 

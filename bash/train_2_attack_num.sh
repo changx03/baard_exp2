@@ -19,12 +19,12 @@ python3 ./experiments/train_attacks.py --data banknote --pretrained banknote_400
 python3 ./experiments/train_attacks.py --data banknote --pretrained banknote_400.pt --attack apgd2 --eps 1.0
 
 python3 ./experiments/train_attacks.py --data banknote --pretrained banknote_400.pt --attack cw2 --eps 0
+python3 ./experiments/train_attacks.py --data banknote --pretrained banknote_400.pt --attack cw2 --eps 5
 python3 ./experiments/train_attacks.py --data banknote --pretrained banknote_400.pt --attack cw2 --eps 10
-python3 ./experiments/train_attacks.py --data banknote --pretrained banknote_400.pt --attack cw2 --eps 100
 
 python3 ./experiments/train_attacks.py --data banknote --pretrained banknote_400.pt --attack cwinf --eps 0
+python3 ./experiments/train_attacks.py --data banknote --pretrained banknote_400.pt --attack cwinf --eps 5
 python3 ./experiments/train_attacks.py --data banknote --pretrained banknote_400.pt --attack cwinf --eps 10
-python3 ./experiments/train_attacks.py --data banknote --pretrained banknote_400.pt --attack cwinf --eps 100
 
 python3 ./experiments/train_attacks.py --data banknote --pretrained banknote_400.pt --attack deepfool --eps 1e-6
 
@@ -51,12 +51,12 @@ python3 ./experiments/train_attacks.py --data breastcancer --pretrained breastca
 python3 ./experiments/train_attacks.py --data breastcancer --pretrained breastcancer_400.pt --attack apgd2 --eps 1.0
 
 python3 ./experiments/train_attacks.py --data breastcancer --pretrained breastcancer_400.pt --attack cw2 --eps 0
+python3 ./experiments/train_attacks.py --data breastcancer --pretrained breastcancer_400.pt --attack cw2 --eps 5
 python3 ./experiments/train_attacks.py --data breastcancer --pretrained breastcancer_400.pt --attack cw2 --eps 10
-python3 ./experiments/train_attacks.py --data breastcancer --pretrained breastcancer_400.pt --attack cw2 --eps 100
 
 python3 ./experiments/train_attacks.py --data breastcancer --pretrained breastcancer_400.pt --attack cwinf --eps 0
+python3 ./experiments/train_attacks.py --data breastcancer --pretrained breastcancer_400.pt --attack cwinf --eps 5
 python3 ./experiments/train_attacks.py --data breastcancer --pretrained breastcancer_400.pt --attack cwinf --eps 10
-python3 ./experiments/train_attacks.py --data breastcancer --pretrained breastcancer_400.pt --attack cwinf --eps 100
 
 python3 ./experiments/train_attacks.py --data breastcancer --pretrained breastcancer_400.pt --attack deepfool --eps 1e-6
 
@@ -83,12 +83,12 @@ python3 ./experiments/train_attacks.py --data htru2 --pretrained htru2_400.pt --
 python3 ./experiments/train_attacks.py --data htru2 --pretrained htru2_400.pt --attack apgd2 --eps 1.0
 
 python3 ./experiments/train_attacks.py --data htru2 --pretrained htru2_400.pt --attack cw2 --eps 0
+python3 ./experiments/train_attacks.py --data htru2 --pretrained htru2_400.pt --attack cw2 --eps 5
 python3 ./experiments/train_attacks.py --data htru2 --pretrained htru2_400.pt --attack cw2 --eps 10
-python3 ./experiments/train_attacks.py --data htru2 --pretrained htru2_400.pt --attack cw2 --eps 100
 
 python3 ./experiments/train_attacks.py --data htru2 --pretrained htru2_400.pt --attack cwinf --eps 0
+python3 ./experiments/train_attacks.py --data htru2 --pretrained htru2_400.pt --attack cwinf --eps 5
 python3 ./experiments/train_attacks.py --data htru2 --pretrained htru2_400.pt --attack cwinf --eps 10
-python3 ./experiments/train_attacks.py --data htru2 --pretrained htru2_400.pt --attack cwinf --eps 100
 
 python3 ./experiments/train_attacks.py --data htru2 --pretrained htru2_400.pt --attack deepfool --eps 1e-6
 

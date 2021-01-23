@@ -3,9 +3,10 @@ Implementing the algorithm of Blocking Adversarial Examples by Testing
 Applicability, Reliability and Decidability.
 """
 import numpy as np
+import scipy.stats as stats
+from sklearn.linear_model import LogisticRegressionCV
 from sklearn.metrics import roc_auc_score
 from sklearn.neighbors import BallTree
-from tqdm import trange
 
 
 def flatten(X):
@@ -31,10 +32,9 @@ class ApplicabilityStage:
         Quantile to compute, which must be between 0 and 1 inclusive.
     """
 
-    def __init__(self, n_classes=10, quantile=0.99, verbose=True):
+    def __init__(self, n_classes=10, quantile=0.99):
         self.n_classes = n_classes
         self.quantile = quantile
-        self.verbose = verbose
 
     def fit(self, X=None, y=None):
         """Fits the model according to the given training data.
@@ -91,7 +91,7 @@ class ApplicabilityStage:
         n = X.shape[0]
         X = flatten(X)
         results = np.zeros(n, dtype=np.long)
-        for i in trange(self.n_classes, desc='Applicability', disable=not self.verbose):
+        for i in range(self.n_classes):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
                 continue
@@ -99,8 +99,9 @@ class ApplicabilityStage:
             lower = self.thresholds_[i, 0]
             upper = self.thresholds_[i, 1]
             blocked_idx = np.where(
-                np.logical_or(np.any(x_subset < lower, axis=1), np.any(x_subset > upper, axis=1))
-            )[0]
+                np.logical_or(
+                    np.any(x_subset < lower, axis=1),
+                    np.any(x_subset > upper, axis=1)))[0]
             results[idx[blocked_idx]] = 1
         return results
 
@@ -137,21 +138,16 @@ class ReliabilityStage:
 
     k : int, default=10
         Number of neighbours required for each sample.
-
-    quantile : float, default=0.99
-        Quantile to compute, which must be between 0 and 1 inclusive.
     """
 
-    def __init__(self, n_classes=10, k=10, quantile=0.99, verbose=True):
+    def __init__(self, n_classes=10, k=10):
         self.n_classes = n_classes
         self.k = k
-        self.quantile = quantile
-        self.verbose = verbose
 
         self.trees_ = []
+        self.detectors_ = []
         self.means_ = np.zeros(self.n_classes, dtype=np.float32)
         self.stds_ = np.zeros(self.n_classes, dtype=np.float32)
-        self.thresholds_ = np.zeros(self.n_classes, dtype=np.float32)
 
     def fit(self, X, y):
         """Fits the model according to the given training data.
@@ -194,16 +190,26 @@ class ReliabilityStage:
             Target adversarial labels. 1 is adversarial example, 0 is benign.
         """
         X = flatten(X)
-        for i in trange(self.n_classes, desc='Reliability', disable=not self.verbose):
-            idx = np.where(np.logical_and(y == i, labels_adv == 0))[0]
+        for i in range(self.n_classes):
+            idx = np.where(y == i)[0]
             if len(idx) == 0:
                 print('Class {:d} has no training samples!'.format(i))
                 continue
             x_subset = X[idx]
+            label_subset = labels_adv[idx]
             tree = self.trees_[i]
             dist, _ = tree.query(x_subset, k=self.k)
             avg_dist = np.sum(dist, axis=1) / self.k
-            self.thresholds_[i] = np.quantile(avg_dist, self.quantile, axis=0)
+
+            if not np.any(label_subset == 1):  # No positive sample
+                print('Label {} has no positive sample!'.format(i))
+                avg_dist = np.concatenate((avg_dist, [avg_dist.max()*1.01]))
+                label_subset = np.concatenate((label_subset, [1]))
+            
+            avg_dist = np.expand_dims(avg_dist, axis=1)
+            detector = LogisticRegressionCV(cv=5)
+            detector.fit(avg_dist, label_subset)
+            self.detectors_.append(detector)
 
     def predict(self, X, y):
         """Detect adversarial examples for samples in X.
@@ -225,7 +231,7 @@ class ReliabilityStage:
         n = X.shape[0]
         X = flatten(X)
         results = np.zeros(n, dtype=np.long)
-        for i in trange(self.n_classes, desc='Reliability', disable=not self.verbose):
+        for i in range(self.n_classes):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
                 continue
@@ -233,7 +239,8 @@ class ReliabilityStage:
             tree = self.trees_[i]
             dist, _ = tree.query(x_subset, k=self.k)
             avg_dist = np.sum(dist, axis=1) / self.k
-            pred = avg_dist > self.thresholds_[i]
+            avg_dist = np.expand_dims(avg_dist, axis=1)
+            pred = self.detectors_[i].predict(avg_dist)
             results[idx] = pred
         return results
 
@@ -257,8 +264,8 @@ class ReliabilityStage:
         n = X.shape[0]
         X = flatten(X)
         # Binary classification. 1: Adversarial example; 0: Benign sample.
-        results = np.zeros(n, dtype=np.float32)
-        for i in trange(self.n_classes, desc='Reliability', disable=not self.verbose):
+        results = np.zeros((n, 2), dtype=np.float32)
+        for i in range(self.n_classes):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
                 continue
@@ -266,7 +273,9 @@ class ReliabilityStage:
             tree = self.trees_[i]
             dist, _ = tree.query(x_subset, k=self.k)
             avg_dist = np.sum(dist, axis=1) / self.k
-            results[idx] = avg_dist
+            avg_dist = np.expand_dims(avg_dist, axis=1)
+            probs = self.detectors_[i].predict_proba(avg_dist)
+            results[idx] = probs
         return results
 
     def score(self, X, y, labels_adv):
@@ -288,7 +297,7 @@ class ReliabilityStage:
         score : float
             The ROC AUC score based on the linear model.
         """
-        prob = self.predict_proba(X, y)
+        prob = self.predict_proba(X, y)[:, 1]
         return roc_auc_score(labels_adv, prob)
 
 
@@ -308,18 +317,20 @@ class DecidabilityStage:
     k : int, default=100
         Number of neighbours required for each sample.
 
-    quantile : float, default=0.99
-        Quantile to compute, which must be between 0 and 1 inclusive.
+    n_bins : int, default=2
+        Number of likelihoods for defining the threshold. n_bins must be less or
+        equal to n_classes.
     """
 
-    def __init__(self, n_classes=10, k=100, quantile=0.99, verbose=True):
+    def __init__(self, n_classes=10, k=100, n_bins=2):
+        if n_bins > n_classes:
+            raise ValueError('n_bins must less or equal to n_classes!')
+
         self.n_classes = n_classes
         self.k = k
-        self.quantile = quantile
-        self.verbose = verbose
+        self.n_bins = n_bins
 
-        self.likelihoods_mean_ = np.zeros((n_classes, n_classes), dtype=np.float32)
-        self.thresholds_ = np.zeros(n_classes, dtype=np.float32)
+        self.detectors_ = []
 
     def fit(self, X, y):
         """Fits the model according to the given training data.
@@ -355,19 +366,29 @@ class DecidabilityStage:
         labels_adv : array-like of shape (n_samples, )
             Target adversarial labels. 1 is adversarial example, 0 is benign.
         """
-        X = flatten(X)
-        for i in trange(self.n_classes, desc='Decidability', disable=not self.verbose):
-            idx = np.where(np.logical_and(y == i, labels_adv == 0))[0]
-            n = len(idx)
-            if n == 0:
+        likelihoods = self.__get_likelihoods(X)[:, -self.n_bins:]
+        # create detectors for each class
+        for i in range(self.n_classes):
+            idx = np.where(y == i)[0]
+            if len(idx) == 0:
                 print('Class {:d} has no training samples!'.format(i))
                 continue
-            x_sub = X[idx]
-            y_sub = y[idx]
-            likelihood = self.__get_likelihoods(x_sub, y_sub)
-            self.thresholds_[i] = np.quantile(likelihood, 1 - self.quantile, axis=0)
+            label_subset = labels_adv[idx]
+            likelihoods_subset = likelihoods[idx]
 
-    def predict(self, X, y):
+            if not np.any(label_subset == 1):  # No positive sample
+                print('Label {} has no positive sample!'.format(i))
+                likelihoods_subset = np.concatenate((
+                    likelihoods_subset, 
+                    [likelihoods_subset.min(axis=0)*0.99]
+                ))
+                label_subset = np.concatenate((label_subset, [1]))
+
+            detector = LogisticRegressionCV(cv=5)
+            detector.fit(likelihoods_subset, label_subset)
+            self.detectors_.append(detector)
+
+    def predict(self, X, y=None):
         """Detect adversarial examples for samples in X.
 
         Parameters
@@ -384,20 +405,18 @@ class DecidabilityStage:
             Returns labels for adversarial examples. 1 is adversarial example, 
             0 is benign.
         """
-        n = X.shape[0]
-        X = flatten(X)
+        n = len(X)
+        likelihoods = self.__get_likelihoods(X)[:, -self.n_bins:]
         results = np.zeros(n, dtype=np.long)
-        for i in trange(self.n_classes, desc='Decidability', disable=not self.verbose):
+        for i in range(self.n_classes):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
                 continue
-            x_sub = X[idx]
-            y_sub = y[idx]
-            likelihood = self.__get_likelihoods(x_sub, y_sub)
-            results[idx] = likelihood < self.thresholds_[i]
+            pred = self.detectors_[i].predict(likelihoods[idx])
+            results[idx] = pred
         return results
 
-    def predict_proba(self, X, y):
+    def predict_proba(self, X, y=None):
         """Predict probability estimates of adversarial examples for samples in 
         X.
 
@@ -414,10 +433,18 @@ class DecidabilityStage:
         labels : array of shape (n_samples, 2)
             Returns probability estimates of adversarial examples.
         """
-        likelihoods = self.__get_likelihoods(X, y)
-        return 1.0 - likelihoods
+        n = X.shape[0]
+        likelihoods = self.__get_likelihoods(X)[:, -self.n_bins:]
+        results = np.zeros((n, 2), dtype=np.float32)
+        for i in range(self.n_classes):
+            idx = np.where(y == i)[0]
+            if len(idx) == 0:
+                continue
+            prob = self.detectors_[i].predict_proba(likelihoods[idx])
+            results[idx] = prob
+        return results
 
-    def score(self, X, y, labels_adv):
+    def score(self, X, y=None, labels_adv=None):
         """Returns the ROC AUC score given test data and labels.
 
         Parameters
@@ -436,15 +463,23 @@ class DecidabilityStage:
         score : float
             The ROC AUC score based on the linear model.
         """
-        prob = self.predict_proba(X, y)
+        prob = self.predict_proba(X, y)[:, 1]
         return roc_auc_score(labels_adv, prob)
 
-    def __get_likelihoods(self, x, y):
-        neigh_idx = self.tree_.query(x, self.k, return_distance=False)
-        neigh_y = np.array([self.y_train_[i] for i in neigh_idx])
-        y_grid = np.repeat(np.expand_dims(y, axis=0).transpose(), self.k, axis=1)
-        likelihood = np.sum(neigh_y == y_grid, axis=1) / self.k
-        return likelihood
+    def __get_likelihoods(self, X):
+        n = X.shape[0]
+        X = flatten(X)
+        neighbors_idx = self.tree_.query(X, self.k, return_distance=False)
+        neighbors_y = np.array([self.y_train_[i] for i in neighbors_idx])
+        bins = np.zeros((n, self.n_classes), dtype=np.float32)
+        for i in range(n):
+            frequency = stats.relfreq(
+                neighbors_y[i],
+                numbins=self.n_classes,
+                defaultreallimits=(0, self.n_classes-1)
+            )[0]
+            bins[i] = np.sort(frequency)
+        return bins
 
 
 class BAARDOperator:

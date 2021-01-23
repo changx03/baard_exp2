@@ -19,12 +19,12 @@ python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --
 python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack apgd2 --eps 1.0
 
 python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack cw2 --eps 0
+python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack cw2 --eps 5
 python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack cw2 --eps 10
-python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack cw2 --eps 100
 
 python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack cwinf --eps 0
+python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack cwinf --eps 5
 python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack cwinf --eps 10
-python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack cwinf --eps 100
 
 python3 ./experiments/train_attacks.py --data mnist --pretrained mnist_200.pt --attack deepfool --eps 1e-6
 

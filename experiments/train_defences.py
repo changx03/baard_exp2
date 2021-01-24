@@ -86,7 +86,8 @@ def main():
         dataset_train = TensorDataset(torch.from_numpy(X_train).type(torch.float32), torch.from_numpy(y_train).type(torch.long))
         dataset_test = TensorDataset(torch.from_numpy(X_test).type(torch.float32), torch.from_numpy(y_test).type(torch.long))
 
-    loader_train = DataLoader(dataset_train, batch_size=512, shuffle=False)
+    # Note: Train set alway shuffle!
+    loader_train = DataLoader(dataset_train, batch_size=512, shuffle=True)
     loader_test = DataLoader(dataset_test, batch_size=512, shuffle=False)
 
     shape_train = get_shape(loader_train.dataset)
@@ -207,11 +208,8 @@ def main():
             squeezers=squeezers,
             n_classes=param['n_classes'],
             device=device)
-        if args.data in ['mnist', 'cifar10']:
-            path_fs = os.path.join(args.output_path, '{}_fs.pt'.format(args.pretrained.split('.')[0]))
-            detector.load(path_fs)
-        else:
-            detector.fit(X_train, y_train, epochs=param['epochs'], verbose=1)
+        path_fs = os.path.join(args.output_path, '{}_fs.pt'.format(args.pretrained.split('.')[0]))
+        detector.load(path_fs)
         detector.search_thresholds(X_val, pred_val, labels_val)
     elif args.defence == 'lid':
         # This batch_size is not same as the mini batch size for the neural network.

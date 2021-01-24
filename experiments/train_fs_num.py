@@ -6,26 +6,30 @@ import sys
 import torch
 import torch.nn as nn
 import torchvision as tv
-import torchvision.datasets as datasets
-from torch.utils.data import DataLoader
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from torch.utils.data import DataLoader, TensorDataset
 
-# Adding the parent directory.
 sys.path.append(os.getcwd())
-from defences.util import get_shape, dataset2tensor
+from defences.feature_squeezing import (DepthSqueezer, FeatureSqueezingTorch,
+                                        GaussianSqueezer)
+from defences.util import dataset2tensor, get_shape
+from models.numeric import NumericModel
 from models.torch_util import validate
-from models.cifar10 import Resnet, Vgg
-from models.mnist import BaseModel
-from defences.feature_squeezing import (GaussianSqueezer, MedianSqueezer,
-                                        DepthSqueezer, FeatureSqueezingTorch)
+from experiments.util import load_csv
 
 
 def main():
+    with open('data.json') as data_json:
+        data_params = json.load(data_json)
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, required=True, choices=['mnist', 'cifar10'])
+    parser.add_argument('--data', type=str, required=True)
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--pretrained', type=str, required=True)
     parser.add_argument('--param', type=str, required=True)
+    parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
 
     print('Dataset:', args.data)
@@ -33,7 +37,7 @@ def main():
 
     with open(args.param) as param_json:
         param = json.load(param_json)
-    param['n_classes'] = 10
+    param['n_classes'] = data_params['data'][args.data]['n_classes']
     print('Param:', param)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -42,14 +46,19 @@ def main():
     # Prepare data
     transforms = tv.transforms.Compose([tv.transforms.ToTensor()])
 
-    if args.data == 'mnist':
-        dataset_train = datasets.MNIST(args.data_path, train=True, download=True, transform=transforms)
-        dataset_test = datasets.MNIST(args.data_path, train=False, download=True, transform=transforms)
-    elif args.data == 'cifar10':
-        dataset_train = datasets.CIFAR10(args.data_path, train=True, download=True, transform=transforms)
-        dataset_test = datasets.CIFAR10(args.data_path, train=False, download=True, transform=transforms)
-    else:
-        raise ValueError('{} is not supported.'.format(args.data))
+    data_path = os.path.join(args.data_path, data_params['data'][args.data]['file_name'])
+    print('Read file:', data_path)
+    X, y = load_csv(data_path)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y,
+        test_size=data_params['data'][args.data]['n_test'],
+        random_state=args.random_state)
+    scaler = MinMaxScaler().fit(X_train)
+    X_train = scaler.transform(X_train)
+    X_test = scaler.transform(X_test)
+    dataset_train = TensorDataset(torch.from_numpy(X_train).type(torch.float32), torch.from_numpy(y_train).type(torch.long))
+    dataset_test = TensorDataset(torch.from_numpy(X_test).type(torch.float32), torch.from_numpy(y_test).type(torch.long))
 
     # Note: Train set alway shuffle!
     loader_train = DataLoader(dataset_train, batch_size=512, shuffle=True)
@@ -63,17 +72,9 @@ def main():
     print('Using softmax layer:', use_prob)
 
     # Load model
-    if args.data == 'mnist':
-        model = BaseModel(use_prob=use_prob).to(device)
-        model_name = 'basic'
-    else:  # args.data == 'cifar10':
-        model_name = args.pretrained.split('_')[1]
-        if model_name == 'resnet':
-            model = Resnet(use_prob=use_prob).to(device)
-        elif model_name == 'vgg':
-            model = Vgg(use_prob=use_prob).to(device)
-        else:
-            raise ValueError('Unknown model: {}'.format(model_name))
+    n_features = data_params['data'][args.data]['n_features']
+    n_classes = data_params['data'][args.data]['n_classes']
+    model = NumericModel(n_features, n_hidden=n_features * 4, n_classes=n_classes, use_prob=use_prob).to(device)
 
     loss = nn.CrossEntropyLoss()
     pretrained_path = os.path.join(args.output_path, args.pretrained)
@@ -92,8 +93,6 @@ def main():
     squeezers = []
     squeezers.append(GaussianSqueezer(x_min=0.0, x_max=1.0, noise_strength=0.025, std=1.0))
     squeezers.append(DepthSqueezer(x_min=0.0, x_max=1.0, bit_depth=8))
-    if args.data in ['mnist', 'cifar10']:
-        squeezers.append(MedianSqueezer(x_min=0.0, x_max=1.0, kernel_size=3))
     print('FS: # of squeezers:', len(squeezers))
     detector = FeatureSqueezingTorch(
         classifier=model,

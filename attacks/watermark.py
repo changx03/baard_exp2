@@ -33,6 +33,8 @@ class WaterMarkAttack:
             # tree contains only targeted samples.
             for i in trange(self.n_classes, disable=not self.verbose):
                 idx = np.where(y == i)[0]
+                if len(idx) > 1000:
+                    idx = np.random.choice(idx, size=1000, replace=False)
                 tree = BallTree(X[idx], leaf_size=32)
                 self.trees_.append(tree)
                 self.X_train_.append(X[idx])
@@ -40,6 +42,8 @@ class WaterMarkAttack:
             # tree contains samples other than the true label.
             for i in trange(self.n_classes, disable=not self.verbose):
                 idx = np.where(y != i)[0]
+                if len(idx) > 5000:
+                    idx = np.random.choice(idx, size=5000, replace=False)
                 tree = BallTree(X[idx], leaf_size=128)
                 self.trees_.append(tree)
                 self.X_train_.append(X[idx])

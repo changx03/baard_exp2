@@ -7,14 +7,14 @@ class LineAttack:
         self.color = color
         self.thickness = thickness
 
-    def generate(self, X, y=None):
-        self.c_ = X.shape[1]
-        self.h_ = X.shape[2]
-        self.w_ = X.shape[3]
-        X = np.moveaxis(X, 1, -1)
-        outputs = np.zeros_like(X, dtype=np.float32)
-        for i in range(X.shape[0]):
-            outputs[i] = self.__draw_line(X[i])
+    def generate(self, x, y=None):
+        self.c_ = x.shape[1]
+        self.h_ = x.shape[2]
+        self.w_ = x.shape[3]
+        x = np.moveaxis(x, 1, -1)
+        outputs = np.zeros_like(x, dtype=np.float32)
+        for i in range(x.shape[0]):
+            outputs[i] = self.__draw_line(x[i])
         outputs = np.moveaxis(outputs, -1, 1)
         return outputs
 

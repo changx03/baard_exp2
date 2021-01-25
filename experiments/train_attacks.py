@@ -26,6 +26,8 @@ from tqdm.auto import trange
 # Adding the parent directory.
 sys.path.append(os.getcwd())
 from attacks.carlini import CarliniWagnerAttackL2
+from attacks.line_attack import LineAttack
+from attacks.watermark import WaterMarkAttack
 from defences.util import get_correct_examples, get_shape
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
@@ -68,15 +70,11 @@ def main():
     transforms = tv.transforms.Compose([tv.transforms.ToTensor()])
 
     if args.data == 'mnist':
-        dataset_train = datasets.MNIST(
-            args.data_path, train=True, download=True, transform=transforms)
-        dataset_test = datasets.MNIST(
-            args.data_path, train=False, download=True, transform=transforms)
+        dataset_train = datasets.MNIST(args.data_path, train=True, download=True, transform=transforms)
+        dataset_test = datasets.MNIST(args.data_path, train=False, download=True, transform=transforms)
     elif args.data == 'cifar10':
-        dataset_train = datasets.CIFAR10(
-            args.data_path, train=True, download=True, transform=transforms)
-        dataset_test = datasets.CIFAR10(
-            args.data_path, train=False, download=True, transform=transforms)
+        dataset_train = datasets.CIFAR10(args.data_path, train=True, download=True, transform=transforms)
+        dataset_test = datasets.CIFAR10(args.data_path, train=False, download=True, transform=transforms)
     else:
         data_path = os.path.join(args.data_path, data_params['data'][args.data]['file_name'])
         print('Read file:', data_path)
@@ -89,12 +87,8 @@ def main():
         scaler = MinMaxScaler().fit(X_train)
         X_train = scaler.transform(X_train)
         X_test = scaler.transform(X_test)
-        dataset_train = TensorDataset(
-            torch.from_numpy(X_train).type(torch.float32),
-            torch.from_numpy(y_train).type(torch.long))
-        dataset_test = TensorDataset(
-            torch.from_numpy(X_test).type(torch.float32),
-            torch.from_numpy(y_test).type(torch.long))
+        dataset_train = TensorDataset(torch.from_numpy(X_train).type(torch.float32), torch.from_numpy(y_train).type(torch.long))
+        dataset_test = TensorDataset(torch.from_numpy(X_test).type(torch.float32), torch.from_numpy(y_test).type(torch.long))
 
     dataloader_train = DataLoader(dataset_train, 256, shuffle=False)
     dataloader_test = DataLoader(dataset_test, 256, shuffle=False)
@@ -243,12 +237,32 @@ def main():
             classifier=classifier,
             gamma=args.eps,
             batch_size=args.batch_size)
+    elif args.attack == 'line':
+        if args.data == 'mnist':
+            color = args.eps
+        elif args.data == 'cifar10':
+            color = (args.eps, args.eps, args.eps)
+        else:
+            raise NotImplementedError
+        attack = LineAttack(color=color, thickness=1)
     elif args.attack == 'shadow':
         attack = ShadowAttack(
             estimator=classifier,
             batch_size=args.batch_size,
             targeted=False,
             verbose=False)
+    elif args.attack == 'watermark':
+        attack = WaterMarkAttack(
+            eps=args.eps,
+            n_classes=data_params['data'][args.data]['n_classes'],
+            x_min=0.0,
+            x_max=1.0,
+            targeted=False)
+
+        X_train, y_train = get_correct_examples(model, dataset_train, device=device, return_tensor=True)
+        X_train = X_train.cpu().detach().numpy()
+        y_train = y_train.cpu().detach().numpy()
+        attack.fit(X_train, y_train)
     else:
         raise NotImplementedError
 
@@ -260,14 +274,16 @@ def main():
     X_benign = tensor_test_X[:n].cpu().detach().numpy()
     y = tensor_test_y[:n].cpu().detach().numpy()
 
-    print('Creating {} adversarial examples with eps={} (Not all attacks use eps)'.format(n,args.eps))
+    print('Creating {} adversarial examples with eps={} (Not all attacks use eps)'.format(n, args.eps))
     time_start = time.time()
     # Shadow attack only takes single sample!
     if args.attack == 'shadow':
         adv = np.zeros_like(X_benign)
-
         for i in trange(len(X_benign)):
             adv[i] = attack.generate(x=np.expand_dims(X_benign[i], axis=0))
+    elif args.attack == 'watermark':
+        # This is untargeted.
+        adv = attack.generate(X_benign, y)
     else:
         adv = attack.generate(x=X_benign)
     time_elapsed = time.time() - time_start

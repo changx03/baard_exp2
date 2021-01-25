@@ -19,7 +19,9 @@
         "deepfool",
         "fgsm",
         "jsma",
-        "shadow"
+        "line",
+        "shadow",
+        "watermark"
     ],
     "defences": [
         "baard",

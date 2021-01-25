@@ -212,6 +212,8 @@ def main():
         detector.load(path_fs)
         detector.search_thresholds(X_val, pred_val, labels_val)
     elif args.defence == 'lid':
+        # ResNet and VGG has no easy solution to sequentialise the hidden layers.
+        use_before_softmax = args.data == 'cifar10'
         # This batch_size is not same as the mini batch size for the neural network.
         detector = LidDetector(
             model,
@@ -219,7 +221,8 @@ def main():
             batch_size=param['batch_size'],
             x_min=0.0,
             x_max=1.0,
-            device=device)
+            device=device,
+            before_softmax=use_before_softmax)
         # LID uses different training set
         X_train, y_train = detector.get_train_set(X_benign[n:], adv[n:], std_dominator=param['std_dominator'])
         detector.fit(X_train, y_train, verbose=1)

@@ -14,38 +14,41 @@ from .util import merge_and_generate_labels
 def get_hidden_layers(sequence, device):
     """Returns a list of functions to compute the outpus in each hidden layer.
     """
-    n_hidden_layers = len(list(sequence.children())) - 1
     # get deep representations
     hidden_layers = []
-    for i in range(1, n_hidden_layers+1):
+    for i in range(1, len(list(sequence.children()))):
         layer = nn.Sequential(*list(sequence.children())[:i]).to(device)
         hidden_layers.append(layer)
-    return hidden_layers, n_hidden_layers
+    return hidden_layers
 
 
 def mle_batch(data, batch, k):
     """Computes Maximum Likelihood Estimator of LID within k nearlest neighbours.
     """
-    k = min(k, len(data)-1)
+    k = min(k, len(data) - 1)
 
     def mle(v):
         # v[-1] is the max of the neighbour distances
-        return - k / np.sum(np.log(v/v[-1]))
+        return - k / np.sum(np.log(v / v[-1]))
 
     a = cdist(batch, data)
-    a = np.apply_along_axis(np.sort, axis=1, arr=a)[:, 1:k+1]
+    a = np.apply_along_axis(np.sort, axis=1, arr=a)[:, 1:k + 1]
     a = np.apply_along_axis(mle, axis=1, arr=a)
     return a
 
 
 def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device,
-                         verbose=1):
+                         before_softmax=False, verbose=1):
     """Trains the local intrinsic dimensionality (LID) using samples in X and 
     its coresponding noisy and adversarial examples.
     Estimated by k close neighbours in the random batch it lies in.
     """
-    hidden_layers, n_hidden_layers = get_hidden_layers(sequence, device)
-    # print('Number of hidden layers: {}'.format(len(hidden_layers)))
+    if before_softmax:
+        hidden_layers = [sequence.before_softmax]
+    else:
+        hidden_layers = get_hidden_layers(sequence, device)
+    n_hidden_layers = len(hidden_layers)
+    print('Number of hidden layers: {}'.format(len(hidden_layers)))
 
     # Convert numpy Array to PyTorch Tensor
     indices = np.random.permutation(X.shape[0])
@@ -63,18 +66,15 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device,
         lid_batch_adv = np.zeros((n_feed, n_hidden_layers), dtype=np.float32)
 
         for i, layer in enumerate(hidden_layers):
-            layer.eval()
-            batch_data = torch.cat(
-                (X[start: end], X_noisy[start: end], X_adv[start: end]))
+            batch_data = torch.cat((X[start: end], X_noisy[start: end], X_adv[start: end]))
             output = layer(batch_data)
             output = output.view(output.size(0), -1).cpu().detach().numpy()
 
             output_benign = output[:n_feed]
-            output_noisy = output[n_feed: n_feed+n_feed]
-            output_adv = output[n_feed+n_feed:]
+            output_noisy = output[n_feed: n_feed + n_feed]
+            output_adv = output[n_feed + n_feed:]
 
-            lid_batch_benign[:, i] = mle_batch(
-                output_benign, output_benign, k=k)
+            lid_batch_benign[:, i] = mle_batch(output_benign, output_benign, k=k)
             lid_batch_noisy[:, i] = mle_batch(output_benign, output_noisy, k=k)
             lid_batch_adv[:, i] = mle_batch(output_benign, output_adv, k=k)
         return lid_batch_benign, lid_batch_noisy, lid_batch_adv
@@ -83,8 +83,9 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device,
     lid_adv = []
     lid_noisy = []
     n_batches = int(np.ceil(X.shape[0] / batch_size))
+    sequence.eval()
     with torch.no_grad():
-        for i_batch in tqdm(range(n_batches), disable=(verbose==0)):
+        for i_batch in tqdm(range(n_batches), disable=(verbose == 0)):
             batch_benign, batch_noisy, batch_adv = estimate(i_batch)
             lid_benign.extend(batch_benign)
             lid_noisy.extend(batch_noisy)
@@ -96,45 +97,48 @@ def get_lid_random_batch(sequence, X, X_noisy, X_adv, k, batch_size, device,
     return lid_benign, lid_noisy, lid_adv
 
 
-def train_lid(sequence, X, X_noisy, X_adv, k=20, batch_size=100, device='cpu',
+def train_lid(sequence, X, X_noisy, X_adv, before_softmax=False, k=20, batch_size=100, device='cpu',
               verbose=1):
     """Gets local intrinsic dimensionality (LID)."""
     lid_benign, lid_noisy, lid_adv = get_lid_random_batch(
-        sequence, X, X_noisy, X_adv, k, batch_size, device,
-        verbose=verbose)
+        sequence, X, X_noisy, X_adv, k, batch_size, device, before_softmax, verbose=verbose)
     lid_pos = lid_adv
     lid_neg = np.concatenate((lid_benign, lid_noisy))
     artifacts, labels = merge_and_generate_labels(lid_pos, lid_neg)
     return artifacts, labels
 
 
-def eval_lid(sequence, X_train, X_eval, k=20, batch_size=100,
+def eval_lid(sequence, X_train, X_eval, before_softmax=False, k=20, batch_size=100,
              device='cpu', verbose=1):
     """Evaluates samples in X using LID characteristics.
     TODO: Consider multithreading
     """
     def mle(v):
-        return - k / np.sum(np.log(v/v[-1]))
+        return - k / np.sum(np.log(v / v[-1]))
 
     n_examples = X_eval.shape[0]
-    hidden_layers, n_hidden_layers = get_hidden_layers(sequence, device)
+    if before_softmax:
+        hidden_layers = [sequence.before_softmax]
+    else:
+        hidden_layers = get_hidden_layers(sequence, device)
+    n_hidden_layers = len(hidden_layers)
     results = np.zeros((n_examples, n_hidden_layers), dtype=np.float32)
 
-    for j in tqdm(range(n_examples), disable=(verbose==0)):
+    sequence.eval()
+    for j in tqdm(range(n_examples), disable=(verbose == 0)):
         x = X_eval[j]
-        indices = np.random.choice(
-            len(X_train), size=batch_size, replace=False)
+        size = batch_size if len(X_train) > batch_size else len(X_train)
+        indices = np.random.choice(len(X_train), size=size, replace=False)
         samples = X_train[indices]
         samples = np.concatenate((np.expand_dims(x, axis=0), samples))
         samples = torch.tensor(samples, dtype=torch.float32).to(device)
         single_lid = np.zeros(n_hidden_layers, dtype=np.float32)
 
         for i, layer in enumerate(hidden_layers):
-            layer.eval()
             output = layer(samples)
             output = output.view(output.size(0), -1).cpu().detach().numpy()
             tree = BallTree(output, leaf_size=2)
-            dist, _ = tree.query(output[:1], k=k+1)
+            dist, _ = tree.query(output[:1], k=k + 1)
             dist = np.squeeze(dist, axis=0)[1:]
             single_lid[i] = mle(dist)
 
@@ -178,16 +182,21 @@ class LidDetector:
 
     device : torch.device, default='cpu'
         The device for PyTorch. Using 'cuda' is recommended.
+
+    before_softmax : bool, default=False
+        If before_softmax is True, LID only uses the last hidden layer before 
+        the softmax layer.
     """
 
     def __init__(self, model=None, k=20, x_min=0.0,
-                 x_max=1.0, batch_size=100, device='cpu'):
+                 x_max=1.0, batch_size=100, device='cpu', before_softmax=False):
         self.model = model
         self.k = k
         self.x_min = x_min
         self.x_max = x_max
         self.batch_size = batch_size
         self.device = device
+        self.before_softmax = before_softmax
 
     def get_train_set(self, X, adv, std_dominator=20.0):
         """Generate training set for fitting LID. 
@@ -243,6 +252,7 @@ class LidDetector:
             k=self.k,
             batch_size=self.batch_size,
             device=self.device,
+            before_softmax=self.before_softmax,
             verbose=verbose)
         self.scaler_ = MinMaxScaler().fit(self.characteristics_)
         self.characteristics_ = self.scaler_.transform(self.characteristics_)
@@ -274,11 +284,11 @@ class LidDetector:
             X_eval=X,
             k=self.k,
             batch_size=self.batch_size,
-            device=self.device
-        )
+            device=self.device,
+            before_softmax=self.before_softmax)
         characteristics = self.scaler_.transform(characteristics)
         return self.detector_.predict(characteristics)
-    
+
     def detect(self, X, y=None):
         return self.predict(X)
 
@@ -305,8 +315,8 @@ class LidDetector:
             X_eval=X,
             k=self.k,
             batch_size=self.batch_size,
-            device=self.device
-        )
+            device=self.device,
+            before_softmax=self.before_softmax)
         characteristics = self.scaler_.transform(characteristics)
         return self.detector_.predict_proba(characteristics)
 

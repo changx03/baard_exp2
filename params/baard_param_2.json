@@ -1,0 +1,9 @@
+{
+    "quantile": 0.99,
+    "k_re": 10,
+    "k_de": 100,
+    "q1": 0.999,
+    "q2": 0.95,
+    "q3": 0.95,
+    "sequence": [true, true, false]
+}

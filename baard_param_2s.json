@@ -1,7 +1,0 @@
-{
-    "quantile": 0.99,
-    "k_re": 10,
-    "k_de": 50,
-    "n_bins": 5,
-    "sequence": [true, true, false]
-}

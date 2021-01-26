@@ -1,0 +1,81 @@
+{
+    "datasets":[
+        "banknote",
+        "breastcancer",
+        "cifar10",
+        "htru2",
+        "mnist",
+        "segment",
+        "texture"
+    ],
+    "attacks": [
+        "apgd",
+        "apgd1",
+        "apgd2",
+        "bim",
+        "boundary",
+        "cw2",
+        "cwinf",
+        "deepfool",
+        "fgsm",
+        "jsma",
+        "line",
+        "shadow",
+        "watermark"
+    ],
+    "defences": [
+        "baard",
+        "fs",
+        "lid",
+        "magnet",
+        "rc"
+    ],
+    "data": {
+        "mnist": {
+            "n_features": [
+                1,
+                28,
+                28
+            ],
+            "n_classes": 10
+        },
+        "cifar10": {
+            "n_features": [
+                3,
+                32,
+                32
+            ],
+            "n_classes": 10
+        },
+        "banknote": {
+            "file_name": "banknote_preprocessed.csv",
+            "n_features": 4,
+            "n_test": 400,
+            "n_classes": 2
+        },
+        "htru2": {
+            "file_name": "htru2_preprocessed.csv",
+            "n_features": 8,
+            "n_test": 4000,
+            "n_classes": 2
+        },
+        "segment": {
+            "file_name": "segment_preprocessed.csv",
+            "n_features": 18,
+            "n_test": 400,
+            "n_classes": 7
+        },
+        "texture": {
+            "file_name": "texture_preprocessed.csv",
+            "n_features": 40,
+            "n_test": 1000,
+            "n_classes": 10
+        },
+        "breastcancer": {
+            "file_name": "breastcancer_preprocessed.csv",
+            "n_features": 30,
+            "n_test": 200,
+            "n_classes": 2
+        }
+    }
+}

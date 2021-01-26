@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import json
 import os
 import sys
 import time
@@ -9,25 +10,14 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torchvision as tv
-import torchvision.datasets as datasets
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import DataLoader, TensorDataset
 
 sys.path.append(os.getcwd())
-# # Adding the parent directory.
+from defences.util import dataset2tensor
 from models.numeric import NumericModel
-from train_pt import train, validate
-
-DATA_NAMES = ['banknote', 'htru2', 'segment', 'texture']
-DATA = {
-    'banknote': {'file_name': 'banknote_preprocessed.csv', 'n_features': 4, 'n_test': 400, 'n_classes': 2},
-    'htru2': {'file_name': 'htru2_preprocessed.csv', 'n_features': 8, 'n_test': 4000, 'n_classes': 2},
-    'segment': {'file_name': 'segment_preprocessed.csv', 'n_features': 18, 'n_test': 400, 'n_classes': 7},
-    'texture': {'file_name': 'texture_preprocessed.csv', 'n_features': 40, 'n_test': 600, 'n_classes': 11},
-}
-RANDOM_STATE = int(2**12)
+from models.torch_util import print_acc_per_label, train, validate
 
 
 def load_csv(file_path):
@@ -39,26 +29,34 @@ def load_csv(file_path):
 
 
 def main():
+    with open('data.json') as data_json:
+        data_params = json.load(data_json)
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, required=True, choices=DATA_NAMES)
+    parser.add_argument('--data', type=str, required=True)
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--epochs', type=int, default=5)
+    parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Device: {}'.format(device))
 
     # Prepare data
-    data_path = os.path.join(args.data_path, DATA[args.data]['file_name'])
+    data_path = os.path.join(args.data_path, data_params['data'][args.data]['file_name'])
     print('Read file: {}'.format(data_path))
     X, y = load_csv(data_path)
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=DATA[args.data]['n_test'], random_state=RANDOM_STATE)
-    scaler = MinMaxScaler().fit(X_train)
-    X_train = scaler.transform(X_train)
-    X_test = scaler.transform(X_test)
+
+    # Normalize data
+    scaler = MinMaxScaler().fit(X)
+    X = scaler.transform(X)
+
+    n_test = data_params['data'][args.data]['n_test']
+    random_state = args.random_state
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=n_test, random_state=random_state)
+    
     dataset_train = TensorDataset(
         torch.from_numpy(X_train).type(torch.float32),
         torch.from_numpy(y_train).type(torch.long))
@@ -70,8 +68,8 @@ def main():
     print('Train set: {}, Test set: {}'.format(X_train.shape, X_test.shape))
 
     # Prepare model
-    n_features = DATA[args.data]['n_features']
-    n_classes = DATA[args.data]['n_classes']
+    n_features = data_params['data'][args.data]['n_features']
+    n_classes = data_params['data'][args.data]['n_classes']
     print('n_features: {}, n_classes: {}'.format(n_features, n_classes))
     model = NumericModel(n_features,
                          n_hidden=n_features * 4,
@@ -92,12 +90,15 @@ def main():
         scheduler.step()
 
         time_elapsed = time.time() - start
-        print(('{:2d}/{:d}[{:s}] Train Loss: {:.4f} Acc: {:.4f}%, ' +
-               'Test Loss: {:.4f} Acc: {:.4f}%').format(
-            epoch + 1, args.epochs,
-            str(datetime.timedelta(seconds=time_elapsed)),
-            tr_loss, tr_acc*100.,
-            va_loss, va_acc*100.))
+        if epoch % 10 == 0:
+            print('{:2d}/{:d}[{:s}] Train Loss: {:.4f} Acc: {:.4f}%, Test Loss: {:.4f} Acc: {:.4f}%'.format(
+                epoch + 1,
+                args.epochs,
+                str(datetime.timedelta(seconds=time_elapsed)),
+                tr_loss,
+                tr_acc * 100,
+                va_loss,
+                va_acc * 100))
 
     time_elapsed = time.time() - since
     print('Total run time: {:.0f}m {:.1f}s'.format(
@@ -109,6 +110,19 @@ def main():
         args.output_path, '{}_{}.pt'.format(args.data, args.epochs))
     print('Output file name: {}'.format(file_name))
     torch.save(model.state_dict(), file_name)
+
+    # Test accuracy per class:
+    print('Training set:')
+    X, y = dataset2tensor(dataset_train)
+    X = X.cpu().detach().numpy()
+    y = y.cpu().detach().numpy()
+    print_acc_per_label(model, X, y, device)
+
+    print('Test set:')
+    X, y = dataset2tensor(dataset_test)
+    X = X.cpu().detach().numpy()
+    y = y.cpu().detach().numpy()
+    print_acc_per_label(model, X, y, device)
 
 
 if __name__ == '__main__':

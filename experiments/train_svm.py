@@ -59,15 +59,10 @@ def main():
     model = SVC(kernel="linear",C=1.0,gamma="scale")
     model.fit(X_train, y_train)
 
-    print(('Train Acc: {:.4f}%, ' +
-            'Test Acc: {:.4f}%').format(
-        model.score(X_train, y_train),
-        model.score(X_test, y_test))
+    print(('Train Acc: {:.4f}%, '+'Test Acc: {:.4f}%').format(model.score(X_train, y_train),model.score(X_test, y_test)))
 
     time_elapsed = time.time() - since
-    print('Total run time: {:.0f}m {:.1f}s'.format(
-        time_elapsed // 60,
-        time_elapsed % 60))
+    print('Total run time: {:.0f}m {:.1f}s'.format(time_elapsed // 60,time_elapsed % 60))
 
 if __name__ == '__main__':
     main()

@@ -104,25 +104,6 @@ class ApplicabilityStage:
             results[idx[blocked_idx]] = 1
         return results
 
-    def score(self, X, y, labels_adv):
-        """Returns the accuracy score.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Test samples.
-
-        y : array-like of shape (n_samples, )
-            Predicted labels from the initial model.
-
-        labels_adv : array-like of shape (n_samples, )
-            Target labels for outliers. 1 is outlier, 0 is benign.
-        """
-        n = X.shape[0]
-        results = self.predict(X, y)
-        correct_results = results == labels_adv
-        return np.sum(correct_results) / n
-
 
 class ReliabilityStage:
     """The 2nd stage of BAARD framework. It tests the reliability of given 
@@ -269,28 +250,6 @@ class ReliabilityStage:
             results[idx] = avg_dist
         return results
 
-    def score(self, X, y, labels_adv):
-        """Returns the ROC AUC score given test data and labels.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Test samples.
-
-        y : array-like of shape (n_samples, )
-            Predicted labels from the initial model.
-
-        labels_adv : array-like of shape (n_samples, )
-            Target adversarial labels. 1 is adversarial example, 0 is benign.
-
-        Returns
-        -------
-        score : float
-            The ROC AUC score based on the linear model.
-        """
-        prob = self.predict_proba(X, y)
-        return roc_auc_score(labels_adv, prob)
-
 
 class DecidabilityStage:
     """The 3rd stage of BAARD framework. It tests the decidability of given 
@@ -417,28 +376,6 @@ class DecidabilityStage:
         likelihoods = self.__get_likelihoods(X, y)
         return 1.0 - likelihoods
 
-    def score(self, X, y, labels_adv):
-        """Returns the ROC AUC score given test data and labels.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Test samples.
-
-        y : array-like of shape (n_samples, )
-            Predicted labels from the initial model.
-
-        labels_adv : array-like of shape (n_samples, )
-            Target adversarial labels. 1 is adversarial example, 0 is benign.
-
-        Returns
-        -------
-        score : float
-            The ROC AUC score based on the linear model.
-        """
-        prob = self.predict_proba(X, y)
-        return roc_auc_score(labels_adv, prob)
-
     def __get_likelihoods(self, x, y):
         neigh_idx = self.tree_.query(x, self.k, return_distance=False)
         neigh_y = np.array([self.y_train_[i] for i in neigh_idx])
@@ -529,45 +466,3 @@ class BAARDOperator:
             positive_idx = uncertain_idx[positive_results]
             labels[positive_idx] = 1
         return labels
-
-    def score(self, X, y, pred, labels_adv):
-        """Rate of success. The success means (1) correctly blocked by detector.
-        (2) If an adversarial example does not alter the prediction, we allow it
-        to pass the detector.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Test samples.
-
-        y : array-like of shape (n_samples, )
-            Target labels.
-
-        pred : array-like of shape (n_samples, )
-            Predicted labels from the initial model.
-
-        labels_adv : array-like of shape (n_samples, )
-            Target adversarial labels. 1 is adversarial example, 0 is benign.
-
-        Returns
-        -------
-        success_rate : float
-            The fraction of correctly classified samples.
-        """
-        n = len(X)
-        blocked_labels = self.detect(X, pred)
-        matched_adv = blocked_labels == labels_adv
-        unmatched_idx = np.where(matched_adv == False)[0]
-        # Two situations for unmatched samples:
-        # 1. false positive (FP): Mislabel benign samples as advasarial examples.
-        # 2. false negative (FN): Fail to reject the sample.
-        # FP is always wrong. FN is ok, only if the prediction matches the true
-        # label.
-        fn_idx = unmatched_idx[np.where(labels_adv[unmatched_idx] == 1)[0]]
-        if len(fn_idx) == 0:
-            matched_label = 0
-        else:
-            matched_label = np.sum(y[fn_idx] == pred[fn_idx])
-        total_correct = np.sum(matched_adv) + matched_label
-        success_rate = total_correct / n
-        return success_rate

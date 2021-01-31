@@ -3,8 +3,9 @@ import os
 import numpy as np
 import torch
 
-from defences.util import score
+from defences.util import acc_on_adv
 from models.torch_util import predict_numpy
+
 
 def get_dataframe(df, model, data, nmodel, nattack, ndefence, device):
     path_result = os.path.join('..', 'results', '{}_{}_{}_{}.pt'.format(data, nmodel, nattack, ndefence))
@@ -15,20 +16,18 @@ def get_dataframe(df, model, data, nmodel, nattack, ndefence, device):
     res_test = result['res_test']
 
     idx_tp = np.where(labels_test == 1)[0]
-    pred = predict_numpy(model, X_test[idx_tp], device=device)
-    acc_adv = np.sum(pred == y_test[idx_tp]) / len(idx_tp)
-
-    # Compute accuracy on adv
-    if ndefence in ['baard_2stage', 'baard_3stage', 'fs', 'lid']:
-        score_ = np.sum(res_test[idx_tp]) / len(idx_tp)
-    elif ndefence == 'rc':
-        score_ = np.sum(res_test[idx_tp] == y_test[idx_tp]) / len(idx_tp)
-    elif ndefence == 'magnet':
+    detected_as_adv = res_test[idx_tp]
+    y_true = y_test[idx_tp]
+    if ndefence == 'magnet':
         X_reformed = result['X_reformed']
-        pred_reformed = predict_numpy(model, X_reformed[idx_tp], device=device)
-        score_ = score(res_test[idx_tp], y_test[idx_tp], pred_reformed, np.ones(len(idx_tp)))
+        y_pred = predict_numpy(model, X_reformed[idx_tp], device=device)
+    elif ndefence == 'rc':
+        y_pred = result['res_test']
+        detected_as_adv = np.zeros_like(y_pred)
     else:
-        raise ValueError
+        y_pred = predict_numpy(model, X_test[idx_tp], device=device)
+
+    score = acc_on_adv(y_pred, y_true, detected_as_adv)
 
     # Compute FPR
     idx_fp = np.where(labels_test == 0)[0]
@@ -38,11 +37,10 @@ def get_dataframe(df, model, data, nmodel, nattack, ndefence, device):
 
     att_str = nattack.split('_')
     df = df.append({
-        'Attack': att_str[0], 
-        'Epsilon': att_str[1], 
-        'Without Defence': acc_adv * 100,
+        'Attack': att_str[0],
+        'Att_param': att_str[1],
         'Defence': ndefence,
-        'False Positive Rate': fpr * 100,
-        'Score': score_ * 100,
+        'FPR': fpr * 100,
+        'Acc_on_adv': score * 100,
     }, ignore_index=True)
     return df

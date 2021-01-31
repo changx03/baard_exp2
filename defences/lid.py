@@ -319,26 +319,3 @@ class LidDetector:
             before_softmax=self.before_softmax)
         characteristics = self.scaler_.transform(characteristics)
         return self.detector_.predict_proba(characteristics)
-
-    def score(self, X, y=None, labels_adv=None):
-        """Returns the ROC AUC score.
-
-        Parameters
-        ----------
-        X : {array-like, sparse matrix} of shape (n_samples, 3, n_features)
-            Training vector, Each sample contains benign, noisy and adversarial 
-            examples as a tuple. Use the `merge_adv_data` function to create X.
-
-        y : array-like of shape (n_samples, )
-            Target labels.
-
-        labels_adv : array-like of shape (n_samples, )
-            Target adversarial labels. 1 is adversarial example, 0 is benign.
-
-        Returns
-        -------
-        score : float
-            The ROC AUC score.
-        """
-        prob = self.predict_proba(X)[:, 1]
-        return roc_auc_score(labels_adv, prob)

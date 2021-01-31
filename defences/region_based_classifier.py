@@ -186,10 +186,8 @@ class RegionBasedClassifier:
 
     def score(self, X, y, r=None):
         """Returns the accuracy score."""
-        n = X.shape[0]
         pred = self.predict(X, r=r)
-        accuracy = np.sum(pred == y) / n
-        return accuracy
+        return np.mean(pred == y)
 
     def __predict(self, tensor_X):
         n = len(tensor_X)

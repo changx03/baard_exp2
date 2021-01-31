@@ -61,7 +61,7 @@ def get_m(p, q):
 
 def kl_divergence(p, q):
     """Returns Kullback–Leibler divergence between p and q, D_KL(P||Q)"""
-    return np.sum(p * np.log(p/q), axis=1)
+    return np.sum(p * np.log(p / q), axis=1)
 
 
 def js_divergence(p, q):
@@ -72,7 +72,7 @@ def js_divergence(p, q):
 
 def smooth_softmax(X, t):
     """The smoother softmax function in distillation network."""
-    X_exp = torch.exp(X/t)
+    X_exp = torch.exp(X / t)
     return X_exp / torch.sum(X_exp, 1).view(X.size(0), 1)
 
 
@@ -178,7 +178,7 @@ class MagNetDetector:
         loss = nn.MSELoss()
         temp_train_loss = np.zeros(epochs, dtype=np.float32)
 
-        for e in tqdm(range(epochs), disable=(verbose==0)):
+        for e in tqdm(range(epochs), disable=(verbose == 0)):
             temp_train_loss[e] = self.__train(loader, loss, optimizer)
 
         self.history_train_loss += temp_train_loss.tolist()
@@ -231,7 +231,7 @@ class MagNetDetector:
             scores = self.__get_js_divergence(
                 torch.from_numpy(X).type(torch.float32),
                 torch.from_numpy(X_ae).type(torch.float32))
-        index = int(np.round((1-fp) * n))
+        index = int(np.round((1 - fp) * n))
         threshold = np.sort(scores)[index]
         if update:
             self.threshold = threshold
@@ -446,7 +446,7 @@ class MagNetOperator:
         ----------
         X : array-like of shape (n_samples, n_features)
             Test samples.
-        
+
         y : default=None
             Unused variable.
 
@@ -468,47 +468,6 @@ class MagNetOperator:
         # Reform all samples in X
         X_reformed = self.reformer.reform(X)
         return X_reformed, labels
-
-    def score(self, X, y, labels_adv):
-        """Rate of success. The success means (1) correctly blocked by detector.
-        (2) Failed blocked by detector, but the reformed sample is correctly 
-        classified by the original classifier.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Test samples.
-
-        y : array-like of shape (n_samples, )
-            Target labels.
-
-        labels_adv : array-like of shape (n_samples, )
-            Target adversarial labels. 1 is adversarial example, 0 is benign.
-
-        Returns
-        -------
-        success_rate : float
-            The fraction of correctly classified samples.
-        """
-        n = len(X)
-        # Get reformed samples and the samples which are blocked by detectors.
-        X_reformed, blocked_labels = self.detect(X)
-        matched_adv = blocked_labels == labels_adv
-        unmatched_idx = np.where(matched_adv == False)[0]
-        # Two situations for unmatched samples:
-        # 1. false positive (FP): Mislabel benign samples as advasarial examples.
-        # 2. false negative (FN): Fail to reject the sample.
-        # FP is always wrong. FN is ok, only if the prediction matches the true
-        # label.
-        fn_idx = unmatched_idx[np.where(labels_adv[unmatched_idx] == 1)[0]]
-        if len(fn_idx) == 0:
-            matched_label = 0
-        else:
-            pred = self.__predict(X_reformed[fn_idx])
-            matched_label = np.sum(y[fn_idx] == pred)
-        total_correct = np.sum(matched_adv) + matched_label
-        success_rate = total_correct / n
-        return success_rate
 
     def __predict(self, X):
         n = len(X)

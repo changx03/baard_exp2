@@ -18,19 +18,21 @@ from torch.utils.data import DataLoader, TensorDataset
 sys.path.append(os.getcwd())
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
+from defences.feature_squeezing import (DepthSqueezer, FeatureSqueezingTorch,
+                                        GaussianSqueezer, MedianSqueezer)
 from defences.lid import LidDetector
+from defences.magnet import (Autoencoder1, Autoencoder2,
+                             MagNetAutoencoderReformer, MagNetDetector,
+                             MagNetOperator)
 from defences.region_based_classifier import RegionBasedClassifier
-from models.torch_util import validate, predict
-from experiments.util import load_csv
+from defences.util import (acc_on_adv, dataset2tensor, get_correct_examples,
+                           get_shape, merge_and_generate_labels)
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.numeric import NumericModel
-from defences.feature_squeezing import (GaussianSqueezer, MedianSqueezer,
-                                        DepthSqueezer, FeatureSqueezingTorch)
-from defences.magnet import (Autoencoder1, Autoencoder2, MagNetDetector,
-                             MagNetAutoencoderReformer, MagNetOperator)
-from defences.util import (dataset2tensor, get_correct_examples, get_shape,
-                           merge_and_generate_labels, score)
+from models.torch_util import predict, predict_numpy, validate
+
+from experiments.util import load_csv
 
 
 def main():
@@ -340,18 +342,27 @@ def main():
 
     # Test defence
     time_start = time.time()
-    X_test, labels_test = merge_and_generate_labels(adv[:n], X_benign[:n], flatten=False)
-    pred_test = np.concatenate((pred_adv[:n], y_true[:n]))
-    y_test = np.concatenate((y_true[:n], y_true[:n]))
+    X_test = X_benign[:n],
+    adv_test = adv[:n]
+    y_test = y_true[:n]
+    y_pred = pred_adv[:n]
 
     # Only MegNet uses reformer.
     if args.defence == 'magnet':
-        X_reformed, res_test = detector.detect(X_test, pred_test)
-        acc = detector.score(X_test, y_test, labels_test)
+        X_reformed, res_test = detector.detect(adv_test)
     else:
         X_reformed = None
-        res_test = detector.detect(X_test, pred_test)
-        acc = score(res_test, y_test, pred_test, labels_test)
+        res_test = detector.detect(adv_test, y_pred)
+
+    y_pred = pred_adv[:n]
+    if args.defence == 'magnet':  # Use reformer
+        y_pred = predict_numpy(model, X_reformed, device)
+    elif args.defence == 'rc':  # Do not detect adv
+        y_pred = res_test
+        res_test = np.zeros_like(y_pred)
+
+    acc = acc_on_adv(y_pred, y_test, res_test)
+
     print('Success rate: {:.4f}%'.format(acc * 100))
     time_elapsed = time.time() - time_start
     print('Total test time:', str(datetime.timedelta(seconds=time_elapsed)))
@@ -361,15 +372,14 @@ def main():
 
     path_result = os.path.join(args.output_path, '{}_{}{}.pt'.format(args.adv, args.defence, suffix))
     torch.save({
-        'X_val': X_val,
-        'y_val': np.concatenate((y_true[n:], y_true[n:])),
-        'labels_val': labels_val,
-        'X_test': X_test,
-        'y_test': y_test,
-        'labels_test': labels_test,
-        'res_test': res_test,
+        'X_benign': X_test,
+        'adv': adv_test,
+        'y_true': y_test,
+        'y_pred': y_pred,
+        'detected_as_adv': res_test,
         'X_reformed': X_reformed,
-        'param': param}, path_result)
+        'param': param},
+        path_result)
     print('Saved to:', path_result)
     print()
 

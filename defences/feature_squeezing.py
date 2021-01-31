@@ -184,11 +184,6 @@ class FeatureSqueezingTorch:
         characteristics = self.scaler_.transform(l1_scores)
         return self.detector_.predict_proba(characteristics)
 
-    def score(self, X, y):
-        """Returns the ROC AUC score"""
-        prob = self.predict_proba(X)[:, 1]
-        return roc_auc_score(y, prob)
-
     def save(self, path):
         data = []
         for model in self.squeezed_models_:
@@ -258,7 +253,4 @@ class FeatureSqueezingSklearn:
         raise NotImplementedError
 
     def predict_proba(self, X):
-        raise NotImplementedError
-
-    def score(self, X, y):
         raise NotImplementedError

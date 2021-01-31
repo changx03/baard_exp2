@@ -124,43 +124,30 @@ def generate_random_samples(x, x_min, x_max, r, size):
     return rng_samples
 
 
-def score(blocked, y, pred, labels_adv):
-    """Rate of success. The success means (1) correctly blocked by detector.
-        (2) If an adversarial example does not alter the prediction, we allow it
-        to pass the detector.
+def acc_on_adv(y_pred, y_true, detected_as_adv):
+    """Compute the accuracy on the adversarial examples.
 
-        Parameters
-        ----------
-        blocked : array-like of shape (n_samples, )
-            Blocked samples. 1 is adversarial example, 0 is benign.
+    Parameters
+    ----------
+    y_pred: numpy array of integers
+        labels predicted by the classifier for the adversarial examples.
 
-        y : array-like of shape (n_samples, )
-            Target labels.
+    y_true: numpy array of integers
+        true labels.
 
-        pred : array-like of shape (n_samples, )
-            Predicted labels from the initial model.
+    detected_as_advx: numpy array of boolean value
+        the i-th value is true if the sample has been detected as an adversarial
+        example, false otherwise.
 
-        labels_adv : array-like of shape (n_samples, )
-            Target adversarial labels. 1 is adversarial example, 0 is benign.
-
-        Returns
-        -------
-        success_rate : float
-            The fraction of correctly classified samples.
+    Returns
+    -------
+    accuracy: float
+        Accuracy on adversarial examples.
     """
-    n = len(blocked)
-    matched_adv = blocked == labels_adv
-    unmatched_idx = np.where(matched_adv == False)[0]
-    # Two situations for unmatched samples:
-    # 1. false positive (FP): Mislabel benign samples as advasarial examples.
-    # 2. false negative (FN): Fail to reject the sample.
-    # FP is always wrong. FN is ok, only if the prediction matches the true
-    # label.
-    fn_idx = unmatched_idx[np.where(labels_adv[unmatched_idx] == 1)[0]]
-    if len(fn_idx) == 0:
-        matched_label = 0
-    else:
-        matched_label = np.sum(y[fn_idx] == pred[fn_idx])
-    total_correct = np.sum(matched_adv) + matched_label
-    success_rate = total_correct / n
-    return success_rate
+    correct_classified = y_pred == y_true
+    print('Correctly classified exampled:', np.sum(correct_classified))
+
+    correct_classified_and_detected = np.logical_or(correct_classified, detected_as_adv)
+    print('Correctly classified and detected:', np.sum(correct_classified))
+
+    return np.mean(correct_classified_and_detected)

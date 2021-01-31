@@ -12,14 +12,21 @@ DATASETS = [
     'mnist',
 ]
 
+
 def get_csv_path(dataset):
     return os.path.join('csv', dataset+'_2.csv')
+
 
 def save_excel(dataset):
     path_csv = get_csv_path(dataset)
     df = pd.read_csv(path_csv, sep=',')
     df = df.drop(columns=['Unnamed: 0'])
-    table = df.pivot(index=['Attack', 'Epsilon', 'Without Defence'], columns=['Defence'], values=['Score', 'False Positive Rate'])
+    df = df.rename(
+        columns={'Epsilon': 'Norm/Confidence', 'Score': 'Accuracy on Adv'})
+    table = df.pivot(
+        index=['Attack', 'Norm/Confidence', 'Without Defence'],
+        columns=['Defence'],
+        values=['Accuracy on Adv', 'False Positive Rate'])
     table = table.replace(-100, np.nan)
     with pd.ExcelWriter(os.path.join('tables', dataset+'_2.xlsx')) as writer:
         table.to_excel(writer, sheet_name=dataset)

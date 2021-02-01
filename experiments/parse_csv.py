@@ -11,7 +11,7 @@ DATASETS = [
     'htru2',
     'mnist',
 ]
-VERSION = 3
+VERSION = 4
 
 
 def get_csv_path(dataset):

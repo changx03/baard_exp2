@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from numpy.random import uniform
 from sklearn.metrics import roc_auc_score, roc_curve
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -43,7 +42,9 @@ def get_roc(y_true, y_prob, show_plot=False):
 
 def get_shape(dataset):
     """Retruns the shape of the data in a PyTorch Dataset object."""
-    shape = list(next(iter(dataset))[0].size())
+    # shape = list(next(iter(dataset))[0].size())
+    X, _ = next(iter(dataset))
+    shape = list(X.size())
     shape = [len(dataset)] + shape
     return tuple(shape)
 
@@ -110,18 +111,6 @@ def merge_and_generate_labels(X_adv, X_benign, flatten=True):
     X = np.concatenate((X_adv, X_benign)).astype(np.float32)
     y = get_binary_labels(X_adv, X_benign)
     return X, y
-
-
-def generate_random_samples(x, x_min, x_max, r, size):
-    """Generates uniformly distributed random samples around x within hypercube
-    B(x, r), where r is L-infinity distance.
-    """
-    shape = tuple([size] + list(x.shape))
-    dtype = x.dtype
-    noise = uniform(low=-abs(r), high=abs(r), size=shape).astype(dtype)
-    rng_samples = np.repeat([x], repeats=size, axis=0) + noise
-    rng_samples = np.minimum(np.maximum(rng_samples, x_min), x_max)
-    return rng_samples
 
 
 def acc_on_adv(y_pred, y_true, detected_as_adv):

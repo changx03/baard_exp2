@@ -32,9 +32,10 @@ def get_dataframe(df, model, data, nmodel, nattack, ndefence, device):
 
     # Compute FPR
     idx_fp = np.where(labels_test == 0)[0]
-    fpr = np.sum(res_test[idx_fp]) / len(idx_fp)
     if ndefence == 'rc':
-        fpr = np.sum(res_test[idx_fp] != y_test[idx_fp]) / len(idx_fp)
+        fpr = np.mean(res_test[idx_fp] != y_test[idx_fp])
+    else:
+        fpr = np.mean(res_test[idx_fp])
 
     att_str = nattack.split('_')
     df = df.append({

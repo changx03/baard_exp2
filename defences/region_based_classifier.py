@@ -9,9 +9,19 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from .util import generate_random_samples
-
 logger = logging.getLogger(__name__)
+
+
+def generate_random_samples(x, x_min, x_max, r, size):
+    """Generates uniformly distributed random samples around x within hypercube
+    B(x, r), where r is L-infinity distance.
+    """
+    shape = tuple([size] + list(x.shape))
+    dtype = x.dtype
+    noise = np.random.uniform(low=-abs(r), high=abs(r), size=shape).astype(dtype)
+    rng_samples = np.repeat([x], repeats=size, axis=0) + noise
+    rng_samples = np.minimum(np.maximum(rng_samples, x_min), x_max)
+    return rng_samples
 
 
 class RegionBasedClassifier:
@@ -119,7 +129,6 @@ class RegionBasedClassifier:
 
     def fit(self, X=None, y=None):
         """Region-based classifier does not require fit."""
-        logger.info('Region-based classifier does not require retraining.')
         return self
 
     def search_thresholds(self, X, y=None, labels_adv=None, verbose=1):
@@ -153,7 +162,10 @@ class RegionBasedClassifier:
         with torch.no_grad():
             for i in range(n):
                 x_rng = generate_random_samples(
-                    X[i], x_min=self.x_min, x_max=self.x_max, r=r,
+                    X[i], 
+                    x_min=self.x_min, 
+                    x_max=self.x_max, 
+                    r=r,
                     size=self.sample_size)
                 tensor_x_rng = torch.tensor(x_rng, dtype=torch.float32)
                 tensor_pred_rng = self.__predict(tensor_x_rng)
@@ -185,17 +197,11 @@ class RegionBasedClassifier:
                 tensor_x_rng = torch.tensor(x_rng, dtype=torch.float32)
                 tensor_preds_rng = self.__predict(tensor_x_rng)
                 preds_rng = tensor_preds_rng.cpu().detach().numpy()
-                prob = np.bincount(
-                    preds_rng, minlength=self.n_classes).astype(np.float32)
+                prob = np.bincount(preds_rng, minlength=self.n_classes).astype(np.float32)
                 prob = prob / np.sum(prob)
                 probabilities[i] = prob
 
         return probabilities
-
-    def score(self, X, y, r=None):
-        """Returns the accuracy score."""
-        pred = self.predict(X, r=r)
-        return np.mean(pred == y)
 
     def __predict(self, tensor_X):
         n = len(tensor_X)

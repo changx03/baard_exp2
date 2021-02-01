@@ -17,7 +17,7 @@ DATA="mnist"
 DEF="fs"
 for ATT in "${ATTACKS[@]}"; do
     echo "\nTesting $DATA $MOD $ATT..."
-    python3 ./experiments/train_defences_old.py --data $DATA --pretrained $DATA"_200.pt" --defence $DEF --param "./params/"$DEF"_param.json" --adv $DATA"_"$MOD"_"$ATT
+    python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_200.pt" --defence $DEF --param "./params/"$DEF"_param.json" --adv $DATA"_"$MOD"_"$ATT
 done
 
 # cifar10
@@ -28,6 +28,6 @@ DEF="fs"
 for MOD in "${MODELS[@]}"; do
     for ATT in "${ATTACKS[@]}"; do
         echo "\nTesting $DATA $MOD $ATT..."
-        python3 ./experiments/train_defences_old.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --defence $DEF --param "./params/"$DEF"_param.json" --adv $DATA"_"$MOD"_"$ATT
+        python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --defence $DEF --param "./params/"$DEF"_param.json" --adv $DATA"_"$MOD"_"$ATT
     done
 done

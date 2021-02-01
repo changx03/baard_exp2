@@ -15,7 +15,7 @@ from defences.util import get_shape, dataset2tensor
 from models.torch_util import validate
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
-from defences.feature_squeezing import (GaussianSqueezer, MedianSqueezer,
+from defences.feature_squeezing import (NLMeansColourSqueezer, MedianSqueezer,
                                         DepthSqueezer, FeatureSqueezingTorch)
 
 
@@ -90,10 +90,15 @@ def main():
 
     # Train defence
     squeezers = []
-    squeezers.append(GaussianSqueezer(x_min=0.0, x_max=1.0, noise_strength=0.025, std=1.0))
-    squeezers.append(DepthSqueezer(x_min=0.0, x_max=1.0, bit_depth=8))
-    if args.data in ['mnist', 'cifar10']:
-        squeezers.append(MedianSqueezer(x_min=0.0, x_max=1.0, kernel_size=3))
+    if args.data == 'mnist':
+        squeezers.append(DepthSqueezer(x_min=0.0, x_max=1.0, bit_depth=1))
+        squeezers.append(MedianSqueezer(x_min=0.0, x_max=1.0, kernel_size=2))
+    else:
+        # CIFAR10
+        squeezers.append(DepthSqueezer(x_min=0.0, x_max=1.0, bit_depth=4))
+        squeezers.append(MedianSqueezer(x_min=0.0, x_max=1.0, kernel_size=2))
+        squeezers.append(NLMeansColourSqueezer(x_min=0.0, x_max=1.0, h=2, templateWindowsSize=3, searchWindowSize=13))
+
     print('FS: # of squeezers:', len(squeezers))
     detector = FeatureSqueezingTorch(
         classifier=model,

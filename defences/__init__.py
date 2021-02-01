@@ -2,7 +2,7 @@ from .baard import (ApplicabilityStage, BAARDOperator, DecidabilityStage,
                     ReliabilityStage)
 from .feature_squeezing import (DepthSqueezer, FeatureSqueezingSklearn,
                                 FeatureSqueezingTorch, GaussianSqueezer,
-                                MedianSqueezer, Squeezer)
+                                MedianSqueezer, Squeezer, NLMeansColourSqueezer)
 from .lid import LidDetector, merge_adv_data
 from .magnet import (Autoencoder1, Autoencoder2, MagNetAutoencoderReformer,
                      MagNetDetector, MagNetNoiseReformer, MagNetOperator,

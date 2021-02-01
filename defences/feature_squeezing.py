@@ -3,14 +3,12 @@ import copy
 import datetime
 import time
 
+import cv2
 import numpy as np
 import torch
-import torch.optim as optim
 import torch.nn as nn
+import torch.optim as optim
 from scipy import ndimage
-from sklearn.linear_model import LogisticRegressionCV
-from sklearn.metrics import roc_auc_score
-from sklearn.preprocessing import MinMaxScaler
 from torch.optim import SGD
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import TensorDataset
@@ -32,7 +30,7 @@ class Squeezer(abc.ABC):
 class GaussianSqueezer(Squeezer):
     """Gaussian Noise Squeezer"""
 
-    def __init__(self, x_min, x_max, noise_strength=0.025, std=1.0):
+    def __init__(self, x_min=0.0, x_max=1.0, noise_strength=0.025, std=1.0):
         super().__init__('gaussian', x_min, x_max)
         self.noise_strength = noise_strength
         self.std = std
@@ -46,7 +44,7 @@ class GaussianSqueezer(Squeezer):
 class MedianSqueezer(Squeezer):
     """Median Filter Squeezer"""
 
-    def __init__(self, x_min, x_max, kernel_size=3):
+    def __init__(self, x_min=0.0, x_max=1.0, kernel_size=2):
         super().__init__('median', x_min, x_max)
         self.kernel_size = kernel_size
 
@@ -61,7 +59,7 @@ class MedianSqueezer(Squeezer):
 class DepthSqueezer(Squeezer):
     """Bit Depth Squeezer"""
 
-    def __init__(self, x_min, x_max, bit_depth=8):
+    def __init__(self, x_min=0.0, x_max=1.0, bit_depth=4):
         super().__init__('depth', x_min, x_max)
         self.bit_depth = bit_depth
 
@@ -73,10 +71,35 @@ class DepthSqueezer(Squeezer):
         return np.clip(X_transformed, self.x_min, self.x_max)
 
 
+class NLMeansColourSqueezer(Squeezer):
+    """OpenCV FastNLMeansDenoisingColored Squeezer"""
+
+    def __init__(self, x_min=0.0, x_max=1.0, h=2, templateWindowsSize=3, searchWindowSize=13):
+        super().__init__('NLMeans', x_min, x_max)
+        self.h = h
+        self.templateWindowsSize = templateWindowsSize
+        self.searchWindowSize = searchWindowSize
+
+    def transform(self, X):
+        X = np.moveaxis(X, 1, -1)
+        outputs = np.zeros_like(X, dtype=np.float32)
+        for i in range(X.shape[0]):
+            img = (X[i].copy() * 255.0).astype('uint8')
+            outputs[i] = cv2.fastNlMeansDenoisingColored(
+                img,
+                None,
+                h=self.h,
+                hColor=self.h,
+                templateWindowSize=self.templateWindowsSize,
+                searchWindowSize=self.searchWindowSize)
+        outputs = np.moveaxis(outputs, -1, 1) / 255.0
+        return np.clip(outputs, self.x_min, self.x_max)
+
+
 class FeatureSqueezingTorch:
     def __init__(self, *, classifier=None, lr=0.001, momentum=0.9,
                  weight_decay=5e-4, loss=nn.CrossEntropyLoss(), batch_size=128,
-                 x_min=0.0, x_max=1.0, squeezers=[], n_classes=10, device='cuda'):
+                 x_min=0.0, x_max=1.0, squeezers=[], n_classes=10, fpr=0.05, device='cuda'):
         self.classifier = classifier
         self.lr = lr
         self.momentum = momentum
@@ -87,6 +110,7 @@ class FeatureSqueezingTorch:
         self.x_max = x_max
         self.squeezers = squeezers
         self.n_classes = n_classes
+        self.fpr = fpr
         self.device = device
 
         self.squeezed_models_ = []
@@ -101,9 +125,11 @@ class FeatureSqueezingTorch:
 
     def fit(self, X, y, epochs=50, verbose=0):
         """Train squeezed models"""
-        squeezed_data = self.__get_squeezed_data(X)
+        squeezed_data = self.__get_squeezed_data(X, verbose)
         for i in range(len(self.squeezers)):
             squeezer = self.squeezers[i]
+            if verbose > 0:
+                print('Training {}...'.format(squeezer.name))
             model = self.squeezed_models_[i]
             samples = squeezed_data[i]
             optimizer = SGD(
@@ -143,24 +169,19 @@ class FeatureSqueezingTorch:
 
     def search_thresholds(self, X, y=None, labels_adv=None):
         """Train a logistic regression model to find the threshold"""
-        l1_scores = self.get_l1_score(X)
-        self.scaler_ = MinMaxScaler().fit(l1_scores)
-        characteristics = self.scaler_.transform(l1_scores)
-        self.detector_ = LogisticRegressionCV(cv=5)
-        self.detector_.fit(characteristics, labels_adv)
+        idx = np.where(labels_adv == 0)[0]  # Only clean images
+        l1_scores = self.get_l1_score(X[idx])
+        self.threshold_ = np.quantile(l1_scores, 1 - self.fpr)
+        return self.threshold_
 
     def get_l1_score(self, X):
         n_squeezer = len(self.squeezers)
-        n_samples = len(X)
         squeezed_data = self.__get_squeezed_data(X)
-        outputs_squeezed = np.zeros(
-            (n_squeezer, n_samples, self.n_classes), dtype=np.long)
+        outputs_squeezed = np.zeros((n_squeezer, X.shape[0], self.n_classes), dtype=np.float32)
 
         for i in range(n_squeezer):
-            dataset = TensorDataset(
-                torch.from_numpy(squeezed_data[i].astype(np.float32)))
-            loader = DataLoader(
-                dataset, batch_size=self.batch_size, shuffle=False)
+            dataset = TensorDataset(torch.from_numpy(squeezed_data[i].astype(np.float32)))
+            loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
             model = self.squeezed_models_[i]
             outputs_squeezed[i] = self.__predict(loader, model)
 
@@ -169,20 +190,19 @@ class FeatureSqueezingTorch:
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
         initial_outputs = self.__predict(loader, self.classifier)
         l1 = np.sum(np.abs(outputs_squeezed - initial_outputs), axis=2)
-        return np.transpose(l1)
+        score = np.max(l1, axis=0)
+        return np.transpose(score)
 
     def predict(self, X):
         l1_scores = self.get_l1_score(X)
-        characteristics = self.scaler_.transform(l1_scores)
-        return self.detector_.predict(characteristics)
+        return l1_scores > self.threshold_
 
     def detect(self, X, y=None):
         return self.predict(X)
 
     def predict_proba(self, X):
         l1_scores = self.get_l1_score(X)
-        characteristics = self.scaler_.transform(l1_scores)
-        return self.detector_.predict_proba(characteristics)
+        return l1_scores
 
     def save(self, path):
         data = []
@@ -195,9 +215,11 @@ class FeatureSqueezingTorch:
         for i in range(len(self.squeezed_models_)):
             self.squeezed_models_[i].load_state_dict(checkpoint[i])
 
-    def __get_squeezed_data(self, X):
+    def __get_squeezed_data(self, X, verbose=0):
         squeezed_data = []
         for squeezer in self.squeezers:
+            if verbose > 0:
+                print('Transforming {}...'.format(squeezer.name))
             X_transformed = squeezer.transform(X)
             squeezed_data.append(X_transformed)
         return np.array(squeezed_data, dtype=np.float32)
@@ -228,8 +250,7 @@ class FeatureSqueezingTorch:
 
     def __predict(self, loader, model):
         model.eval()
-        tensor_pred = torch.zeros(
-            (len(loader.dataset), self.n_classes), dtype=torch.float32)
+        tensor_pred = torch.zeros((len(loader.dataset), self.n_classes), dtype=torch.float32)
         start = 0
         with torch.no_grad():
             for mini_batch in loader:

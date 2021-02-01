@@ -145,9 +145,5 @@ def acc_on_adv(y_pred, y_true, detected_as_adv):
         Accuracy on adversarial examples.
     """
     correct_classified = y_pred == y_true
-    print('Correctly classified exampled:', np.sum(correct_classified))
-
     correct_classified_and_detected = np.logical_or(correct_classified, detected_as_adv)
-    print('Correctly classified and detected:', np.sum(correct_classified))
-
     return np.mean(correct_classified_and_detected)

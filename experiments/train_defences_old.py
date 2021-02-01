@@ -19,7 +19,7 @@ sys.path.append(os.getcwd())
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
 from defences.feature_squeezing import (DepthSqueezer, FeatureSqueezingTorch,
-                                        GaussianSqueezer, MedianSqueezer)
+                                        MedianSqueezer, NLMeansColourSqueezer)
 from defences.lid import LidDetector
 from defences.magnet import (Autoencoder1, Autoencoder2,
                              MagNetAutoencoderReformer, MagNetDetector,
@@ -194,10 +194,15 @@ def main():
         detector.search_thresholds(X_val, pred_val, labels_val)
     elif args.defence == 'fs':
         squeezers = []
-        squeezers.append(GaussianSqueezer(x_min=0.0, x_max=1.0, noise_strength=0.025, std=1.0))
-        squeezers.append(DepthSqueezer(x_min=0.0, x_max=1.0, bit_depth=8))
-        if args.data in ['mnist', 'cifar10']:
-            squeezers.append(MedianSqueezer(x_min=0.0, x_max=1.0, kernel_size=3))
+        if args.data == 'mnist':
+            squeezers.append(DepthSqueezer(x_min=0.0, x_max=1.0, bit_depth=1))
+            squeezers.append(MedianSqueezer(x_min=0.0, x_max=1.0, kernel_size=2))
+        elif args.data == 'cifar10':
+            squeezers.append(DepthSqueezer(x_min=0.0, x_max=1.0, bit_depth=4))
+            squeezers.append(MedianSqueezer(x_min=0.0, x_max=1.0, kernel_size=2))
+            squeezers.append(NLMeansColourSqueezer(x_min=0.0, x_max=1.0, h=2, templateWindowsSize=3, searchWindowSize=13))
+        else:
+            raise NotImplementedError
         print('FS: # of squeezers:', len(squeezers))
         detector = FeatureSqueezingTorch(
             classifier=model,
@@ -211,11 +216,8 @@ def main():
             squeezers=squeezers,
             n_classes=param['n_classes'],
             device=device)
-        if args.data in ['mnist', 'cifar10']:
-            path_fs = os.path.join(args.output_path, '{}_fs.pt'.format(args.pretrained.split('.')[0]))
-            detector.load(path_fs)
-        else:
-            detector.fit(X_train, y_train, epochs=param['epochs'], verbose=1)
+        path_fs = os.path.join(args.output_path, '{}_fs.pt'.format(args.pretrained.split('.')[0]))
+        detector.load(path_fs)
         detector.search_thresholds(X_val, pred_val, labels_val)
     elif args.defence == 'lid':
         # This batch_size is not same as the mini batch size for the neural network.

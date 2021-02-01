@@ -69,7 +69,7 @@ class RegionBasedClassifier:
         self.device = device
 
     def search_r(self, X, y, r0=0.0, step_size=0.01, stop=None, update=True,
-                 verbose=0):
+                 verbose=0, exit_early=True):
         n = len(X)
         r = r0
         time_start = time.time()
@@ -89,15 +89,22 @@ class RegionBasedClassifier:
         if stop is None:
             stop = r0
 
+        r_best = r0
+        acc_best = 0.0
         while acc_region >= acc_point or r <= stop:
             time_elapsed = time.time() - time_start
             if verbose > 0:
                 print('[{:s}] Accuracy on region-based: {:.4f}, r: {:.2f}'.format(
                     str(datetime.timedelta(seconds=time_elapsed)), acc_region, r))
             time_start = time.time()
-            r += step_size
             acc_region = self.score(X, y, r=r)
             results.append([r, acc_region])
+            if acc_best <= acc_region:
+                acc_best = acc_region
+                r_best = r
+            if exit_early and acc_best > acc_region:
+                break
+            r += step_size
 
         r_best = r
         for res in reversed(results):
@@ -129,6 +136,7 @@ class RegionBasedClassifier:
             update=True,
             verbose=verbose)
         print('Best r =', r_best)
+        return r_best
 
     def predict(self, X, r=None):
         """Predicts class labels for samples in X."""

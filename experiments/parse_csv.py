@@ -11,10 +11,11 @@ DATASETS = [
     'htru2',
     'mnist',
 ]
+VERSION = 3
 
 
 def get_csv_path(dataset):
-    return os.path.join('csv', dataset+'_2.csv')
+    return os.path.join('csv', '{}_{}.csv'.format(dataset, VERSION))
 
 
 def save_excel(dataset):
@@ -22,13 +23,13 @@ def save_excel(dataset):
     df = pd.read_csv(path_csv, sep=',')
     df = df.drop(columns=['Unnamed: 0'])
     df = df.rename(
-        columns={'Epsilon': 'Norm/Confidence', 'Score': 'Accuracy on Adv'})
+        columns={'Epsilon': 'Adv_param', 'Score': 'Acc_on_adv'})
     table = df.pivot(
-        index=['Attack', 'Norm/Confidence', 'Without Defence'],
+        index=['Attack', 'Adv_param'],
         columns=['Defence'],
-        values=['Accuracy on Adv', 'False Positive Rate'])
+        values=['Acc_on_adv', 'FPR'])
     table = table.replace(-100, np.nan)
-    with pd.ExcelWriter(os.path.join('tables', dataset+'_2.xlsx')) as writer:
+    with pd.ExcelWriter(os.path.join('tables', '{}_{}.xlsx'.format(dataset, VERSION))) as writer:
         table.to_excel(writer, sheet_name=dataset)
 
 

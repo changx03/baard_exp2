@@ -52,4 +52,5 @@ done
 # python3 ./experiments/train_defences.py --data banknote --pretrained banknote_400.pt --defence baard --param ./params/baard_param_3s.json --suffix 3stage --adv banknote_basic16_apgd_0.2
 # python3 ./experiments/train_defences.py --data breastcancer --pretrained breastcancer_400.pt --defence baard --param ./params/baard_param_3s.json --suffix 3stage --adv breastcancer_basic120_apgd_0.2
 # python3 ./experiments/train_defences.py --data mnist --pretrained mnist_200.pt --defence baard --param ./params/baard_param_3.json --suffix 3stage --adv mnist_basic_cw2_0.0
-# python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_resnet_200.pt --defence baard --param ./params/baard_param_3.json --suffix 3stage --adv cifar10_resnet_cw2_0.0
+# python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_resnet_200.pt --defence baard --param ./params/baard_param_3.json --suffix 3stage --adv cifar10_resnet_apgd_0.3
+# python3 ./experiments/train_defences.py --data cifar10 --pretrained cifar10_vgg_200.pt --defence baard --param ./params/baard_param_3.json --suffix 3stage --adv cifar10_vgg_cw2_0.0

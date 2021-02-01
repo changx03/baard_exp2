@@ -30,9 +30,35 @@ from defences.util import (acc_on_adv, dataset2tensor, get_correct_examples,
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.numeric import NumericModel
-from models.torch_util import predict, predict_numpy, validate
+from models.torch_util import (AddGaussianNoise, predict, predict_numpy,
+                               validate)
 
 from experiments.util import load_csv
+
+
+def baard_preprocess(data, tensor_X):
+    """Preprocess training data"""
+    if data == 'cifar10':
+        # return tensor_X
+        transform = tv.transforms.Compose([
+            tv.transforms.RandomHorizontalFlip(),
+            # tv.transforms.RandomCrop(32, padding=4),
+            AddGaussianNoise(mean=0., std=1., eps=0.02)
+        ])
+        return transform(tensor_X)
+    elif data == 'mnist':
+        # return tensor_X
+        transform = tv.transforms.Compose([
+            tv.transforms.RandomRotation(5)
+            # AddGaussianNoise(mean=0., std=1., eps=0.02)
+        ])
+        return transform(tensor_X)
+    else:
+        # return tensor_X
+        transform = tv.transforms.Compose([
+            AddGaussianNoise(mean=0., std=1., eps=0.02)
+        ])
+        return transform(tensor_X)
 
 
 def main():
@@ -189,8 +215,13 @@ def main():
         print('BAARD: # of stages:', len(stages))
         detector = BAARDOperator(stages=stages)
 
+        # Run preprocessing
+        X_baard = baard_preprocess(args.data, tensor_train_X).cpu().detach().numpy()
         # Fit the model with the filtered the train set.
-        detector.fit(X_train, y_train)
+        detector.stages[0].fit(X_baard, y_train)
+        detector.stages[1].fit(X_train, y_train)
+        if len(detector.stages) == 3:
+            detector.stages[2].fit(X_train, y_train)
         detector.search_thresholds(X_val, pred_val, labels_val)
     elif args.defence == 'fs':
         squeezers = []
@@ -362,7 +393,12 @@ def main():
         y_pred = pred_test
 
     acc = acc_on_adv(y_pred[:n], y_test[:n], res_test[:n])
-    print('Success rate: {:.4f}%'.format(acc * 100))
+    if args.defence == 'rc':
+        fpr = np.mean(y_pred[n:] != y_test[n:])
+    else:
+        fpr = np.mean(res_test[n:])
+    print('Acc_on_adv:', acc)
+    print('FPR:', fpr)
     time_elapsed = time.time() - time_start
     print('Total test time:', str(datetime.timedelta(seconds=time_elapsed)))
 
@@ -378,7 +414,7 @@ def main():
             'X_test': X_test,
             'y_test': y_test,
             'labels_test': labels_test,
-            'res_test': res_test,
+            'res_test': y_pred if args.defence == 'rc' else res_test,
             'X_reformed': X_reformed,
             'param': param}, path_result)
         print('Saved to:', path_result)

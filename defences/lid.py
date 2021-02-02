@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 from scipy.spatial.distance import cdist
 from sklearn.linear_model import LogisticRegressionCV
-from sklearn.metrics import roc_auc_score
 from sklearn.neighbors import BallTree
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm

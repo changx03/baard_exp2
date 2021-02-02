@@ -261,17 +261,3 @@ class FeatureSqueezingTorch:
                 tensor_pred[start:end] = outputs
                 start = end
         return tensor_pred.cpu().detach().numpy()
-
-
-class FeatureSqueezingSklearn:
-    def __init__(self):
-        raise NotImplementedError
-
-    def fit(self, X, y, epochs=50):
-        raise NotImplementedError
-
-    def predict(self, X):
-        raise NotImplementedError
-
-    def predict_proba(self, X):
-        raise NotImplementedError

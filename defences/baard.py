@@ -3,7 +3,6 @@ Implementing the algorithm of Blocking Adversarial Examples by Testing
 Applicability, Reliability and Decidability.
 """
 import numpy as np
-from sklearn.metrics import roc_auc_score
 from sklearn.neighbors import BallTree
 from tqdm import trange
 

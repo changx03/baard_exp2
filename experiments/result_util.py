@@ -8,7 +8,7 @@ from models.torch_util import predict_numpy
 
 
 def get_dataframe(df, model, data, nmodel, nattack, ndefence, device):
-    path_result = os.path.join('..', 'results', '{}_{}_{}_{}.pt'.format(data, nmodel, nattack, ndefence))
+    path_result = os.path.join('results', '{}_{}_{}_{}.pt'.format(data, nmodel, nattack, ndefence))
     result = torch.load(path_result)
     X_test = result['X_test']
     y_test = result['y_test']

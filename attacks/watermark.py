@@ -10,14 +10,13 @@ from tqdm import trange
 class WaterMarkAttack:
     def __init__(self,
                  eps=0.3,
-                 base=1.0,
                  n_classes=10,
                  x_min=0.0,
                  x_max=1.0,
                  targeted=False,
                  verbose=True):
         self.eps = eps
-        self.base = base
+        self.base = 1. - eps
         self.n_classes = n_classes
         self.x_min = x_min
         self.x_max = x_max

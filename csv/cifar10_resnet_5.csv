@@ -1,5 +1,5 @@
 ,Attack,Adv_param,Defence,FPR,Acc_on_adv
-0,apgd,0.031,baard_2stage,4.3,12.7
+0,apgd,0.031,baard_2stage,4.8,13.3
 1,apgd,0.031,baard_3stage,7.8,28.7
 2,apgd,0.031,lid,0.0,0.5
 3,apgd,0.031,rc,0.4,0.5
@@ -137,9 +137,3 @@
 135,watermark,0.6,rc,0.4,79.60000000000001
 136,watermark,0.6,fs,4.9,84.8
 137,watermark,0.6,magnet,0.1,68.7
-138,watermark,1.0,baard_2stage,4.3999999999999995,69.6
-139,watermark,1.0,baard_3stage,7.5,66.9
-140,watermark,1.0,lid,0.0,0.0
-141,watermark,1.0,rc,0.4,49.8
-142,watermark,1.0,fs,4.9,63.9
-143,watermark,1.0,magnet,0.1,37.1

@@ -7,5 +7,5 @@ MOD="basic"
 DATA="mnist"
 DEF="magnet"
 for ATT in "${ATTACKS[@]}"; do
-    python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_400.pt" --defence $DEF --param "./params/"$DEF"_param.json" --adv $DATA"_"$MOD"_"$ATT
+    python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_200.pt" --defence $DEF --param "./params/"$DEF"_param.json" --adv $DATA"_"$MOD"_"$ATT
 done

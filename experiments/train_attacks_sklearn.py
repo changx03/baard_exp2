@@ -12,8 +12,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 
-sys.path.append(os.getcwd())
 # # Adding the parent directory.
+sys.path.append(os.getcwd())
+from experiments.util import set_seeds
 
 MODEL_NAME = 'svm'
 
@@ -42,6 +43,8 @@ def main():
     parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
 
+    set_seeds(args.random_state)
+    
     print('Dataset:', args.data)
     print('Running attack:', args.attack)
 

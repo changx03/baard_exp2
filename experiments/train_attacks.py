@@ -33,6 +33,7 @@ from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.numeric import NumericModel
 from models.torch_util import validate
+from experiments.util import set_seeds
 
 
 def load_csv(file_path):
@@ -60,6 +61,8 @@ def main():
     parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
 
+    set_seeds(args.random_state)
+    
     print('Dataset:', args.data)
     print('Pretrained model:', args.pretrained)
     print('Running attack: {}'.format(args.attack))

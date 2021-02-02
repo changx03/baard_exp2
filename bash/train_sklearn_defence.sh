@@ -5,12 +5,12 @@
 ATTACKS=("bim_0.05" "bim_0.2" "bim_0.4" "bim_1.0" "boundary_0.3" "fgsm_0.05" "fgsm_0.2" "fgsm_0.4" "fgsm_1.0")
 DATASETS=("banknote" "breastcancer" "htru2")
 MOD="svm"
-# DEF="rc"
-# for DATA in "${DATASETS[@]}"; do
-#     for ATT in "${ATTACKS[@]}"; do
-#         python3 ./experiments/train_defences_sklearn.py --data $DATA --model $MOD --adv $ATT --defence $DEF --param "./params/"$DEF"_param_"$DATA"_"$MOD".json"
-#     done
-# done
+DEF="rc"
+for DATA in "${DATASETS[@]}"; do
+    for ATT in "${ATTACKS[@]}"; do
+        python3 ./experiments/train_defences_sklearn.py --data $DATA --model $MOD --adv $ATT --defence $DEF --param "./params/"$DEF"_param_"$DATA"_"$MOD".json"
+    done
+done
 
 
 DEF="baard"

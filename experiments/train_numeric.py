@@ -18,6 +18,7 @@ sys.path.append(os.getcwd())
 from defences.util import dataset2tensor
 from models.numeric import NumericModel
 from models.torch_util import print_acc_per_label, train, validate
+from experiments.util import set_seeds
 
 
 def load_csv(file_path):
@@ -41,6 +42,8 @@ def main():
     parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
 
+    set_seeds(args.random_state)
+    
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Device: {}'.format(device))
 

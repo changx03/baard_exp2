@@ -16,14 +16,40 @@ from torch.utils.data import DataLoader, TensorDataset
 
 # Adding the parent directory.
 sys.path.append(os.getcwd())
-from defences.region_based_classifier import RegionBasedClassifier
-from defences.util import (get_correct_examples,
+from defences.util import (acc_on_adv, dataset2tensor, get_correct_examples,
                            get_shape, merge_and_generate_labels)
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.numeric import NumericModel
-from models.torch_util import predict, validate
+from models.torch_util import (AddGaussianNoise, predict, predict_numpy,
+                               validate)
+
 from experiments.util import load_csv, set_seeds
+
+
+def baard_preprocess(data, tensor_X):
+    """Preprocess training data"""
+    if data == 'cifar10':
+        # return tensor_X
+        transform = tv.transforms.Compose([
+            tv.transforms.RandomHorizontalFlip(),
+            # tv.transforms.RandomCrop(32, padding=4),
+            AddGaussianNoise(mean=0., std=1., eps=0.02)
+        ])
+        return transform(tensor_X)
+    elif data == 'mnist':
+        # return tensor_X
+        transform = tv.transforms.Compose([
+            tv.transforms.RandomRotation(5)
+            # AddGaussianNoise(mean=0., std=1., eps=0.02)
+        ])
+        return transform(tensor_X)
+    else:
+        # return tensor_X
+        transform = tv.transforms.Compose([
+            AddGaussianNoise(mean=0., std=1., eps=0.02)
+        ])
+        return transform(tensor_X)
 
 
 def main():
@@ -32,18 +58,18 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', type=str, required=True)
+    parser.add_argument('--model', type=str, required=True)
+    parser.add_argument('--pretrained', type=str, required=True)
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--output_path', type=str, default='results')
-    parser.add_argument('--pretrained', type=str, required=True)
-    parser.add_argument('--adv', type=str, required=True, help="Example: 'mnist_basic_apgd_0.3'")
-    parser.add_argument('--random_state', type=int, default=1234)
+    parser.add_argument('--random_state', type=str, default=1234)
     args = parser.parse_args()
+    print(args)
 
     set_seeds(args.random_state)
 
-    print('Dataset:', args.data)
-    print('Pretrained model:', args.pretrained)
-    print('Pretrained samples:', args.adv + '_adv.npy')
+    print('data:', args.data)
+    print('model:', args.model)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Device: {}'.format(device))
@@ -72,8 +98,7 @@ def main():
         dataset_train = TensorDataset(torch.from_numpy(X_train).type(torch.float32), torch.from_numpy(y_train).type(torch.long))
         dataset_test = TensorDataset(torch.from_numpy(X_test).type(torch.float32), torch.from_numpy(y_test).type(torch.long))
 
-    # Note: Train set alway shuffle!
-    loader_train = DataLoader(dataset_train, batch_size=512, shuffle=True)
+    loader_train = DataLoader(dataset_train, batch_size=512, shuffle=False)
     loader_test = DataLoader(dataset_test, batch_size=512, shuffle=False)
 
     shape_train = get_shape(loader_train.dataset)
@@ -82,8 +107,6 @@ def main():
     print('Test set:', shape_test)
     use_prob = True
     print('Using softmax layer:', use_prob)
-
-    n_classes = data_params['data'][args.data]['n_classes']
 
     # Load model
     if args.data == 'mnist':
@@ -96,9 +119,10 @@ def main():
         elif model_name == 'vgg':
             model = Vgg(use_prob=use_prob).to(device)
         else:
-            raise ValueError('Unknown model: {}'.format(model_name))
+            raise NotImplementedError
     else:
         n_features = data_params['data'][args.data]['n_features']
+        n_classes = data_params['data'][args.data]['n_classes']
         model = NumericModel(n_features, n_hidden=n_features * 4, n_classes=n_classes, use_prob=use_prob).to(device)
         model_name = 'basic' + str(n_features * 4)
 
@@ -125,57 +149,17 @@ def main():
     _, acc_perfect = validate(model, loader_test, loss, device)
     print('Accuracy on {} filtered test set: {:.4f}%'.format(len(dataset_test), acc_perfect * 100))
 
-    # Load pre-trained adversarial examples
-    path_benign = os.path.join(args.output_path, args.adv + '_x.npy')
-    path_adv = os.path.join(args.output_path, args.adv + '_adv.npy')
-    path_y = os.path.join(args.output_path, args.adv + '_y.npy')
-    X_benign = np.load(path_benign)
-    adv = np.load(path_adv)
-    y_true = np.load(path_y)
-
-    dataset = TensorDataset(torch.from_numpy(X_benign), torch.from_numpy(y_true))
-    loader = DataLoader(dataset, batch_size=512, shuffle=False)
-    _, acc = validate(model, loader, loss, device)
-    print('Accuracy on {} benign samples: {:.4f}%'.format(len(dataset), acc * 100))
-
-    dataset = TensorDataset(torch.from_numpy(adv), torch.from_numpy(y_true))
-    loader = DataLoader(dataset, batch_size=512, shuffle=False)
-    _, acc = validate(model, loader, loss, device)
-    print('Accuracy on {} adversarial examples: {:.4f}%'.format(len(dataset), acc * 100))
-
-    # Do NOT shuffle the indices, so different defences can use the same test set.
-    dataset = TensorDataset(torch.from_numpy(adv))
-    loader = DataLoader(dataset, batch_size=512, shuffle=False)
-    pred_adv = predict(model, loader, device).cpu().detach().numpy()
-
-    # Find the thresholds using the 2nd half
-    n = len(X_benign) // 2
-    # Merge benign samples and adversarial examples into one set.
-    # This labels indicate a sample is an adversarial example or not.
-    X_val, labels_val = merge_and_generate_labels(adv[n:], X_benign[n:], flatten=False)
-    # The predictions for benign samples are exactly same as the true labels.
-    pred_val = np.concatenate((pred_adv[n:], y_true[n:]))
-
     X_train = tensor_train_X.cpu().detach().numpy()
     y_train = tensor_train_y.cpu().detach().numpy()
 
-    # Train defence
-    time_start = time.time()
-    detector = RegionBasedClassifier(
-        model=model,
-        r=0.2,
-        sample_size=1000,
-        n_classes=n_classes,
-        x_min=0.0,
-        x_max=1.0,
-        batch_size=512,
-        r0=0.0,
-        step_size=0.02,
-        stop_value=0.4,
-        device=device)
-    detector.search_thresholds(X_val, pred_val, labels_val, verbose=0)
-    time_elapsed = time.time() - time_start
-    print('Total training time:', str(datetime.timedelta(seconds=time_elapsed)))
+    X_baard = baard_preprocess(args.data, tensor_train_X).cpu().detach().numpy()
+    obj = {
+        'X_train': X_baard,
+        'y_train': y_train
+    }
+    path_ouput = os.path.join(args.output_path, '{}_{}_baard_train.pt'.format(args.data, args.model, args.model))
+    torch.save(obj, path_ouput)
+    print('Save to:', path_ouput)
     print()
 
 

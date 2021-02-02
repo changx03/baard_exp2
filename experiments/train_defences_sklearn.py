@@ -17,7 +17,7 @@ from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
 from defences.region_based_classifier import SklearnRegionBasedClassifier
 from defences.util import acc_on_adv, merge_and_generate_labels
-from experiments.util import load_csv
+from experiments.util import load_csv, set_seeds
 
 
 def baard_preprocess(X, eps=0.02, mean=0., std=1., x_min=0.0, x_max=1.0):
@@ -45,6 +45,8 @@ def main():
     args.adv = '{}_{}_{}'.format(args.data, args.model, args.adv)
     print(args)
 
+    set_seeds(args.random_state)
+    
     print('Dataset:', args.data)
     print('Model:', args.model)
     print('Pretrained samples:', args.adv + '_adv.npy')
@@ -113,7 +115,10 @@ def main():
         detector = BAARDOperator(stages=stages)
 
         # Run preprocessing
-        X_baard = baard_preprocess(X_train)
+        baard_train_path = os.path.join('results', '{}_{}_baard_train.pt'.format(args.data, args.model))
+        obj = torch.load(baard_train_path)
+        X_baard = obj['X_train']
+        y_train = obj['y_train']
         detector.stages[0].fit(X_baard, y_train)
         detector.stages[1].fit(X_train, y_train)
         if len(detector.stages) == 3:

@@ -11,7 +11,7 @@
 9,bim,1.0,baard_2stage,3.1,100.0
 10,bim,1.0,baard_3stage,4.9,100.0
 11,bim,1.0,rc,0.1,0.0
-12,boundary,0.3,baard_2stage,3.1,21.0
+12,boundary,0.3,baard_2stage,3.1,23.0
 13,boundary,0.3,baard_3stage,4.9,97.2
 14,boundary,0.3,rc,0.1,29.599999999999998
 15,fgsm,0.05,baard_2stage,3.1,98.2

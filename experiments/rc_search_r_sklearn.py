@@ -14,7 +14,7 @@ from sklearn.svm import SVC
 sys.path.append(os.getcwd())
 from defences.region_based_classifier import SklearnRegionBasedClassifier
 
-from experiments.util import load_csv
+from experiments.util import load_csv, set_seeds
 
 
 def main():
@@ -31,6 +31,8 @@ def main():
     parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
 
+    set_seeds(args.random_state)
+    
     if args.param == None:
         args.param = os.path.join('params', 'rc_param_{}.json'.format(args.data))
 

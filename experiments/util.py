@@ -1,5 +1,6 @@
 import os
 import sys
+import random
 
 import numpy as np
 import pandas as pd
@@ -95,3 +96,11 @@ def get_dataframe_sklearn(df, model, data, nmodel, nattack, ndefence):
         'Acc_on_adv': score * 100,
     }, ignore_index=True)
     return df
+
+
+def set_seeds(random_state):
+    random.seed(random_state)
+    np.random.seed(random_state)
+    torch.manual_seed(random_state)
+    torch.cuda.manual_seed_all(random_state)
+    torch.backends.cudnn.deterministic = True

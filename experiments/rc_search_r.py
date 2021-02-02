@@ -171,9 +171,7 @@ def main():
         step_size=0.02,
         stop_value=0.4,
         device=device)
-    # Region-based classifier only uses benign samples to search threshold.
-    # The r value is already set to the optimal. We don't need to search it.
-    r = detector.search_thresholds(X_val, pred_val, labels_val, verbose=0)
+    detector.search_thresholds(X_val, pred_val, labels_val, verbose=0)
     time_elapsed = time.time() - time_start
     print('Total training time:', str(datetime.timedelta(seconds=time_elapsed)))
     print()

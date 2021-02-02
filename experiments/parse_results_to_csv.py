@@ -8,7 +8,7 @@ sys.path.append(os.getcwd())
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.numeric import NumericModel
-from experiments.result_util import get_dataframe
+from experiments.util import get_dataframe
 
 VERSION = 5
 OUTPUT_PATH = 'csv'

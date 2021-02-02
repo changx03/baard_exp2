@@ -113,7 +113,7 @@ def main():
     path_y = os.path.join(args.output_path, '{}_y.npy'.format(output_file))
     path_adv = os.path.join(args.output_path, '{}_adv.npy'.format(output_file))
     np.save(path_x, X_benign)
-    np.save(path_y, y)
+    np.save(path_y, y_true)
     np.save(path_adv, adv)
 
     print('Saved to:', path_adv)

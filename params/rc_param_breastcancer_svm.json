@@ -1,0 +1,8 @@
+{
+    "r": 0.34,
+    "sample_size": 1000,
+    "batch_size": 512,
+    "r0": 0,
+    "step_size": 0.02,
+    "stop_value": 0.40
+}

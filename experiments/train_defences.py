@@ -252,13 +252,15 @@ def main():
         detector.search_thresholds(X_val, pred_val, labels_val)
     elif args.defence == 'lid':
         # This batch_size is not same as the mini batch size for the neural network.
+        before_softmax = args.data == 'cifar10'
         detector = LidDetector(
             model,
             k=param['k'],
             batch_size=param['batch_size'],
             x_min=0.0,
             x_max=1.0,
-            device=device)
+            device=device,
+            before_softmax=before_softmax)
         # LID uses different training set
         X_train, y_train = detector.get_train_set(X_benign[n:], adv[n:], std_dominator=param['std_dominator'])
         detector.fit(X_train, y_train, verbose=1)

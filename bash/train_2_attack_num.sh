@@ -4,7 +4,7 @@
 
 DATASETS=("banknote" "breastcancer" "htru2")
 
-for MOD in "${MODELS[@]}"; do
+for DATA in "${DATASETS[@]}"; do
     python3 ./experiments/train_attacks.py --data $DATA --pretrained $DATA"_400.pt" --attack apgd --eps 0.05
     python3 ./experiments/train_attacks.py --data $DATA --pretrained $DATA"_400.pt" --attack apgd --eps 0.2
     python3 ./experiments/train_attacks.py --data $DATA --pretrained $DATA"_400.pt" --attack apgd --eps 0.4

@@ -16,7 +16,7 @@ DATASETS = ['banknote', 'breastcancer', 'htru2', 'cifar10', 'cifar10', 'mnist']
 MODEL_NAMES = ['basic16', 'basic120', 'basic32', 'resnet', 'vgg', 'basic']
 ATTACKS_NUM = [
     'apgd_0.05', 'apgd_0.2', 'apgd_0.4', 'apgd_1.0',
-    'apgd2_0.2', 'apgd2_0.4', 'apgd2_1.0', 'apgd2_2.0', 'apgd2_3.0',
+    'apgd2_0.4', 'apgd2_1.0', 'apgd2_2.0', 'apgd2_3.0',
     'boundary_0.3',
     'cw2_0.0', 'cw2_5.0', 'cw2_10.0',
     'deepfool_1e-06',

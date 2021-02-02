@@ -10,5 +10,3 @@ python3 ./experiments/train_attacks.py --data breastcancer --pretrained breastca
 
 # python3 ./experiments/train_attacks.py --data cifar10 --pretrained cifar10_resnet_200.pt --attack boundary
 # python3 ./experiments/train_attacks.py --data cifar10 --pretrained cifar10_vgg_200.pt --attack boundary
-# python3 ./experiments/train_attacks.py --data segment --pretrained segment_400.pt --attack boundary --batch_size 32
-# python3 ./experiments/train_attacks.py --data texture --pretrained texture_400.pt --attack boundary --batch_size 32

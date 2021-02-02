@@ -141,7 +141,7 @@ def main():
     tensor_test_X, tensor_test_y = get_correct_examples(
         model, dataset_test, device=device, return_tensor=True)
     dataset_perfect = TensorDataset(tensor_test_X, tensor_test_y)
-    loader_perfect = DataLoader(dataset_perfect, batch_size=512, shuffle=True)
+    loader_perfect = DataLoader(dataset_perfect, batch_size=512, shuffle=False)
     _, acc_perfect = validate(model, loader_perfect, loss, device)
     print('Accuracy on {} filtered test examples: {:.4f}%'.format(
         len(dataset_perfect), acc_perfect * 100))

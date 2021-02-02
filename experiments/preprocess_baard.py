@@ -139,13 +139,13 @@ def main():
     # The original train and test sets are no longer needed.
     tensor_train_X, tensor_train_y = get_correct_examples(model, dataset_train, device=device, return_tensor=True)
     dataset_train = TensorDataset(tensor_train_X, tensor_train_y)
-    loader_train = DataLoader(dataset_train, batch_size=512, shuffle=True)
+    loader_train = DataLoader(dataset_train, batch_size=512, shuffle=False)
     _, acc_perfect = validate(model, loader_train, loss, device)
     print('Accuracy on {} filtered train set: {:.4f}%'.format(len(dataset_train), acc_perfect * 100))
 
     tensor_test_X, tensor_test_y = get_correct_examples(model, dataset_test, device=device, return_tensor=True)
     dataset_test = TensorDataset(tensor_test_X, tensor_test_y)
-    loader_test = DataLoader(dataset_test, batch_size=512, shuffle=True)
+    loader_test = DataLoader(dataset_test, batch_size=512, shuffle=False)
     _, acc_perfect = validate(model, loader_test, loss, device)
     print('Accuracy on {} filtered test set: {:.4f}%'.format(len(dataset_test), acc_perfect * 100))
 

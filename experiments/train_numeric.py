@@ -67,7 +67,7 @@ def main():
         torch.from_numpy(X_test).type(torch.float32),
         torch.from_numpy(y_test).type(torch.long))
     dataloader_train = DataLoader(dataset_train, args.batch_size, shuffle=True)
-    dataloader_test = DataLoader(dataset_test, args.batch_size, shuffle=True)
+    dataloader_test = DataLoader(dataset_test, args.batch_size, shuffle=False)
     print('Train set: {}, Test set: {}'.format(X_train.shape, X_test.shape))
 
     # Prepare model

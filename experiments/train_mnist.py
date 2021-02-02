@@ -45,7 +45,7 @@ def main():
     dataloader_train = DataLoader(
         dataset_train, batch_size=args.batch_size, shuffle=True)
     dataloader_test = DataLoader(
-        dataset_test, batch_size=args.batch_size, shuffle=True)
+        dataset_test, batch_size=args.batch_size, shuffle=False)
 
     print('Train set: {}, Test set: {}'.format(
         len(dataset_train), len(dataset_test)))

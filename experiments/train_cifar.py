@@ -49,10 +49,8 @@ def main():
     dataset_test = datasets.CIFAR10(
         args.data_path, train=False, download=True, transform=transform_test)
 
-    dataloader_train = DataLoader(
-        dataset_train, batch_size=args.batch_size, shuffle=True)
-    dataloader_test = DataLoader(
-        dataset_test, batch_size=args.batch_size, shuffle=True)
+    dataloader_train = DataLoader(dataset_train, batch_size=args.batch_size, shuffle=True)
+    dataloader_test = DataLoader(dataset_test, batch_size=args.batch_size, shuffle=False)
 
     print('Train set: {}, Test set: {}'.format(
         len(dataset_train), len(dataset_test)))

@@ -143,8 +143,7 @@ class FeatureSqueezingTorch:
             dataset = TensorDataset(
                 torch.from_numpy(samples.astype(np.float32)),
                 torch.from_numpy(y.astype(np.long)))
-            loader = DataLoader(
-                dataset, batch_size=self.batch_size, shuffle=True)
+            loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
             for e in range(epochs):
                 time_start = time.time()

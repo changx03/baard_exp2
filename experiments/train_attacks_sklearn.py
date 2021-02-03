@@ -47,6 +47,10 @@ def main():
 
     set_seeds(args.random_state)
 
+    if not os.path.exists(args.output_path):
+        print('Output folder does not exist. Create:', args.output_path)
+        os.mkdir(args.output_path)
+        
     print('Dataset:', args.data)
     print('Running attack:', args.attack)
 

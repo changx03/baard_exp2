@@ -60,9 +60,14 @@ def main():
     parser.add_argument('--n_samples', type=int, default=2000)
     parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
+    print(args)
 
     set_seeds(args.random_state)
     
+    if not os.path.exists(args.output_path):
+        print('Output folder does not exist. Create:', args.output_path)
+        os.mkdir(args.output_path)
+        
     print('Dataset:', args.data)
     print('Pretrained model:', args.pretrained)
     print('Running attack: {}'.format(args.attack))

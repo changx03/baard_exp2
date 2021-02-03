@@ -38,6 +38,7 @@ def main():
     parser.add_argument('--adv', type=str, required=True, help="Example: 'mnist_basic_apgd_0.3'")
     parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
+    print(args)
 
     set_seeds(args.random_state)
 
@@ -173,9 +174,22 @@ def main():
         step_size=0.02,
         stop_value=0.4,
         device=device)
-    detector.search_thresholds(X_val, pred_val, labels_val, verbose=0)
+    r_best = detector.search_thresholds(X_val, pred_val, labels_val, verbose=0)
     time_elapsed = time.time() - time_start
     print('Total training time:', str(datetime.timedelta(seconds=time_elapsed)))
+    
+    param = {
+        "r": r_best,
+        "sample_size": 1000,
+        "batch_size": 512,
+        "r0": 0,
+        "step_size": 0.02,
+        "stop_value": 0.40
+    }
+    path_json = os.path.join('params', 'rc_param_{}_{}.json'.format(args.data, args.model))
+    with open(path_json, 'w') as f:
+        json.dump(param, f)
+    print('Save to:', path_json)
     print()
 
 

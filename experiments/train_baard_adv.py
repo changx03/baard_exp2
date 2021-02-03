@@ -164,8 +164,12 @@ def main():
     parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
     print(args)
-
+    
     set_seeds(args.random_state)
+
+    if not os.path.exists(args.output_path):
+        print('Output folder does not exist. Create:', args.output_path)
+        os.mkdir(args.output_path)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Device:', device)

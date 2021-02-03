@@ -41,6 +41,10 @@ def main():
 
     set_seeds(args.random_state)
 
+    if not os.path.exists(args.output_path):
+        print('Output folder does not exist. Create:', args.output_path)
+        os.mkdir(args.output_path)
+        
     with open(args.param) as param_json:
         param = json.load(param_json)
     param['n_classes'] = DATA[args.data]['n_classes']

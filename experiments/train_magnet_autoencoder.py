@@ -21,6 +21,7 @@ from models.cifar10 import Resnet, Vgg
 from defences.util import dataset2tensor
 from models.torch_util import validate
 from defences.magnet import Autoencoder1, Autoencoder2, MagNetDetector
+from experiments.util import set_seeds
 
 DATA_NAMES = ['mnist', 'cifar10']
 DATA = {
@@ -36,6 +37,9 @@ def main():
     parser.add_argument('--pretrained', type=str, required=True)
     parser.add_argument('--param', type=str, required=True)
     args = parser.parse_args()
+    print(args)
+
+    set_seeds(args.random_state)
 
     with open(args.param) as param_json:
         param = json.load(param_json)

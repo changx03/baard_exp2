@@ -16,6 +16,7 @@ sys.path.append(os.getcwd())
 from defences.util import dataset2tensor
 from models.cifar10 import Resnet, Vgg
 from models.torch_util import print_acc_per_label, train, validate
+from experiments.util import set_seeds
 
 
 def main():
@@ -27,7 +28,10 @@ def main():
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--pretrained', type=str, nargs='?')
+    parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
+
+    set_seeds(args.random_state)
 
     if not os.path.exists(args.data_path):
         os.makedirs(args.data_path)

@@ -153,7 +153,6 @@ def train_adv(data='mnist',
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', type=str, required=True, choices=['train_adv', 'train_surrogate'])
     parser.add_argument('--data', type=str, required=True, choices=['mnist', 'cifar10'])
     parser.add_argument('--model', type=str, required=True, choices=['basic', 'resnet', 'vgg'])
     parser.add_argument('--n_samples', type=int, default=2000)

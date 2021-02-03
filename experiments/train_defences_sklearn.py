@@ -10,6 +10,7 @@ import torch
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
+from sklearn.tree import ExtraTreeClassifier
 
 # Adding the parent directory.
 sys.path.append(os.getcwd())
@@ -73,6 +74,8 @@ def main():
     # Train model
     if args.model == 'svm':
         model = SVC(kernel="linear", C=1.0, gamma="scale", random_state=random_state)
+    elif args.model == 'tree':
+        model = ExtraTreeClassifier(random_state=random_state)
     else:
         raise NotImplementedError
     model.fit(X_train, y_train)

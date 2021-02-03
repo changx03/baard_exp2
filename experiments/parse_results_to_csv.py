@@ -1,6 +1,7 @@
 import os
 import sys
 
+import numpy as np
 import pandas as pd
 import torch
 
@@ -88,6 +89,10 @@ def read_results(idx, data, device):
             except FileNotFoundError as err:
                 print(err)
                 continue
+
+    # These attacks have no hyperparameter
+    df.loc[(df['Attack'] == 'boundary'), 'Adv_param'] = np.nan
+
     output_file = os.path.join(OUTPUT_PATH, '{}_{}_{}.csv'.format(data, model_name, VERSION))
     df.to_csv(output_file)
     print('Save to:', output_file)

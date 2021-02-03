@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 DATASETS = ['banknote', 'breastcancer', 'htru2']
-MODEL_NAMES = ['svm']
+MODEL_NAMES = ['svm', 'tree']
 VERSION = 1
 
 

@@ -2,6 +2,7 @@ import os
 import sys
 import json
 
+import numpy as np
 import pandas as pd
 from sklearn.svm import SVC
 from sklearn.preprocessing import MinMaxScaler
@@ -54,6 +55,10 @@ def read_results(data, model_name):
             except FileNotFoundError as err:
                 print(err)
                 continue
+    
+    # These attacks have no hyperparameter
+    df.loc[(df['Attack'] == 'boundary'), 'Adv_param'] = np.nan
+
     output_file = os.path.join(OUTPUT_PATH, '{}_{}_{}.csv'.format(data, model_name, VERSION))
     df.to_csv(output_file)
     print('Save to:', output_file)

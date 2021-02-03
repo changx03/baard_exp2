@@ -9,6 +9,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
+from sklearn.tree import ExtraTreeClassifier
 
 # Adding the parent directory.
 sys.path.append(os.getcwd())
@@ -23,7 +24,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', type=str, required=True)
-    parser.add_argument('--model', type=str, default='svm')
+    parser.add_argument('--model', type=str, default='svm', choices=['svm', 'tree'])
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--adv', type=str, default='fgsm_0.2')
@@ -63,6 +64,8 @@ def main():
     # Train model
     if args.model == 'svm':
         model = SVC(kernel="linear", C=1.0, gamma="scale", random_state=random_state)
+    elif args.model == 'tree':
+        model = ExtraTreeClassifier()
     else:
         raise NotImplementedError
     model.fit(X_train, y_train)
@@ -98,9 +101,22 @@ def main():
         r0=0.0,
         step_size=0.02,
         stop_value=0.4)
-    detector.search_thresholds(X_val, model.predict(X_val), np.zeros_like(y_val), verbose=0)
+    r_best = detector.search_thresholds(X_val, model.predict(X_val), np.zeros_like(y_val), verbose=0)
     time_elapsed = time.time() - time_start
     print('Total training time:', str(datetime.timedelta(seconds=time_elapsed)))
+
+    param = {
+        "r": r_best,
+        "sample_size": 1000,
+        "batch_size": 512,
+        "r0": 0,
+        "step_size": 0.02,
+        "stop_value": 0.40
+    }
+    path_json = os.path.join('params', 'rc_param_{}_{}.json'.format(args.data, args.model))
+    with open(path_json, 'w') as f:
+        json.dump(param, f)
+    print('Save to:', path_json)
     print()
 
 

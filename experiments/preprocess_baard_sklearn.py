@@ -10,6 +10,7 @@ import torch
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
+from sklearn.tree import ExtraTreeClassifier
 
 # Adding the parent directory.
 sys.path.append(os.getcwd())
@@ -28,7 +29,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', type=str, required=True)
-    parser.add_argument('--model', type=str, default='svm')
+    parser.add_argument('--model', type=str, default='svm', choices=['svm', 'tree'])
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--random_state', type=str, default=1234)
@@ -54,7 +55,12 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=n_test, random_state=random_state)
 
     # Train model
-    model = SVC(kernel="linear", C=1.0, gamma="scale", random_state=random_state)
+    if args.model == 'svm':
+        model = SVC(kernel="linear", C=1.0, gamma="scale", random_state=random_state)
+    elif args.model == 'tree':
+        model = ExtraTreeClassifier(random_state=random_state)
+    else:
+        raise NotImplementedError
     model.fit(X_train, y_train)
     acc_train = model.score(X_train, y_train)
     acc_test = model.score(X_test, y_test)

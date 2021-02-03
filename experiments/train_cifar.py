@@ -94,12 +94,6 @@ def main():
             1, args.epochs, str(datetime.timedelta(seconds=time_elapsed)),
             tr_loss, tr_acc * 100.,
             va_loss, va_acc * 100.))
-        if epoch % 50 == 0:
-            file_name = os.path.join(
-                args.output_path,
-                'temp_cifar10_{:s}_{:d}.pt'.format(args.model, epoch))
-            torch.save(model.state_dict(), file_name)
-            print('Saved temporary file: {}'.format(file_name))
 
     time_elapsed = time.time() - since
     print('Total run time: {:.0f}m {:.1f}s'.format(

@@ -139,9 +139,9 @@ def train_adv(data='mnist',
     print("Accuracy on adversarial examples: {:.4f}%".format(acc_adv * 100))
 
     if not is_test:
-        output_file = '{}_{}_baard_train_surro_train_eps{}_size{}.pt'.format(data, model_name, eps, n_samples)
+        output_file = '{}_{}_baard_surro_train_eps{}_size{}.pt'.format(data, model_name, eps, n_samples)
     else:
-        output_file = '{}_{}_baard_train_surro_test_eps{}_size{}.pt'.format(data, model_name, eps, n_samples)
+        output_file = '{}_{}_baard_surro_test_eps{}_size{}.pt'.format(data, model_name, eps, n_samples)
     file_path = os.path.join(path_output, output_file)
     output = {
         'X': X_benign,

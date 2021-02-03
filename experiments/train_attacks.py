@@ -162,35 +162,30 @@ def main():
         device_type='gpu')
 
     if args.attack == 'apgd':
-        eps_step = args.eps / 10.0 if args.eps <= 0.1 else args.eps / 4.0
-        max_iter = 1000 if args.eps <= 0.1 else 100
+        eps_step = args.eps / 10.0 if args.eps <= 0.1 else 0.1
         attack = AutoProjectedGradientDescent(
             estimator=classifier,
             eps=args.eps,
             eps_step=eps_step,
-            max_iter=max_iter,
+            max_iter=1000,
             batch_size=args.batch_size,
             targeted=False)
     elif args.attack == 'apgd1':
-        eps_step = args.eps / 10.0 if args.eps <= 0.1 else args.eps / 4.0
-        max_iter = 1000 if args.eps <= 0.1 else 100
         attack = AutoProjectedGradientDescent(
             estimator=classifier,
             norm=1,
             eps=args.eps,
-            eps_step=eps_step,
-            max_iter=max_iter,
+            eps_step=0.1,
+            max_iter=1000,
             batch_size=args.batch_size,
             targeted=False)
     elif args.attack == 'apgd2':
-        eps_step = args.eps / 10.0 if args.eps <= 0.1 else args.eps / 4.0
-        max_iter = 1000 if args.eps <= 0.1 else 100
         attack = AutoProjectedGradientDescent(
             estimator=classifier,
             norm=2,
             eps=args.eps,
-            eps_step=eps_step,
-            max_iter=max_iter,
+            eps_step=0.1,
+            max_iter=1000,
             batch_size=args.batch_size,
             targeted=False)
     elif args.attack == 'bim':

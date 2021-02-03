@@ -85,15 +85,15 @@ def get_baard_output(data, model_name, data_path, output_path, file_name, param,
 
     stages = []
     stages.append(ApplicabilityStage(n_classes=N_CLASSES, quantile=param['q1']))
-    # stages.append(ReliabilityStage(n_classes=N_CLASSES, k=param['k_re'], quantile=param['q2']))
-    # stages.append(DecidabilityStage(n_classes=N_CLASSES, k=param['k_de'], quantile=param['q3']))
+    stages.append(ReliabilityStage(n_classes=N_CLASSES, k=param['k_re'], quantile=param['q2']))
+    stages.append(DecidabilityStage(n_classes=N_CLASSES, k=param['k_de'], quantile=param['q3']))
     print('BAARD: # of stages:', len(stages))
 
     detector = BAARDOperator(stages=stages)
     detector.stages[0].fit(X_baard, y_train)
-    # detector.stages[1].fit(X_train, y_train)
-    # detector.stages[2].fit(X_train, y_train)
-    # detector.search_thresholds(X_val, y_val, np.zeros_like(y_val))
+    detector.stages[1].fit(X_train, y_train)
+    detector.stages[2].fit(X_train, y_train)
+    detector.search_thresholds(X_val, y_val, np.zeros_like(y_val))
 
     pred_adv = predict_numpy(model, adv, device)
     print('Acc on adv without clip:', np.mean(pred_adv == y))
@@ -122,14 +122,14 @@ def get_baard_output(data, model_name, data_path, output_path, file_name, param,
 
     pred_adv_clip = predict_numpy(model, adv_clipped, device)
     print('Acc on adv with clip:', np.mean(pred_adv_clip == y))
-    print('Do clipped samples have same labels:', np.all(pred_adv == pred_adv_clip))
-    print('How many are different:', np.sum(pred_adv != pred_adv_clip))
+    print('Class changed after clipping:', np.sum(pred_adv != pred_adv_clip))
 
     pred_X = predict_numpy(model, X, device)
     assert not np.all([pred_X, y])
     baard_label_adv = detector.detect(adv_clipped, pred_adv_clip)
 
-    print('baard_label_adv:', np.sum(baard_label_adv))
+    s1_blocked = detector.stages[0].predict(adv_clipped, pred_adv_clip)
+    print('Blocked by Stage1:', np.sum(s1_blocked))
 
     acc = acc_on_adv(pred_adv_clip, y, baard_label_adv)
     print('Acc_on_adv:', acc)
@@ -137,15 +137,15 @@ def get_baard_output(data, model_name, data_path, output_path, file_name, param,
     baard_label_x = detector.detect(X, y)
     print('FPR:', np.mean(baard_label_x))
 
-    # output = {
-    #     'X': X,
-    #     'adv': adv,
-    #     'y': y,
-    #     'baard_label_x': baard_label_x,
-    #     'baard_label_adv': baard_label_adv}
-    # torch.save(output, file_path)
-    # print('Save to:', file_path)
-    # print()
+    output = {
+        'X': X,
+        'adv': adv_clipped,
+        'y': y,
+        'baard_label_x': baard_label_x,
+        'baard_label_adv': baard_label_adv}
+    torch.save(output, file_path)
+    print('Save to:', file_path)
+    print()
 
 
 def main():

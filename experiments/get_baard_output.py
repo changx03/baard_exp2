@@ -68,7 +68,7 @@ def get_baard_output(data, model_name, data_path, output_path, file_name, param,
     y_train = tensor_train_y.cpu().detach().numpy()
 
     # Load the preprocessed training set
-    baard_train_path = os.path.join('results', '{}_{}_baard_train.pt'.format(data, model_name))
+    baard_train_path = os.path.join(output_path, '{}_{}_baard_train.pt'.format(data, model_name))
     obj = torch.load(baard_train_path)
     X_baard = obj['X_train']
 

@@ -19,8 +19,8 @@ def load_csv(file_path):
     return X, y
 
 
-def get_dataframe(df, model, data, nmodel, nattack, ndefence, device):
-    path_result = os.path.join('results', '{}_{}_{}_{}.pt'.format(data, nmodel, nattack, ndefence))
+def get_dataframe(df, model, data, nmodel, nattack, ndefence, device, result_path):
+    path_result = os.path.join(result_path, '{}_{}_{}_{}.pt'.format(data, nmodel, nattack, ndefence))
     result = torch.load(path_result)
     X_test = result['X_test']
     y_test = result['y_test']
@@ -60,8 +60,8 @@ def get_dataframe(df, model, data, nmodel, nattack, ndefence, device):
     return df
 
 
-def get_dataframe_sklearn(df, model, data, nmodel, nattack, ndefence):
-    path_result = os.path.join('results', '{}_{}_{}_{}.pt'.format(data, nmodel, nattack, ndefence))
+def get_dataframe_sklearn(df, model, data, nmodel, nattack, ndefence, result_path):
+    path_result = os.path.join(result_path, '{}_{}_{}_{}.pt'.format(data, nmodel, nattack, ndefence))
     result = torch.load(path_result)
     X_test = result['X_test']
     y_test = result['y_test']
@@ -99,6 +99,7 @@ def get_dataframe_sklearn(df, model, data, nmodel, nattack, ndefence):
 
 
 def set_seeds(random_state):
+    random_state = int(random_state)
     random.seed(random_state)
     np.random.seed(random_state)
     torch.manual_seed(random_state)

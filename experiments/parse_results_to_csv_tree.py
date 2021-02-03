@@ -22,6 +22,7 @@ DEFENCES_NUM = ['baard_2stage', 'baard_3stage', 'rc']
 COLUMNS = ['Attack', 'Adv_param', 'Defence', 'FPR', 'Acc_on_adv']
 DATA_PATH = 'data'
 RANDOM_STATE = 1234
+RESULT_PATH = 'results'
 
 
 
@@ -53,7 +54,7 @@ def read_results(data, model_name):
     for attack in ATTACKS_NUM:
         for defence in DEFENCES_NUM:
             try:
-                df = get_dataframe_sklearn(df, model, data, model_name, attack, defence)
+                df = get_dataframe_sklearn(df, model, data, model_name, attack, defence, RESULT_PATH)
             except FileNotFoundError as err:
                 print(err)
                 continue

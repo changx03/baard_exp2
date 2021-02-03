@@ -122,7 +122,7 @@ def main():
         detector = BAARDOperator(stages=stages)
 
         # Run preprocessing
-        baard_train_path = os.path.join('results', '{}_{}_baard_train.pt'.format(args.data, args.model))
+        baard_train_path = os.path.join(args.output_path, '{}_{}_baard_train.pt'.format(args.data, args.model))
         obj = torch.load(baard_train_path)
         X_baard = obj['X_train']
         y_train = obj['y_train']

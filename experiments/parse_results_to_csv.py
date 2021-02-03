@@ -42,6 +42,7 @@ ATTACKS_MNIST = [
 DEFENCES_NUM = ['baard_2stage', 'baard_3stage', 'lid', 'rc']
 DEFENCES_IMG = ['fs', 'magnet']
 COLUMNS = ['Attack', 'Adv_param', 'Defence', 'FPR', 'Acc_on_adv']
+RESULT_PATH = 'results'
 
 
 def get_model(idx, device):
@@ -63,7 +64,7 @@ def get_model(idx, device):
         model_file = '{}_200.pt'.format(DATASETS[idx])
     else:
         raise NotImplementedError
-    path_model = os.path.join('results', model_file)
+    path_model = os.path.join(RESULT_PATH, model_file)
     model.load_state_dict(torch.load(path_model))
     model = model.to(device)
     return model
@@ -85,7 +86,7 @@ def read_results(idx, data, device):
     for attack in attack_names:
         for defence in defence_names:
             try:
-                df = get_dataframe(df, model, data, model_name, attack, defence, device)
+                df = get_dataframe(df, model, data, model_name, attack, defence, device, RESULT_PATH)
             except FileNotFoundError as err:
                 print(err)
                 continue

@@ -32,7 +32,7 @@ def main():
     parser.add_argument('--model', type=str, default='svm', choices=['svm', 'tree'])
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--output_path', type=str, default='results')
-    parser.add_argument('--random_state', type=str, default=1234)
+    parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
     print(args)
 

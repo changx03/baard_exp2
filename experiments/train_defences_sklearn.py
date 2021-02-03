@@ -131,6 +131,8 @@ def main():
         if len(detector.stages) == 3:
             detector.stages[2].fit(X_train, y_train)
         detector.search_thresholds(X_val, model.predict(X_val), np.zeros_like(y_val))
+        path_baard = os.path.join(args.output_path, 'baard_{}_{}_param.pt'.format(args.data, args.model))
+        detector.save(path_baard)
     elif args.defence == 'rc':
         detector = SklearnRegionBasedClassifier(
             model=model,

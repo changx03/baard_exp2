@@ -207,6 +207,8 @@ def main():
         if len(detector.stages) == 3:
             detector.stages[2].fit(X_train, y_train)
         detector.search_thresholds(X_val, pred_val, labels_val)
+        path_baard = os.path.join(args.output_path, 'baard_{}_{}_param.pt'.format(args.data, model_name))
+        detector.save(path_baard)
     elif args.defence == 'fs':
         squeezers = []
         if args.data == 'mnist':

@@ -82,7 +82,6 @@ def main():
     parser.add_argument('--test', type=str, required=True)
     parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--data_path', type=str, default='results')
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
@@ -99,7 +98,7 @@ def main():
     n_channels = 1 if args.data == 'mnist' else 3
 
     # Load training data (Shuffle is required)
-    path_train = os.path.join(args.data_path, args.train)
+    path_train = os.path.join(args.output_path, args.train)
     obj_train = torch.load(path_train)
     X_train = np.concatenate((obj_train['X'], obj_train['adv']))
     y_train = np.concatenate((obj_train['baard_label_x'], obj_train['baard_label_adv']))
@@ -110,7 +109,7 @@ def main():
     print('[Train set] Adv: {}, Benign: {}'.format(np.sum(y_train == 1), np.sum(y_train == 0)))
 
     # Load test data (Do not shuffle)
-    path_test = os.path.join(args.data_path, args.test)
+    path_test = os.path.join(args.output_path, args.test)
     obj_test = torch.load(path_test)
     X_test = np.concatenate((obj_test['X'], obj_test['adv']))
     y_test = np.concatenate((obj_test['baard_label_x'], obj_test['baard_label_adv']))

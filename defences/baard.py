@@ -3,7 +3,7 @@ Implementing the algorithm of Blocking Adversarial Examples by Testing
 Applicability, Reliability and Decidability.
 """
 import numpy as np
-from sklearn.metrics import roc_auc_score
+import torch
 from sklearn.neighbors import BallTree
 from tqdm import trange
 
@@ -35,6 +35,8 @@ class ApplicabilityStage:
         self.n_classes = n_classes
         self.quantile = quantile
         self.verbose = verbose
+
+        self.k = 0  # A dummy variable
 
     def fit(self, X=None, y=None):
         """Fits the model according to the given training data.
@@ -98,10 +100,13 @@ class ApplicabilityStage:
             x_subset = X[idx]
             lower = self.thresholds_[i, 0]
             upper = self.thresholds_[i, 1]
-            blocked_idx = np.where(
-                np.logical_or(np.any(x_subset < lower, axis=1), np.any(x_subset > upper, axis=1))
-            )[0]
-            results[idx[blocked_idx]] = 1
+            # blocked_idx_of_idx = np.where(np.logical_or(np.any(x_subset < lower, axis=1), np.any(x_subset > upper, axis=1)))[0]
+            below = np.any(x_subset < lower, axis=1)
+            above = np.any(x_subset > upper, axis=1)
+            out_of_box = np.logical_or(below, above)
+            blocked_idx_of_idx = np.where(out_of_box)[0]
+            blocked_idx = idx[blocked_idx_of_idx]
+            results[blocked_idx] = 1
         return results
 
 
@@ -466,3 +471,26 @@ class BAARDOperator:
             positive_idx = uncertain_idx[positive_results]
             labels[positive_idx] = 1
         return labels
+
+    def save(self, path):
+        thresholds = []
+        quantiles = np.zeros(3, dtype=np.float32)
+        ks = np.zeros(3, dtype=np.long)
+        for i, stage in enumerate(self.stages):
+            thresholds.append(stage.thresholds_)
+            ks[i] = stage.k
+            quantiles[i] = stage.quantile
+        obj = {
+            "thresholds": thresholds,
+            "quantiles": quantiles,
+            "ks": ks}
+        torch.save(obj, path)
+        print('Save to:', path)
+
+    def load(self, path):
+        obj = torch.load(path)
+        for i in range(len(self.stages)):
+            self.stages[i].thresholds_ = obj['thresholds'][i]
+            self.stages[i].quantile = obj['quantiles'][i]
+            self.stages[i].k = obj['ks'][i]
+        print('Load from:', path)

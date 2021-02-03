@@ -1,6 +1,7 @@
 import os
 import sys
 
+import numpy as np
 import pandas as pd
 import torch
 
@@ -8,7 +9,7 @@ sys.path.append(os.getcwd())
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.numeric import NumericModel
-from experiments.result_util import get_dataframe
+from experiments.util import get_dataframe
 
 VERSION = 5
 OUTPUT_PATH = 'csv'
@@ -28,16 +29,16 @@ ATTACKS_CIFAR10 = [
     'deepfool_1e-06',
     'fgsm_0.031', 'fgsm_0.3', 'fgsm_0.6', 'fgsm_1.0', 'fgsm_1.5',
     'line_0.0', 'line_0.5', 'line_1.0',
-    'watermark_0.3', 'watermark_0.6', 'watermark_1.0']
+    'watermark_0.3', 'watermark_0.6']
 ATTACKS_MNIST = [
-    'apgd_0.063', 'apgd_0.3', 'apgd_1.0', 'apgd_1.5',
+    'apgd_0.063', 'apgd_0.3', 'apgd_0.6', 'apgd_1.0', 'apgd_1.5',
     'apgd2_1.5', 'apgd2_2.0', 'apgd2_3.0', 'apgd2_5.0',
     'boundary_0.3',
     'cw2_0.0', 'cw2_5.0', 'cw2_10.0',
     'deepfool_1e-06',
     'fgsm_0.063', 'fgsm_0.3', 'fgsm_0.6', 'fgsm_1.0', 'fgsm_1.5',
     'line_0.0', 'line_0.5', 'line_1.0',
-    'watermark_0.3', 'watermark_0.6', 'watermark_1.0']
+    'watermark_0.3', 'watermark_0.6']
 DEFENCES_NUM = ['baard_2stage', 'baard_3stage', 'lid', 'rc']
 DEFENCES_IMG = ['fs', 'magnet']
 COLUMNS = ['Attack', 'Adv_param', 'Defence', 'FPR', 'Acc_on_adv']
@@ -88,6 +89,10 @@ def read_results(idx, data, device):
             except FileNotFoundError as err:
                 print(err)
                 continue
+
+    # These attacks have no hyperparameter
+    df.loc[(df['Attack'] == 'boundary'), 'Adv_param'] = np.nan
+
     output_file = os.path.join(OUTPUT_PATH, '{}_{}_{}.csv'.format(data, model_name, VERSION))
     df.to_csv(output_file)
     print('Save to:', output_file)

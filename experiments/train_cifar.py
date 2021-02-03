@@ -15,6 +15,7 @@ sys.path.append(os.getcwd())
 from defences.util import dataset2tensor
 from models.cifar10 import Resnet, Vgg
 from models.torch_util import print_acc_per_label, train, validate
+from experiments.util import set_seeds
 
 
 def main():
@@ -26,7 +27,10 @@ def main():
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--pretrained', type=str, nargs='?')
+    parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
+
+    set_seeds(args.random_state)
 
     if not os.path.exists(args.data_path):
         os.makedirs(args.data_path)
@@ -48,10 +52,8 @@ def main():
     dataset_test = datasets.CIFAR10(
         args.data_path, train=False, download=True, transform=transform_test)
 
-    dataloader_train = DataLoader(
-        dataset_train, batch_size=args.batch_size, shuffle=True)
-    dataloader_test = DataLoader(
-        dataset_test, batch_size=args.batch_size, shuffle=True)
+    dataloader_train = DataLoader(dataset_train, batch_size=args.batch_size, shuffle=True)
+    dataloader_test = DataLoader(dataset_test, batch_size=args.batch_size, shuffle=False)
 
     print('Train set: {}, Test set: {}'.format(
         len(dataset_train), len(dataset_test)))
@@ -91,12 +93,6 @@ def main():
             1, args.epochs, str(datetime.timedelta(seconds=time_elapsed)),
             tr_loss, tr_acc * 100.,
             va_loss, va_acc * 100.))
-        if epoch % 50 == 0:
-            file_name = os.path.join(
-                args.output_path,
-                'temp_cifar10_{:s}_{:d}.pt'.format(args.model, epoch))
-            torch.save(model.state_dict(), file_name)
-            print('Saved temporary file: {}'.format(file_name))
 
     time_elapsed = time.time() - since
     print('Total run time: {:.0f}m {:.1f}s'.format(

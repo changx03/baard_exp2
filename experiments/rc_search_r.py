@@ -23,7 +23,7 @@ from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.numeric import NumericModel
 from models.torch_util import predict, validate
-from experiments.util import load_csv
+from experiments.util import load_csv, set_seeds
 
 
 def main():
@@ -38,6 +38,9 @@ def main():
     parser.add_argument('--adv', type=str, required=True, help="Example: 'mnist_basic_apgd_0.3'")
     parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
+    print(args)
+
+    set_seeds(args.random_state)
 
     print('Dataset:', args.data)
     print('Pretrained model:', args.pretrained)
@@ -119,7 +122,7 @@ def main():
 
     tensor_test_X, tensor_test_y = get_correct_examples(model, dataset_test, device=device, return_tensor=True)
     dataset_test = TensorDataset(tensor_test_X, tensor_test_y)
-    loader_test = DataLoader(dataset_test, batch_size=512, shuffle=True)
+    loader_test = DataLoader(dataset_test, batch_size=512, shuffle=False)
     _, acc_perfect = validate(model, loader_test, loss, device)
     print('Accuracy on {} filtered test set: {:.4f}%'.format(len(dataset_test), acc_perfect * 100))
 
@@ -171,11 +174,22 @@ def main():
         step_size=0.02,
         stop_value=0.4,
         device=device)
-    # Region-based classifier only uses benign samples to search threshold.
-    # The r value is already set to the optimal. We don't need to search it.
-    r = detector.search_thresholds(X_val, pred_val, labels_val, verbose=0)
+    r_best = detector.search_thresholds(X_val, pred_val, labels_val, verbose=0)
     time_elapsed = time.time() - time_start
     print('Total training time:', str(datetime.timedelta(seconds=time_elapsed)))
+    
+    param = {
+        "r": r_best,
+        "sample_size": 1000,
+        "batch_size": 512,
+        "r0": 0,
+        "step_size": 0.02,
+        "stop_value": 0.40
+    }
+    path_json = os.path.join('params', 'rc_param_{}_{}.json'.format(args.data, args.model))
+    with open(path_json, 'w') as f:
+        json.dump(param, f)
+    print('Save to:', path_json)
     print()
 
 

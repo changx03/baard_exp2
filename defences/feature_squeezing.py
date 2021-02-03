@@ -143,8 +143,7 @@ class FeatureSqueezingTorch:
             dataset = TensorDataset(
                 torch.from_numpy(samples.astype(np.float32)),
                 torch.from_numpy(y.astype(np.long)))
-            loader = DataLoader(
-                dataset, batch_size=self.batch_size, shuffle=True)
+            loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
             for e in range(epochs):
                 time_start = time.time()
@@ -261,17 +260,3 @@ class FeatureSqueezingTorch:
                 tensor_pred[start:end] = outputs
                 start = end
         return tensor_pred.cpu().detach().numpy()
-
-
-class FeatureSqueezingSklearn:
-    def __init__(self):
-        raise NotImplementedError
-
-    def fit(self, X, y, epochs=50):
-        raise NotImplementedError
-
-    def predict(self, X):
-        raise NotImplementedError
-
-    def predict_proba(self, X):
-        raise NotImplementedError

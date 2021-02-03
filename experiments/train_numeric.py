@@ -18,6 +18,7 @@ sys.path.append(os.getcwd())
 from defences.util import dataset2tensor
 from models.numeric import NumericModel
 from models.torch_util import print_acc_per_label, train, validate
+from experiments.util import set_seeds
 
 
 def load_csv(file_path):
@@ -40,7 +41,14 @@ def main():
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
+    print(args)
 
+    set_seeds(args.random_state)
+    
+    if not os.path.exists(args.output_path):
+        print('Output folder does not exist. Create:', args.output_path)
+        os.mkdir(args.output_path)
+        
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Device: {}'.format(device))
 
@@ -64,7 +72,7 @@ def main():
         torch.from_numpy(X_test).type(torch.float32),
         torch.from_numpy(y_test).type(torch.long))
     dataloader_train = DataLoader(dataset_train, args.batch_size, shuffle=True)
-    dataloader_test = DataLoader(dataset_test, args.batch_size, shuffle=True)
+    dataloader_test = DataLoader(dataset_test, args.batch_size, shuffle=False)
     print('Train set: {}, Test set: {}'.format(X_train.shape, X_test.shape))
 
     # Prepare model

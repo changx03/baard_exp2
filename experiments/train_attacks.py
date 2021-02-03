@@ -37,6 +37,7 @@ from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.numeric import NumericModel
 from models.torch_util import validate
+from experiments.util import set_seeds
 
 
 def load_csv(file_path):
@@ -56,14 +57,21 @@ def main():
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--pretrained', type=str, required=True)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--attack', type=str, required=True, choices=data_params['attacks'])
     parser.add_argument('--eps', type=float, default=0.3)
     # NOTE: In CW_L2 attack, eps is the upper bound of c.
     parser.add_argument('--n_samples', type=int, default=2000)
     parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
+    print(args)
 
+    set_seeds(args.random_state)
+    
+    if not os.path.exists(args.output_path):
+        print('Output folder does not exist. Create:', args.output_path)
+        os.mkdir(args.output_path)
+        
     print('Dataset:', args.data)
     print('Pretrained model:', args.pretrained)
     print('Running attack: {}'.format(args.attack))
@@ -142,7 +150,7 @@ def main():
     tensor_test_X, tensor_test_y = get_correct_examples(
         model, dataset_test, device=device, return_tensor=True)
     dataset_perfect = TensorDataset(tensor_test_X, tensor_test_y)
-    loader_perfect = DataLoader(dataset_perfect, batch_size=512, shuffle=True)
+    loader_perfect = DataLoader(dataset_perfect, batch_size=512, shuffle=False)
     _, acc_perfect = validate(model, loader_perfect, loss, device)
     print('Accuracy on {} filtered test examples: {:.4f}%'.format(
         len(dataset_perfect), acc_perfect * 100))
@@ -163,35 +171,30 @@ def main():
         device_type='gpu')
 
     if args.attack == 'apgd':
-        eps_step = args.eps / 10.0 if args.eps <= 0.1 else args.eps / 4.0
-        max_iter = 1000 if args.eps <= 0.1 else 100
+        eps_step = args.eps / 10.0 if args.eps <= 0.1 else 0.1
         attack = AutoProjectedGradientDescent(
             estimator=classifier,
             eps=args.eps,
             eps_step=eps_step,
-            max_iter=max_iter,
+            max_iter=1000,
             batch_size=args.batch_size,
             targeted=False)
     elif args.attack == 'apgd1':
-        eps_step = args.eps / 10.0 if args.eps <= 0.1 else args.eps / 4.0
-        max_iter = 1000 if args.eps <= 0.1 else 100
         attack = AutoProjectedGradientDescent(
             estimator=classifier,
             norm=1,
             eps=args.eps,
-            eps_step=eps_step,
-            max_iter=max_iter,
+            eps_step=0.1,
+            max_iter=1000,
             batch_size=args.batch_size,
             targeted=False)
     elif args.attack == 'apgd2':
-        eps_step = args.eps / 10.0 if args.eps <= 0.1 else args.eps / 4.0
-        max_iter = 1000 if args.eps <= 0.1 else 100
         attack = AutoProjectedGradientDescent(
             estimator=classifier,
             norm=2,
             eps=args.eps,
-            eps_step=eps_step,
-            max_iter=max_iter,
+            eps_step=0.1,
+            max_iter=1000,
             batch_size=args.batch_size,
             targeted=False)
     elif args.attack == 'bim':

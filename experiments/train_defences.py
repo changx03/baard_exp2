@@ -33,32 +33,7 @@ from models.numeric import NumericModel
 from models.torch_util import (AddGaussianNoise, predict, predict_numpy,
                                validate)
 
-from experiments.util import load_csv
-
-
-def baard_preprocess(data, tensor_X):
-    """Preprocess training data"""
-    if data == 'cifar10':
-        # return tensor_X
-        transform = tv.transforms.Compose([
-            tv.transforms.RandomHorizontalFlip(),
-            # tv.transforms.RandomCrop(32, padding=4),
-            AddGaussianNoise(mean=0., std=1., eps=0.02)
-        ])
-        return transform(tensor_X)
-    elif data == 'mnist':
-        # return tensor_X
-        transform = tv.transforms.Compose([
-            tv.transforms.RandomRotation(5)
-            # AddGaussianNoise(mean=0., std=1., eps=0.02)
-        ])
-        return transform(tensor_X)
-    else:
-        # return tensor_X
-        transform = tv.transforms.Compose([
-            AddGaussianNoise(mean=0., std=1., eps=0.02)
-        ])
-        return transform(tensor_X)
+from experiments.util import load_csv, set_seeds
 
 
 def main():
@@ -79,6 +54,12 @@ def main():
     args = parser.parse_args()
     print(args)
 
+    set_seeds(args.random_state)
+    
+    if not os.path.exists(args.output_path):
+        print('Output folder does not exist. Create:', args.output_path)
+        os.mkdir(args.output_path)
+        
     print('Dataset:', args.data)
     print('Pretrained model:', args.pretrained)
     print('Pretrained samples:', args.adv + '_adv.npy')
@@ -163,7 +144,7 @@ def main():
 
     tensor_test_X, tensor_test_y = get_correct_examples(model, dataset_test, device=device, return_tensor=True)
     dataset_test = TensorDataset(tensor_test_X, tensor_test_y)
-    loader_test = DataLoader(dataset_test, batch_size=512, shuffle=True)
+    loader_test = DataLoader(dataset_test, batch_size=512, shuffle=False)
     _, acc_perfect = validate(model, loader_test, loss, device)
     print('Accuracy on {} filtered test set: {:.4f}%'.format(len(dataset_test), acc_perfect * 100))
 
@@ -216,13 +197,18 @@ def main():
         detector = BAARDOperator(stages=stages)
 
         # Run preprocessing
-        X_baard = baard_preprocess(args.data, tensor_train_X).cpu().detach().numpy()
+        baard_train_path = os.path.join('results', '{}_{}_baard_train.pt'.format(args.data, model_name))
+        obj = torch.load(baard_train_path)
+        X_baard = obj['X_train']
+        y_train = obj['y_train']
         # Fit the model with the filtered the train set.
         detector.stages[0].fit(X_baard, y_train)
         detector.stages[1].fit(X_train, y_train)
         if len(detector.stages) == 3:
             detector.stages[2].fit(X_train, y_train)
         detector.search_thresholds(X_val, pred_val, labels_val)
+        path_baard = os.path.join(args.output_path, 'baard_{}_{}_param.pt'.format(args.data, model_name))
+        detector.save(path_baard)
     elif args.defence == 'fs':
         squeezers = []
         if args.data == 'mnist':

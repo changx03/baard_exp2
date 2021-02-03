@@ -150,3 +150,6 @@ test.sh
 test.ipynb
 results/*
 test
+*.out
+examples/baard_demo.pt
+result*/

@@ -17,7 +17,7 @@ from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from defences.feature_squeezing import (NLMeansColourSqueezer, MedianSqueezer,
                                         DepthSqueezer, FeatureSqueezingTorch)
-
+from experiments.util import set_seeds
 
 def main():
     parser = argparse.ArgumentParser()
@@ -26,8 +26,16 @@ def main():
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--pretrained', type=str, required=True)
     parser.add_argument('--param', type=str, required=True)
+    parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
+    print(args)
 
+    set_seeds(args.random_state)
+
+    if not os.path.exists(args.output_path):
+        print('Output folder does not exist. Create:', args.output_path)
+        os.mkdir(args.output_path)
+        
     print('Dataset:', args.data)
     print('Pretrained model:', args.pretrained)
 

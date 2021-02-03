@@ -97,10 +97,13 @@ class ApplicabilityStage:
             x_subset = X[idx]
             lower = self.thresholds_[i, 0]
             upper = self.thresholds_[i, 1]
-            blocked_idx = np.where(
-                np.logical_or(np.any(x_subset < lower, axis=1), np.any(x_subset > upper, axis=1))
-            )[0]
-            results[idx[blocked_idx]] = 1
+            # blocked_idx_of_idx = np.where(np.logical_or(np.any(x_subset < lower, axis=1), np.any(x_subset > upper, axis=1)))[0]
+            below = np.any(x_subset < lower, axis=1)
+            above = np.any(x_subset > upper, axis=1)
+            out_of_box = np.logical_or(below, above)
+            blocked_idx_of_idx = np.where(out_of_box)[0]
+            blocked_idx = idx[blocked_idx_of_idx]
+            results[blocked_idx] = 1
         return results
 
 

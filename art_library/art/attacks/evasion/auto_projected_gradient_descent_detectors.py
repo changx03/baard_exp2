@@ -2,9 +2,10 @@ import logging
 import math
 from typing import Optional, Union, TYPE_CHECKING
 
+from torch.nn import Softmax
 import numpy as np
 from tqdm.auto import trange
-
+import torch
 from art.config import ART_NUMPY_DTYPE
 from art.attacks.evasion.auto_projected_gradient_descent import AutoProjectedGradientDescent
 from art.estimators.estimator import BaseEstimator, LossGradientsMixin
@@ -30,7 +31,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         self,
         estimator: "CLASSIFIER_LOSS_GRADIENTS_TYPE",
         detector: "CLASSIFIER_LOSS_GRADIENTS_TYPE",
-        detector_th : int,
+        detector_th : int = 0.5,
         beta: int = 0.5,
         norm: Union[int, float, str] = np.inf,
         eps: float = 0.3,
@@ -68,66 +69,61 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         self.beta = beta
         self.detector_th = detector_th
 
-        detector_score = detector.predict(x=np.ones(shape=(1,
-                                                           *detector.input_shape)))
-        if (detector_score < 0) or (detector_score > 1):
-            raise ValueError(
-                "The detector's score should be a value between 0 and 1."
+        if isinstance(detector, PyTorchClassifier):
+            import torch
+
+            if detector.clip_values is not None:
+                raise ValueError("The clip value of the detector cannot "
+                                 "be different from None.")
+
+            class detector_loss:
+                """
+                The detector loss is the detector score for the class 1
+                - the detector threshold
+                """
+
+                def __init__(self):
+                    self.reduction = "mean"
+
+                def __call__(self, y_pred, y_true):  # type: ignore
+                    """
+                    y_pred are actually the logits.
+                    y_true is actually unused.
+                    """
+                    if isinstance(y_pred, np.ndarray):
+                        scores = torch.from_numpy(y_pred)
+                    else:
+                        scores = y_pred
+
+                    # apply the softmax to have scores in 0 1
+                    softmax_obj = Softmax()
+                    scores = softmax_obj(scores)
+
+                    # consider the score assigned to the malicious class
+                    scores = scores[:, 1]
+
+                    scores = scores - detector_th
+
+                    return torch.mean(scores)
+
+            self._det_loss_object = detector_loss()
+
+            detector_apgd = PyTorchClassifier(
+                model=detector.model,
+                loss=self._det_loss_object,
+                input_shape=detector.input_shape,
+                nb_classes=detector.nb_classes,
+                optimizer=None,
+                channels_first=detector.channels_first,
+                preprocessing_defences=detector.preprocessing_defences,
+                postprocessing_defences=detector.postprocessing_defences,
+                preprocessing=detector.preprocessing,
+                device_type=detector._device,
             )
 
         else:
-
-            if isinstance(detector, PyTorchClassifier):
-                import torch
-
-                if detector.clip_values is not None:
-                    raise ValueError("The clip value of the detector cannot "
-                                     "be different from None.")
-
-                class detector_loss:
-                    """
-                    The detector loss is the detector score for the class 1
-                    - the detector threshold
-                    """
-
-                    def __init__(self):
-                        self.reduction = "mean"
-
-                    def __call__(self, y_pred):  # type: ignore
-                        """
-                        y_pred must be the logits.
-                        """
-                        if isinstance(y_pred, np.ndarray):
-                            y_pred = torch.from_numpy(y_pred)
-
-                        # consider the score assigned to the malicious class
-                        scores = y_pred[:,1]
-
-                        # fixme: check if the brodcasting is made correctly
-                        scores = scores - self.detector_th
-                        print ("y pred shape ", y_pred.shape)
-                        print("scores shape ", scores.shape)
-
-                        return torch.mean(scores)
-
-                self._det_loss_object = detector_loss()
-
-                detector_apgd = PyTorchClassifier(
-                    model=detector.model,
-                    loss=self._det_loss_object,
-                    input_shape=detector.input_shape,
-                    nb_classes=detector.nb_classes,
-                    optimizer=None,
-                    channels_first=detector.channels_first,
-                    preprocessing_defences=detector.preprocessing_defences,
-                    postprocessing_defences=detector.postprocessing_defences,
-                    preprocessing=detector.preprocessing,
-                    device_type=detector._device,
-                )
-
-            else:
-                raise ValueError("The type of the detector classifier is not "
-                                 "supported.")
+            raise ValueError("The type of the detector classifier is not "
+                             "supported.")
 
         self.detector = detector_apgd
 
@@ -171,7 +167,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
             # get the detector prediction (1 means the sample is predicted
             # as malicious, 0 as benign).
-            detector_pred = self.estimator.predict(x_adv)
+            detector_pred = self.estimator.predict(x_adv)[:,1]
 
             # the element of sample_is_robust will be 0 if the sample is
             # classified as the attacker wants, 1 otherwise
@@ -246,11 +242,12 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                     # targeted
                     grad = (
                             (1 - self.beta) *
-                            self.estimator.loss_gradient(x_k, y_batch) + \
+                            self.estimator.loss_gradient(x_k, y_batch) * \
+                            (1- 2 * int(self.targeted)) - \
                             self.beta * \
                             self.detector.loss_gradient(x_k, np.ones(
                                 y_batch.shape)) # grad wrt malicious class.
-                            ) * (1 - 2 * int(self.targeted))
+                            )
 
                     # Apply norm bound
                     if self.norm in [np.inf, "inf"]:
@@ -285,13 +282,13 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                               self.estimator.loss(x=x_k, y=y_batch,
                                                   reduction="mean") + \
                               self.beta * \
-                              self.detector.loss(x=x_k, reduction="mean")
+                              self.detector.loss(x=x_k,  y=y_batch, reduction="mean")
 
                         f_1 = (1-self.beta) * \
                               self.estimator.loss(x=x_1, y=y_batch,
                                                   reduction="mean") + \
                               self.beta * \
-                              self.detector.loss(x=x_1, reduction="mean")
+                              self.detector.loss(x=x_1,  y=y_batch, reduction="mean")
 
                         self.eta_w_j_m_1 = eta
                         self.f_max_w_j_m_1 = f_0
@@ -329,7 +326,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                                    self.estimator.loss(x=x_k_p_1, y=y_batch,
                                                        reduction="mean") + \
                                    self.beta * \
-                                   self.detector.loss(x=x_k_p_1,
+                                   self.detector.loss(x=x_k_p_1, y=y_batch,
                                                      reduction="mean")
 
                         if f_k_p_1 > self.f_max:
@@ -363,9 +360,10 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
                 y_pred_adv_k = self.estimator.predict(x_k)
 
-                # get the detector prediction (1 means the sample is predicted
-                # as malicious, 0 as benign).
-                detector_pred_k = self.estimator.predict(x_k)
+                # get the detector prediction for the benign class (1 means
+                # the sample is predicted
+                # as benign, 1 as malicious).
+                detector_pred_benign_k = self.estimator.predict(x_k)[:,0]
 
                 # the element of sample_is_not_robust_k will be 1 if the
                 # sample is classified as the attacker wants, 0 otherwise
@@ -382,7 +380,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                 sample_is_not_robust_k = np.logical_and(sample_is_not_robust_k,
                                                  # (1 if classified by the
                                                         # detector as benign)
-                                                 np.invert(detector_pred_k))
+                                                    detector_pred_benign_k)
 
                 x_robust[batch_index_1:batch_index_2][sample_is_not_robust_k] = x_k[sample_is_not_robust_k]
 

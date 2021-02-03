@@ -152,4 +152,4 @@ results/*
 test
 *.out
 examples/baard_demo.pt
-result_2/*
+result*/

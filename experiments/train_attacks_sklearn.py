@@ -6,8 +6,9 @@ import sys
 import numpy as np
 import pandas as pd
 from art.attacks.evasion import (BasicIterativeMethod, BoundaryAttack,
-                                 FastGradientMethod)
+                                 FastGradientMethod, DecisionTreeAttack)
 from art.estimators.classification import SklearnClassifier
+from sklearn.tree import ExtraTreeClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
@@ -16,8 +17,7 @@ from sklearn.svm import SVC
 sys.path.append(os.getcwd())
 from experiments.util import set_seeds
 
-MODEL_NAME = 'svm'
-
+ATTACKS = ['bim', 'fgsm', 'boundary', 'tree']
 
 def load_csv(file_path):
     """Load a pre-processed CSV file."""
@@ -33,18 +33,20 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', type=str, required=True, choices=data_params['datasets'])
+    parser.add_argument('--model', type=str, default='svm', choices=['svm', 'tree'])
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--output_path', type=str, default='results')
-    parser.add_argument('--attack', type=str, required=True, choices=data_params['attacks'])
+    parser.add_argument('--attack', type=str, required=True, choices=ATTACKS)
     parser.add_argument('--eps', type=float, default=0.3)
     # NOTE: In CW_L2 attack, eps is the upper bound of c.
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--n_samples', type=int, default=2000)
     parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
+    print(args)
 
     set_seeds(args.random_state)
-    
+
     print('Dataset:', args.data)
     print('Running attack:', args.attack)
 
@@ -62,7 +64,12 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=n_test, random_state=random_state)
 
     # Train model
-    model = SVC(kernel="linear", C=1.0, gamma="scale", random_state=random_state)
+    if args.model == 'svm':
+        model = SVC(kernel="linear", C=1.0, gamma="scale", random_state=random_state)
+    elif args.model == 'tree':
+        model = ExtraTreeClassifier(random_state=random_state)
+    else:
+        raise NotImplementedError
     model.fit(X_train, y_train)
     acc_train = model.score(X_train, y_train)
     acc_test = model.score(X_test, y_test)
@@ -96,6 +103,9 @@ def main():
             estimator=classifier,
             eps=args.eps,
             batch_size=args.batch_size)
+    elif args.attack == 'tree':
+        attack = DecisionTreeAttack(
+            classifier=classifier)
     else:
         raise NotImplementedError
 
@@ -111,7 +121,7 @@ def main():
     acc = model.score(adv, y_true)
     print('Acc on adv:', acc)
 
-    output_file = '{}_{}_{}_{}'.format(args.data, MODEL_NAME, args.attack, str(args.eps))
+    output_file = '{}_{}_{}_{}'.format(args.data, args.model, args.attack, str(args.eps))
     path_x = os.path.join(args.output_path, '{}_x.npy'.format(output_file))
     path_y = os.path.join(args.output_path, '{}_y.npy'.format(output_file))
     path_adv = os.path.join(args.output_path, '{}_adv.npy'.format(output_file))

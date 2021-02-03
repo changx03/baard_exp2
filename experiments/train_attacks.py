@@ -53,7 +53,7 @@ def main():
     parser.add_argument('--data_path', type=str, default='data')
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--pretrained', type=str, required=True)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--attack', type=str, required=True, choices=data_params['attacks'])
     parser.add_argument('--eps', type=float, default=0.3)
     # NOTE: In CW_L2 attack, eps is the upper bound of c.

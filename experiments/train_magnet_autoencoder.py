@@ -36,6 +36,7 @@ def main():
     parser.add_argument('--output_path', type=str, default='results')
     parser.add_argument('--pretrained', type=str, required=True)
     parser.add_argument('--param', type=str, required=True)
+    parser.add_argument('--random_state', type=int, default=1234)
     args = parser.parse_args()
     print(args)
 

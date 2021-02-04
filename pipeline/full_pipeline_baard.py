@@ -86,21 +86,30 @@ def run_full_pipeline_baard(data,
 
     adv = run_attack_untargeted(file_model, X, y, att_name=att_name, eps=eps, device=device)
 
+    print('-------------------------------------------------------------------')
+    print('Start testing adversarial examples...')
+    pred = predict_numpy(model, adv, device)
+    print('Acc on adv:', np.mean(pred == y))
+
     X_def_test = X[:1000]
     y_def_test = y[:1000]
     adv_def_test = adv[:1000]
+    pred_adv_def_test = pred[:1000]
 
     X_def_val = X[1000:2000]
     y_def_val = y[1000:2000]
-    adv_def_val = adv[1000:2000]
+    adv_def_val = adv[1000:2000]  # Unused by BAARD
+    pred_adv_def_val = pred[1000:2000]  # Unused by BAARD
 
     X_att_test = X[2000:4000]
     y_att_test = y[2000:4000]
     adv_att_test = adv[2000:4000]
+    pred_adv_att_test = pred[2000:4000]
 
     X_surro_train = X[4000:]
     y_surro_train = y[4000:]
     adv_surro_train = adv[4000:]
+    pred_adv_surro_train = pred[4000:]
 
     print('-------------------------------------------------------------------')
     print('Start training BAARD...')
@@ -146,15 +155,14 @@ def run_full_pipeline_baard(data,
 
     print('-------------------------------------------------------------------')
     print('Start testing BAARD...')
-    pred_adv = predict_numpy(model, adv_def_test, device)
 
     time_start = time.time()
-    label_adv = detector.detect(adv_def_test, pred_adv)
+    label_adv = detector.detect(adv_def_test, pred_adv_def_test)
     label_clean = detector.detect(X_def_test, y_def_test)
     time_elapsed = time.time() - time_start
     print('Total run time:', str(datetime.timedelta(seconds=time_elapsed)))
 
-    acc = acc_on_adv(pred_adv, y_def_test, label_adv)
+    acc = acc_on_adv(pred_adv_def_test, y_def_test, label_adv)
     fpr = np.mean(label_clean)
     print('Acc_on_adv:', acc)
     print('FPR:', fpr)
@@ -165,7 +173,7 @@ def run_full_pipeline_baard(data,
         'adv': adv_def_test,
         'label_adv': label_adv,
         'label_clean': label_clean,
-        'pred_adv': pred_adv
+        'pred_adv': pred_adv_def_test
     }
     file_baard_output = os.path.join(path, '{}_{}_{}_{}_baard_output.pt'.format(data, model_name, att_name, eps))
     torch.save(obj, file_baard_output)
@@ -189,14 +197,12 @@ def run_full_pipeline_baard(data,
             label_test = obj['label_test']
             print(X_train.shape, label_train.shape, X_test.shape, label_test.shape)
         else:
-            pred_surro_train = predict_numpy(model, adv_surro_train, device)
-            label_adv_train = detector.detect(adv_surro_train, pred_surro_train)
+            label_adv_train = detector.detect(adv_surro_train, pred_adv_surro_train)
             label_X_train = detector.detect(X_surro_train, y_surro_train)
             X_train = np.concatenate((X_surro_train, adv_surro_train))
             label_train = np.concatenate((label_X_train, label_adv_train))
 
-            pred_surro_test = predict_numpy(model, adv_att_test[:1000], device)
-            label_adv_test = detector.detect(adv_att_test[:1000], pred_surro_test)
+            label_adv_test = detector.detect(adv_att_test[:1000], pred_adv_att_test[:1000])
             label_X_test = detector.detect(X_att_test[:1000], y_att_test[:1000])
             X_test = np.concatenate((X_att_test[:1000], adv_att_test[:1000]))
             label_test = np.concatenate((label_X_test, label_adv_test))
@@ -204,11 +210,11 @@ def run_full_pipeline_baard(data,
             obj = {
                 'X_train': X_train,
                 'y_train': np.concatenate((y_surro_train, y_surro_train)),
-                'pred_train': np.concatenate((y_surro_train, pred_surro_train)),
+                'pred_train': np.concatenate((y_surro_train, pred_adv_surro_train)),
                 'label_train': label_train,
                 'X_test': X_test,
                 'y_test': np.concatenate((y_att_test[:1000], y_att_test[:1000])),
-                'pred_test': np.concatenate((y_att_test[:1000], pred_surro_test)),
+                'pred_test': np.concatenate((y_att_test[:1000], pred_adv_att_test[:1000])),
                 'label_test': label_test
             }
             torch.save(obj, file_surro_data)

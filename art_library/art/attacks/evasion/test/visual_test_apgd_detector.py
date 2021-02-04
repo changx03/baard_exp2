@@ -138,6 +138,60 @@ def plot_detector_decision_region(X, clf, detector):
     Z = Z.reshape(xx.shape)
     cs = plt.contourf(xx, yy, Z, cmap=cmap, alpha = 0.5)
 
+def plot_clf_decision_region(X, clf):
+
+    colors = ['blue', 'red', 'gray', 'black', 'green', 'cyan']
+    cmap = colors[:3]
+    # Convert list of colors to colormap
+    cmap = ListedColormap(cmap)
+
+    plot_step = 0.02
+
+    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
+                         np.arange(y_min, y_max, plot_step))
+    plt.tight_layout(h_pad=0.5, w_pad=0.5, pad=2.5)
+
+    # chose the colors depending on the classifier predictions
+    points_to_classify = np.c_[xx.ravel(), yy.ravel()]
+
+    points_to_classify = points_to_classify.astype(np.float32)
+
+    clf_scores = clf.predict(points_to_classify)
+    Z = clf_scores.argmax(axis=1)
+
+    Z = Z.reshape(xx.shape)
+    #cs = plt.contourf(xx, yy, Z, cmap=cmap, alpha = 0.5)
+    cs = plt.contour(xx, yy, Z, colors='black', alpha=0.5, levels=[0])
+
+
+def _apgd_grad(x, y, attack):
+
+    x = np.expand_dims(x, axis=0)
+    y = np.expand_dims(y, axis=0)
+
+    grad_clf = attack.estimator.loss_gradient(x, y) * \
+            (1 - 2 * int(attack.targeted))
+
+    # normalize the gradient for visualization
+    norm = np.linalg.norm(grad_clf)
+    if norm > 0:
+        grad_clf /= norm
+
+    return grad_clf
+
+def _apgd_obj_func(x, y, attack):
+
+    x = np.expand_dims(x, axis=0)
+    y = np.expand_dims(y, axis=0)
+
+    loss = attack.estimator.loss(x=x, y=y,
+                        reduction="none")
+    loss = loss
+
+    return loss
+
 
 def _apgd_det_grad(x, y, attack):
 
@@ -160,7 +214,7 @@ def _apgd_det_grad(x, y, attack):
     else:
         grad = grad_clf
 
-    # normalize the gradient
+    # normalize the gradient for visualization
     norm = np.linalg.norm(grad)
     if norm > 0:
         grad /= norm
@@ -190,7 +244,9 @@ def _apgd_det_obj_func(x, y, attack):
 
     return loss
 
-def plot_attacker_objective_function(X, attack):
+def plot_attacker_objective_function(X, attack,attack_obf_fun,grad_obj_fun):
+
+    plot_clf_decision_region(X, clf)
 
     #plot_step = 0.02
     plot_step = 0.3
@@ -207,9 +263,10 @@ def plot_attacker_objective_function(X, attack):
     n_vals = points_to_classify.shape[0]
     Y = np.zeros((n_vals, 2))
     Y[:,1] = 1
+
     Z = np.zeros((n_vals))
     for p_idx in range(n_vals):
-        Z[p_idx] = _apgd_det_obj_func(points_to_classify[p_idx,:], Y[p_idx,:],
+        Z[p_idx] = attack_obf_fun(points_to_classify[p_idx,:], Y[p_idx,:],
                                       attack)
 
     print("z min  ", Z.min(), "z max ", Z.max())
@@ -221,7 +278,7 @@ def plot_attacker_objective_function(X, attack):
     grad_point_values = np.zeros((n_vals, 2))
     # compute gradient on each grid point
     for p_idx in range(n_vals):
-        grad_point_values[p_idx, :] = _apgd_det_grad(
+        grad_point_values[p_idx, :] = grad_obj_fun(
             points_to_classify[p_idx, :].ravel(), Y[p_idx,:], attack)
 
     U = grad_point_values[:, 0].reshape(
@@ -256,17 +313,18 @@ def evaluate_attack_efficacy(adv_x):
     plot_detector_decision_region(X_tr_det, clf, detector)
 
     # plot dataset samples
-    plot_points(X_train, y_train, 2)
+    #plot_points(X_train, y_train, 2)
 
     # plot dummy adversarial samples
-    plot_points(dummy_adv_x, np.ones((dummy_adv_x.shape[0],)), 2, 'gray')
+    #plot_points(dummy_adv_x, np.ones((dummy_adv_x.shape[0],)), 2, 'gray')
 
     # plot adversarial examples
     plot_points(adv_x, y_test, 2, fixed_color=None,
                 edgecolor='black')
 
-    plt.xlim((-1, 3))
-    plt.ylim((0, 5))
+# todo: readd
+#    plt.xlim((-1, 3))
+#    plt.ylim((0, 5))
 
     plt.show()
 
@@ -278,9 +336,11 @@ def evaluate_attack_efficacy(adv_x):
     print("accuracy on the apgd advx", acc)
 
 
-def show_attackers_obj_function(X_test, attack, adv_x):
+def show_attackers_obj_function(X_test, attack, adv_x, attack_obf_fun,
+                                grad_obj_fun):
 
-    plot_attacker_objective_function(X_test, attack)
+    plot_attacker_objective_function(X_test, attack, attack_obf_fun,
+                                     grad_obj_fun)
 
     # plot dataset samples
     plot_points(X_train, y_train, 2)
@@ -292,8 +352,9 @@ def show_attackers_obj_function(X_test, attack, adv_x):
     plot_points(adv_x, y_test, 2, fixed_color=None,
                 edgecolor='black')
 
-    plt.xlim((-1, 3))
-    plt.ylim((0, 5))
+    #fixme: re-add
+   # plt.xlim((-1, 3))
+   # plt.ylim((0, 5))
     #
     plt.show()
 
@@ -333,20 +394,35 @@ detector = net_generation_and_train(X_tr_det, y_tr_det, net_type=Net)
 
 ###############################
 
-# attack the detector with apgd (black box attack)
-#attack = AutoProjectedGradientDescent(estimator=clf, norm=2, eps=2.5)
+attack_class = 'apgd_detector' # can be apgd or apgd_detector
 
+if attack_class == "apgd":
+    #attack the detector with apgd (black box attack)
+    attack = AutoProjectedGradientDescent(estimator=clf, norm=2, eps=3.0,
+                                          #loss_type='cross_entropy'
+                                          loss_type =
+                                           "cross_entropy",
+                                           #'logits_difference'
+                                          )
 
-# attack the detector with apgd detector (white box against detector)
-attack = AutoProjectedGradientDescentDetectors(estimator = clf,
-                                               detector=detector,
-                                               norm=2,
-                                               eps = 3.0,
-                                               beta=0.9,
-                                               loss_type=
-                                               'cross_entropy',
-                                               clf_loss_multiplier = 0.001,
-                                               detector_th=0.0)
+    attack_obf_fun = _apgd_obj_func
+    grad_obj_fun = _apgd_grad
+
+else:
+
+    attack_obf_fun = _apgd_det_obj_func
+    grad_obj_fun = _apgd_det_grad
+
+    # attack the detector with apgd detector (white box against detector)
+    attack = AutoProjectedGradientDescentDetectors(estimator = clf,
+                                                   detector=detector,
+                                                   norm=2,
+                                                   eps = 3.0,
+                                                   beta=0.90,
+                                                   loss_type=
+                                                   'cross_entropy',
+                                                   clf_loss_multiplier = 0.001,
+                                                   detector_th=0.0)
 
 # attack the detector
 adv_x = attack.generate(x=X_test, y=y_test)
@@ -356,7 +432,8 @@ adv_x = attack.generate(x=X_test, y=y_test)
 
 #plt.subplot(2, 2, 2)
 print("show attacker objective function")
-show_attackers_obj_function(X_test, attack, adv_x)
+show_attackers_obj_function(X_test, attack, adv_x, attack_obf_fun,
+ grad_obj_fun)
 
 ##################################################
 # from art.estimators.classification import DetectorClassifier

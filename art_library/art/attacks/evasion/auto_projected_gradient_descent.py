@@ -27,6 +27,7 @@ from typing import Optional, Union, TYPE_CHECKING
 import numpy as np
 from tqdm.auto import trange
 from torch.nn import Softmax
+from torch.autograd import Variable
 
 from art.config import ART_NUMPY_DTYPE
 from art.attacks.attack import EvasionAttack
@@ -59,7 +60,7 @@ class AutoProjectedGradientDescent(EvasionAttack):
         "verbose",
     ]
     _estimator_requirements = (BaseEstimator, LossGradientsMixin, ClassifierMixin)
-    _predefined_losses = [None, "cross_entropy", "difference_logits_ratio"]
+    _predefined_losses = [None, "cross_entropy", "difference_logits_ratio", 'logits_difference']
 
     def __init__(
         self,
@@ -89,6 +90,12 @@ class AutoProjectedGradientDescent(EvasionAttack):
         :param verbose: Show progress bars.
         """
         from art.estimators.classification import TensorFlowClassifier, TensorFlowV2Classifier, PyTorchClassifier
+
+        # fixme: block "logits_difference" for library different than pytorch
+
+        if targeted is True:
+            raise NotImplementedError("This attack so far do not works as a "
+                                      "targeted attack.")
 
         if loss_type not in self._predefined_losses:
             raise ValueError(
@@ -275,33 +282,6 @@ class AutoProjectedGradientDescent(EvasionAttack):
                         self._loss_object = torch.nn.CrossEntropyLoss(
                         reduction="mean")
 
-                # elif loss_type == "normalized_cross_entropy":
-                #
-                #     class normalized_clf_loss:
-                #         """
-                #         Apply the softmax to the classifier loss
-                #         """
-                #
-                #         def __init__(self):
-                #             self.reduction = "mean"
-                #
-                #         def __call__(self, y_pred, y_true):  # type: ignore
-                #             """
-                #             y_pred are actually the logits.
-                #             """
-                #             y_true = torch.argmax(y_true, dim=1)
-                #
-                #             cross_entr_obj = torch.nn.CrossEntropyLoss(
-                #                 reduction="mean")
-                #             loss = cross_entr_obj(y_pred, y_true)
-                #
-                #             # crop values
-                #             loss /= 100
-                #
-                #             return loss
-                #
-                #     self._loss_object = normalized_clf_loss()
-
                 elif loss_type == "difference_logits_ratio":
                     if is_probability(
                         estimator.predict(x=np.ones(shape=(1, *estimator.input_shape), dtype=ART_NUMPY_DTYPE))
@@ -351,6 +331,49 @@ class AutoProjectedGradientDescent(EvasionAttack):
                                 return torch.mean(dlr.float())
 
                         self._loss_object = difference_logits_ratio()
+
+                elif loss_type == "logits_difference":
+                    if is_probability(
+                        estimator.predict(x=np.ones(shape=(1, *estimator.input_shape), dtype=ART_NUMPY_DTYPE))
+                    ):
+                        raise ValueError(
+                            "The provided estimator seems to predict probabilities. "
+                            "If loss_type='logits_difference' the estimator has to to predict logits."
+                        )
+                    else:
+                        # fixme: only for binary clf and for indiscriminate
+                        #  attacks
+                        class logits_difference:
+                            def __init__(self):
+                                self.reduction = "mean"
+
+                            def __call__(self, y_true, y_pred):
+                                if isinstance(y_true, np.ndarray):
+                                    #y_true = torch.from_numpy(y_true)
+                                    y_true = torch.tensor(y_true,
+                                                          requires_grad=True)
+                                if isinstance(y_pred, np.ndarray):
+                                    #y_pred = torch.from_numpy(y_pred)
+                                    y_pred = torch.tensor(y_pred,
+                                                          requires_grad=True)
+                                y_true = y_true.float()
+                                y_pred = y_pred.float()
+
+                                i_y_true = torch.argmax(y_true, axis=1)
+                                i_y_competing = torch.argmin(y_true, axis=1)
+
+                                # scores true class
+                                scores_true = y_pred[:, i_y_true]
+                                scores_competing = y_pred[:, i_y_competing]
+
+                                diff = scores_true - scores_competing
+                                diff = torch.mean(diff.float())
+                                diff = - diff
+
+                                loss = Variable(diff, requires_grad=True)
+                                return loss
+
+                        self._loss_object = logits_difference()
 
                 estimator_apgd = PyTorchClassifier(
                     model=estimator.model,

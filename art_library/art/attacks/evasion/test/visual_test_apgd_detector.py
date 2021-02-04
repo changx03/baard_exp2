@@ -145,26 +145,35 @@ def _apgd_det_grad(x, y, attack):
     y = np.expand_dims(y, axis=0)
 
     grad = (
-            (1 - attack.beta) *
+            (1 - attack.beta) * attack.clf_loss_multiplier *
             attack.estimator.loss_gradient(x, y) * \
-            (1 - 2 * int(attack.targeted)) #+ \
-            #attack.beta * \
-            #attack.detector.loss_gradient(x, np.ones(
-            #    y.shape))  # grad wrt malicious class.
+            (1 - 2 * int(attack.targeted)) - \
+            attack.beta * \
+            attack.detector.loss_gradient(x, np.ones(
+                y.shape))  # grad wrt malicious class.
     )
 
     # normalize the gradient
-    grad /= np.linalg.norm(grad)
+    norm = np.linalg.norm(grad)
+    if norm > 0:
+        grad /= norm
 
     return grad
 
 def _apgd_det_obj_func(x, y, attack):
 
-    loss = (1 - attack.beta) * \
-    attack.estimator.loss(x=x, y=y,
-                        reduction="none") #+ \
-    #attack.beta * \
-    #attack.detector.loss(x=x, y=y, reduction="mean")
+    x = np.expand_dims(x, axis=0)
+    y = np.expand_dims(y, axis=0)
+
+    loss_clf = attack.estimator.loss(x=x, y=y,
+                        reduction="none")
+    loss_clf = (1 - attack.beta) * attack.clf_loss_multiplier * loss_clf
+
+    loss_det =  - \
+    attack.beta * \
+    attack.detector.loss(x=x, y=y, reduction="none")
+
+    loss = loss_clf + loss_det
 
     return loss
 
@@ -182,15 +191,20 @@ def plot_attacker_objective_function(X, attack):
     points_to_classify = np.c_[xx.ravel(), yy.ravel()]
     points_to_classify = points_to_classify.astype(np.float32)
 
-    Y = np.zeros((points_to_classify.shape[0], 2))
+    n_vals = points_to_classify.shape[0]
+    Y = np.zeros((n_vals, 2))
     Y[:,1] = 1
-    Z = _apgd_det_obj_func(points_to_classify, Y, attack)
+    Z = np.zeros((n_vals))
+    for p_idx in range(n_vals):
+        Z[p_idx] = _apgd_det_obj_func(points_to_classify[p_idx,:], Y[p_idx,:],
+                                      attack)
+
+    print("z min  ", Z.min(), "z max ", Z.max())
 
     Z = Z.reshape(xx.shape)
     cs = plt.contourf(xx, yy, Z, cmap=plt.cm.seismic, alpha = 0.5)
 
     # plot gradients
-    n_vals = points_to_classify.shape[0]
     grad_point_values = np.zeros((n_vals, 2))
     # compute gradient on each grid point
     for p_idx in range(n_vals):
@@ -314,8 +328,11 @@ detector = net_generation_and_train(X_tr_det, y_tr_det, net_type=Net)
 attack = AutoProjectedGradientDescentDetectors(estimator = clf,
                                                detector=detector,
                                                norm=2,
-                                               eps = 3.0,
-                                               beta=0.50,
+                                               eps = 2.0,
+                                               beta=0.0,
+                                               loss_type=
+                                               'cross_entropy',
+                                               clf_loss_multiplier = 0.001,
                                                detector_th=0)
 
 # attack the detector

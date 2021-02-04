@@ -25,7 +25,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         "beta",
     ]
 
-    _predefined_losses = [None, "cross_entropy", "difference_logits_ratio"]
+    _predefined_losses = ["cross_entropy"]
 
     def __init__(
         self,
@@ -33,6 +33,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         detector: "CLASSIFIER_LOSS_GRADIENTS_TYPE",
         detector_th : int = 0.5,
         beta: int = 0.5,
+        clf_loss_multiplier: int = 1,
         norm: Union[int, float, str] = np.inf,
         eps: float = 0.3,
         eps_step: float = 0.1,
@@ -54,6 +55,8 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         :param beta: Constant which regulates the trade-off between the
         optimization of the classifier and the detector losses. In
         particular is the weight given to the detector's loss.
+        :param clf_loss_multiplier: Constant for which the classifier loss
+        will be multiplied.
         :param norm: The norm of the adversarial perturbation. Possible values: "inf", np.inf, 1 or 2.
         :param eps: Maximum perturbation that the attacker can introduce.
         :param eps_step: Attack step size (input variation) at each iteration.
@@ -68,6 +71,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
         self.beta = beta
         self.detector_th = detector_th
+        self.clf_loss_multiplier = clf_loss_multiplier
 
         if isinstance(detector, PyTorchClassifier):
             import torch
@@ -104,7 +108,10 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
                     scores = scores - detector_th
 
-                    return torch.mean(scores)
+                    if self.reduction == 'mean':
+                        return torch.mean(scores)
+                    else:
+                        return scores
 
             self._det_loss_object = detector_loss()
 
@@ -120,6 +127,8 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                 preprocessing=detector.preprocessing,
                 device_type=detector._device,
             )
+
+            self._det_loss_object = detector_loss()
 
         else:
             raise ValueError("The type of the detector classifier is not "
@@ -162,19 +171,20 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
         for _ in trange(max(1, self.nb_random_init), desc="AutoPGD - restart", disable=not self.verbose):
 
-            # Determine correctly predicted samples
-            estimator_y_pred = self.estimator.predict(x_adv)
+            # Get classifier scores
+            estimator_y_scores = self.estimator.predict(x_adv)
 
             # get the detector prediction (1 means the sample is predicted
             # as malicious, 0 as benign).
-            detector_pred = self.estimator.predict(x_adv)[:,1]
+            detector_scores = self.estimator.predict(x_adv)
+            detector_pred = np.argmax(detector_scores, axis=1)
 
             # the element of sample_is_robust will be 0 if the sample is
             # classified as the attacker wants, 1 otherwise
             if self.targeted:
-                sample_is_robust = np.argmax(estimator_y_pred, axis=1) != np.argmax(y, axis=1)
+                sample_is_robust = np.argmax(estimator_y_scores, axis=1) != np.argmax(y, axis=1)
             elif not self.targeted:
-                sample_is_robust = np.argmax(estimator_y_pred, axis=1) == np.argmax(y, axis=1)
+                sample_is_robust = np.argmax(estimator_y_scores, axis=1) == np.argmax(y, axis=1)
 
             # 1 if the sample is still correct (not classified as the target
             # class) or detected as adversarial example by the detector
@@ -280,13 +290,13 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                         # (1-self.beta) * loss_clf + self.beta * loss_detector
                         f_0 = (1-self.beta) * \
                               self.estimator.loss(x=x_k, y=y_batch,
-                                                  reduction="mean") + \
+                                                  reduction="mean") - \
                               self.beta * \
                               self.detector.loss(x=x_k,  y=y_batch, reduction="mean")
 
                         f_1 = (1-self.beta) * \
                               self.estimator.loss(x=x_1, y=y_batch,
-                                                  reduction="mean") + \
+                                                  reduction="mean") -\
                               self.beta * \
                               self.detector.loss(x=x_1,  y=y_batch, reduction="mean")
 
@@ -324,7 +334,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
                         f_k_p_1 = (1 - self.beta) * \
                                    self.estimator.loss(x=x_k_p_1, y=y_batch,
-                                                       reduction="mean") + \
+                                                       reduction="mean") - \
                                    self.beta * \
                                    self.detector.loss(x=x_k_p_1, y=y_batch,
                                                      reduction="mean")
@@ -360,10 +370,11 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
                 y_pred_adv_k = self.estimator.predict(x_k)
 
-                # get the detector prediction for the benign class (1 means
-                # the sample is predicted
-                # as benign, 1 as malicious).
-                detector_pred_benign_k = self.estimator.predict(x_k)[:,0]
+                # get the detector prediction.
+                detector_scores_k = self.estimator.predict(x_k)
+                detector_pred_k = np.argmax(detector_scores_k, axis=1)
+                # invert the detector prediction
+                inv_detector_pred_k = np.invert(detector_pred_k)
 
                 # the element of sample_is_not_robust_k will be 1 if the
                 # sample is classified as the attacker wants, 0 otherwise
@@ -380,7 +391,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                 sample_is_not_robust_k = np.logical_and(sample_is_not_robust_k,
                                                  # (1 if classified by the
                                                         # detector as benign)
-                                                    detector_pred_benign_k)
+                                                    inv_detector_pred_k)
 
                 x_robust[batch_index_1:batch_index_2][sample_is_not_robust_k] = x_k[sample_is_not_robust_k]
 

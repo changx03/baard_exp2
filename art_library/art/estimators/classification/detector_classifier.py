@@ -104,8 +104,10 @@ class DetectorClassifier(ClassifierNeuralNetwork):
         # Compute the prediction logits
         classifier_outputs = self.classifier.predict(x=x, batch_size=batch_size)
         detector_outputs = self.detector.predict(x=x, batch_size=batch_size)
+
         detector_outputs = (np.reshape(detector_outputs, [-1]) + 1) * np.max(classifier_outputs, axis=1)
         detector_outputs = np.reshape(detector_outputs, [-1, 1])
+
         combined_outputs = np.concatenate([classifier_outputs, detector_outputs], axis=1)
 
         # Apply postprocessing

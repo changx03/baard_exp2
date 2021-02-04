@@ -26,6 +26,7 @@ from typing import Optional, Union, TYPE_CHECKING
 
 import numpy as np
 from tqdm.auto import trange
+from torch.nn import Softmax
 
 from art.config import ART_NUMPY_DTYPE
 from art.attacks.attack import EvasionAttack
@@ -271,7 +272,36 @@ class AutoProjectedGradientDescent(EvasionAttack):
                             "the estimator has to to predict logits."
                         )
                     else:
-                        self._loss_object = torch.nn.CrossEntropyLoss(reduction="mean")
+                        self._loss_object = torch.nn.CrossEntropyLoss(
+                        reduction="mean")
+
+                # elif loss_type == "normalized_cross_entropy":
+                #
+                #     class normalized_clf_loss:
+                #         """
+                #         Apply the softmax to the classifier loss
+                #         """
+                #
+                #         def __init__(self):
+                #             self.reduction = "mean"
+                #
+                #         def __call__(self, y_pred, y_true):  # type: ignore
+                #             """
+                #             y_pred are actually the logits.
+                #             """
+                #             y_true = torch.argmax(y_true, dim=1)
+                #
+                #             cross_entr_obj = torch.nn.CrossEntropyLoss(
+                #                 reduction="mean")
+                #             loss = cross_entr_obj(y_pred, y_true)
+                #
+                #             # crop values
+                #             loss /= 100
+                #
+                #             return loss
+                #
+                #     self._loss_object = normalized_clf_loss()
+
                 elif loss_type == "difference_logits_ratio":
                     if is_probability(
                         estimator.predict(x=np.ones(shape=(1, *estimator.input_shape), dtype=ART_NUMPY_DTYPE))

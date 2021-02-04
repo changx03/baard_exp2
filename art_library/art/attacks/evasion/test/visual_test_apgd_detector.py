@@ -144,14 +144,21 @@ def _apgd_det_grad(x, y, attack):
     x = np.expand_dims(x, axis=0)
     y = np.expand_dims(y, axis=0)
 
-    grad = (
-            (1 - attack.beta) * attack.clf_loss_multiplier *
+    grad_clf = (1 - attack.beta) * attack.clf_loss_multiplier * \
             attack.estimator.loss_gradient(x, y) * \
-            (1 - 2 * int(attack.targeted)) - \
-            attack.beta * \
+            (1 - 2 * int(attack.targeted))
+
+    scores = attack.estimator.predict(x).ravel()
+    y_pred = np.argmax(scores).item()
+    y_true = np.argmax(y).item()
+    # fixme: this work only for indiscriminate attack
+    if y_pred != y_true :
+        grad_det = -  attack.beta * \
             attack.detector.loss_gradient(x, np.ones(
                 y.shape))  # grad wrt malicious class.
-    )
+        grad = grad_clf + grad_det
+    else:
+        grad = grad_clf
 
     # normalize the gradient
     norm = np.linalg.norm(grad)
@@ -169,11 +176,17 @@ def _apgd_det_obj_func(x, y, attack):
                         reduction="none")
     loss_clf = (1 - attack.beta) * attack.clf_loss_multiplier * loss_clf
 
-    loss_det =  - \
-    attack.beta * \
-    attack.detector.loss(x=x, y=y, reduction="none")
-
-    loss = loss_clf + loss_det
+    scores = attack.estimator.predict(x).ravel()
+    y_pred = np.argmax(scores).item()
+    y_true = np.argmax(y).item()
+    # fixme: this work only for indiscriminate attack
+    if y_pred != y_true :
+        loss_det =  - \
+        attack.beta * \
+        attack.detector.loss(x=x, y=y, reduction="none")
+        loss = loss_clf + loss_det
+    else:
+        loss = loss_clf
 
     return loss
 
@@ -328,12 +341,12 @@ detector = net_generation_and_train(X_tr_det, y_tr_det, net_type=Net)
 attack = AutoProjectedGradientDescentDetectors(estimator = clf,
                                                detector=detector,
                                                norm=2,
-                                               eps = 2.0,
-                                               beta=0.0,
+                                               eps = 2.5,
+                                               beta=0.8,
                                                loss_type=
                                                'cross_entropy',
                                                clf_loss_multiplier = 0.001,
-                                               detector_th=0)
+                                               detector_th=0.0)
 
 # attack the detector
 adv_x = attack.generate(x=X_test, y=y_test)

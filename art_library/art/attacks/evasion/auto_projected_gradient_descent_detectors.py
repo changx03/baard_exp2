@@ -106,7 +106,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                     # consider the score assigned to the malicious class
                     scores = scores[:, 1]
 
-                    scores = scores - detector_th
+                    scores, _ = torch.max(scores - detector_th, dim=0)
 
                     if self.reduction == 'mean':
                         return torch.mean(scores)

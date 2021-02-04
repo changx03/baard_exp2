@@ -88,7 +88,7 @@ def run_full_pipeline_baard(data,
 
     print('-------------------------------------------------------------------')
     print('Start testing adversarial examples...')
-    pred = predict_numpy(model, adv[:1000], device)
+    pred = predict_numpy(model, adv, device)
     print('Acc on adv:', np.mean(pred == y[:1000]))
 
     X_def_test = X[:1000]

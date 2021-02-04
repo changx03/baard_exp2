@@ -26,8 +26,6 @@ from pipeline.train_surrogate import get_pretrained_surrogate, train_surrogate
 
 PATH_DATA = 'data'
 EPOCHS = 200
-ATTACK = 'apgd2'
-EPSILON = 2.0
 
 
 def run_full_pipeline_baard(data,
@@ -35,7 +33,8 @@ def run_full_pipeline_baard(data,
                             path,
                             seed,
                             json_baard=os.path.join('params', 'baard_param_3.json'),
-                            att_name=ATTACK, eps=EPSILON):
+                            att_name='apgd2',
+                            eps=2.0):
     set_seeds(seed)
 
     if not os.path.exists(path):
@@ -246,8 +245,11 @@ def run_full_pipeline_baard(data,
 
 
 if __name__ == '__main__':
+    path_json_baard = os.path.join('params', 'baard_param_3.json')
+    attack = 'apgd2'
+    eps = 2.
     seeds = [65558, 87742, 47709, 33474, 83328]
     for i in range(len(seeds)):
         path = 'result_{}'.format(str(i))
-        run_full_pipeline_baard('mnist', 'dnn', path, seed=seeds[i], json_baard=os.path.join('params', 'baard_param_3.json'))
-        run_full_pipeline_baard('cifar10', 'resnet', path, seed=seeds[i], json_baard=os.path.join('params', 'baard_param_3.json'))
+        run_full_pipeline_baard('mnist', 'dnn', path, att_name=attack, eps=eps, seed=seeds[i], json_baard=path_json_baard)
+        run_full_pipeline_baard('cifar10', 'resnet', path, att_name=attack, eps=eps, seed=seeds[i], json_baard=path_json_baard)

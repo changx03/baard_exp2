@@ -1,25 +1,23 @@
 import datetime
-
 import os
 import sys
 import time
 
 import torch
-import numpy as np
 import torch.nn as nn
 import torch.optim as optim
-from art.attacks.evasion import (AutoProjectedGradientDescent,
-                                 BasicIterativeMethod, BoundaryAttack,
-                                 CarliniLInfMethod, DeepFool,
-                                 FastGradientMethod, SaliencyMapMethod,
-                                 ShadowAttack)
+from art.attacks.evasion import (AutoProjectedGradientDescent, DeepFool,
+                                 FastGradientMethod)
 from art.estimators.classification import PyTorchClassifier
-from tqdm.auto import trange
+from attacks.carlini import CarliniWagnerAttackL2
 
 # Adding the parent directory.
 sys.path.append(os.getcwd())
-from models.mnist import BaseModel
 from models.cifar10 import Resnet, Vgg
+from models.mnist import BaseModel
+
+BATCH_SIZE = 128
+
 
 def run_attack_untargeted(file_model, X, y, att_name, eps, device):
     path = file_model.split('/')[0]
@@ -62,15 +60,44 @@ def run_attack_untargeted(file_model, X, y, att_name, eps, device):
         clip_values=(0.0, 1.0),
         device_type='gpu')
 
-    if att_name == 'apgd2':
+    if att_name == 'apgd':
+        eps_step = eps / 4. if eps <= 0.2 else 0.1
+        attack = AutoProjectedGradientDescent(
+            estimator=classifier,
+            eps=eps,
+            eps_step=eps_step,
+            max_iter=1000,
+            batch_size=BATCH_SIZE,
+            targeted=False)
+    elif att_name == 'apgd2':
         attack = AutoProjectedGradientDescent(
             estimator=classifier,
             norm=2,
             eps=eps,
             eps_step=0.1,
             max_iter=1000,
-            batch_size=128,
+            batch_size=BATCH_SIZE,
             targeted=False)
+    elif att_name == 'cw2':
+        # Do not increase the batch_size
+        attack = CarliniWagnerAttackL2(
+            model=model,
+            n_classes=n_classes,
+            confidence=eps,
+            verbose=True,
+            check_prob=False,
+            batch_size=32,
+            targeted=False)
+    elif att_name == 'deepfool':
+        # Do not adjust Epsilon
+        attack = DeepFool(
+            classifier=classifier,
+            batch_size=BATCH_SIZE)
+    elif att_name == 'fgsm':
+        attack = FastGradientMethod(
+            estimator=classifier,
+            eps=eps,
+            batch_size=BATCH_SIZE)
     else:
         raise NotImplementedError
 

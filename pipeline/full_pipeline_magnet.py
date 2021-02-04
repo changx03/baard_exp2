@@ -163,9 +163,7 @@ def run_full_pipeline_magnet(data,
 
 if __name__ == '__main__':
     seeds = [65558, 87742, 47709, 33474, 83328]
-    # for i in range(len(seeds)):
-    #     path = 'result_{}'.format(str(i))
-    #     run_full_pipeline_magnet('mnist', 'dnn', path, seed=seeds[i])
-    #     run_full_pipeline_magnet('cifar10', 'resnet', path, seed=seeds[i])
-
-    run_full_pipeline_magnet('mnist', 'dnn', 'result_0', seed=seeds[0])
+    for i in range(len(seeds)):
+        path = 'result_{}'.format(str(i))
+        run_full_pipeline_magnet('mnist', 'dnn', path, seed=seeds[i])
+        run_full_pipeline_magnet('cifar10', 'resnet', path, seed=seeds[i])

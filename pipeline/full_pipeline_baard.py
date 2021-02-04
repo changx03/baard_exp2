@@ -246,11 +246,8 @@ def run_full_pipeline_baard(data,
 
 
 if __name__ == '__main__':
-    # run_full_pipeline_baard('mnist', 'dnn', 'result_4', seed=5386, json_baard=os.path.join('params', 'baard_param_3.json'))
-    # run_full_pipeline_baard('cifar10', 'resnet', 'result_4', seed=5386, json_baard=os.path.join('params', 'baard_param_3.json'))
-
     seeds = [65558, 87742, 47709, 33474, 83328]
-    for i in range(1, 6):
+    for i in range(len(seeds)):
         path = 'result_{}'.format(str(i))
         run_full_pipeline_baard('mnist', 'dnn', path, seed=seeds[i], json_baard=os.path.join('params', 'baard_param_3.json'))
         run_full_pipeline_baard('cifar10', 'resnet', path, seed=seeds[i], json_baard=os.path.join('params', 'baard_param_3.json'))

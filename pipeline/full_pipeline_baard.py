@@ -26,16 +26,19 @@ from pipeline.train_surrogate import get_pretrained_surrogate, train_surrogate
 
 PATH_DATA = 'data'
 EPOCHS = 200
+SEEDS = [65558, 87742, 47709, 33474, 83328]
 
 
 def run_full_pipeline_baard(data,
                             model_name,
                             path,
                             seed,
-                            json_baard=os.path.join('params', 'baard_param_3.json'),
+                            json_param=os.path.join('params', 'baard_param_3.json'),
                             att_name='apgd2',
                             eps=2.0):
     set_seeds(seed)
+
+    print('args:', data, model_name, path, seed, json_param, att_name, eps)
 
     if not os.path.exists(path):
         print('Output folder does not exist. Create:', path)
@@ -126,7 +129,7 @@ def run_full_pipeline_baard(data,
     torch.save(obj, file_baard_train)
     print('Save BAARD training data to:', file_baard_train)
 
-    with open(json_baard) as j:
+    with open(json_param) as j:
         baard_param = json.load(j)
     print('Param:', baard_param)
     sequence = baard_param['sequence']
@@ -248,8 +251,8 @@ if __name__ == '__main__':
     path_json_baard = os.path.join('params', 'baard_param_3.json')
     attack = 'apgd2'
     eps = 2.
-    seeds = [65558, 87742, 47709, 33474, 83328]
-    for i in range(len(seeds)):
+
+    for i in range(len(SEEDS)):
         path = 'result_{}'.format(str(i))
-        run_full_pipeline_baard('mnist', 'dnn', path, att_name=attack, eps=eps, seed=seeds[i], json_baard=path_json_baard)
-        run_full_pipeline_baard('cifar10', 'resnet', path, att_name=attack, eps=eps, seed=seeds[i], json_baard=path_json_baard)
+        run_full_pipeline_baard('mnist', 'dnn', path, att_name=attack, eps=eps, seed=SEEDS[i], json_param=path_json_baard)
+        run_full_pipeline_baard('cifar10', 'resnet', path, att_name=attack, eps=eps, seed=SEEDS[i], json_param=path_json_baard)

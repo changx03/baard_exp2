@@ -27,8 +27,6 @@ from pipeline.train_defence import train_magnet
 
 PATH_DATA = 'data'
 EPOCHS = 200
-ATTACK = 'apgd2'
-EPSILON = 2.0
 
 
 def run_full_pipeline_magnet(data,
@@ -36,9 +34,11 @@ def run_full_pipeline_magnet(data,
                              path,
                              seed,
                              json_param=os.path.join('params', 'magnet_param.json'),
-                             att_name=ATTACK,
-                             eps=EPSILON):
+                             att_name='apgd2',
+                             eps=2.0):
     set_seeds(seed)
+
+    print('args:', data, model_name, path, seed, json_param, att_name, eps)
 
     if not os.path.exists(path):
         print('Output folder does not exist. Create:', path)

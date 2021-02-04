@@ -25,7 +25,7 @@ from pipeline.train_model import train_model
 from pipeline.train_surrogate import get_pretrained_surrogate, train_surrogate
 
 PATH_DATA = 'data'
-EPOCHS_BASE = 200
+EPOCHS = 200
 ATTACK = 'apgd2'
 EPSILON = 2.0
 
@@ -63,7 +63,7 @@ def run_full_pipeline_baard(data,
 
     file_model = os.path.join(path, '{}_{}_model.pt'.format(data, model_name))
     print('Start training {} model on {}...'.format(model_name, data))
-    model = train_model(data, model_name, dataset_train, dataset_test, EPOCHS_BASE, device, file_model)
+    model = train_model(data, model_name, dataset_train, dataset_test, EPOCHS, device, file_model)
 
     # Split data
     tensor_X, tensor_y = get_correct_examples(model, dataset_test, device=device, return_tensor=True)
@@ -88,8 +88,8 @@ def run_full_pipeline_baard(data,
 
     print('-------------------------------------------------------------------')
     print('Start testing adversarial examples...')
-    pred = predict_numpy(model, adv, device)
-    print('Acc on adv:', np.mean(pred == y))
+    pred = predict_numpy(model, adv[:1000], device)
+    print('Acc on adv:', np.mean(pred == y[:1000]))
 
     X_def_test = X[:1000]
     y_def_test = y[:1000]
@@ -196,6 +196,7 @@ def run_full_pipeline_baard(data,
             X_test = obj['X_test']
             label_test = obj['label_test']
             print(X_train.shape, label_train.shape, X_test.shape, label_test.shape)
+            print('Labelled as adv:', np.mean(label_train == 1), np.mean(label_test == 1))
         else:
             label_adv_train = detector.detect(adv_surro_train, pred_adv_surro_train)
             label_X_train = detector.detect(X_surro_train, y_surro_train)
@@ -206,6 +207,8 @@ def run_full_pipeline_baard(data,
             label_X_test = detector.detect(X_att_test[:1000], y_att_test[:1000])
             X_test = np.concatenate((X_att_test[:1000], adv_att_test[:1000]))
             label_test = np.concatenate((label_X_test, label_adv_test))
+            print(X_train.shape, label_train.shape, X_test.shape, label_test.shape)
+            print('Labelled as adv:', np.mean(label_train == 1), np.mean(label_test == 1))
 
             obj = {
                 'X_train': X_train,
@@ -220,7 +223,7 @@ def run_full_pipeline_baard(data,
             torch.save(obj, file_surro_data)
             print('Save surrogate training data to:', file_surro_data)
 
-        surrogate = train_surrogate(X_train, X_test, label_train, label_test, epochs=EPOCHS_BASE, device=device)
+        surrogate = train_surrogate(X_train, X_test, label_train, label_test, epochs=EPOCHS, device=device)
         torch.save(surrogate.state_dict(), file_surro)
         print('Save surrogate model to:', file_surro)
 
@@ -244,4 +247,10 @@ def run_full_pipeline_baard(data,
 
 if __name__ == '__main__':
     # run_full_pipeline_baard('mnist', 'dnn', 'result_4', seed=5386, json_baard=os.path.join('params', 'baard_param_3.json'))
-    run_full_pipeline_baard('cifar10', 'resnet', 'result_4', seed=5386, json_baard=os.path.join('params', 'baard_param_3.json'))
+    # run_full_pipeline_baard('cifar10', 'resnet', 'result_4', seed=5386, json_baard=os.path.join('params', 'baard_param_3.json'))
+
+    seeds = [65558, 87742, 47709, 33474, 83328]
+    for i in range(1, 6):
+        path = 'result_{}'.format(str(i))
+        run_full_pipeline_baard('mnist', 'dnn', path, seed=seeds[i], json_baard=os.path.join('params', 'baard_param_3.json'))
+        run_full_pipeline_baard('cifar10', 'resnet', path, seed=seeds[i], json_baard=os.path.join('params', 'baard_param_3.json'))

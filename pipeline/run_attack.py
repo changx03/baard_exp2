@@ -38,7 +38,7 @@ def run_attack_untargeted(file_model, X, y, att_name, eps, device):
         n_features = (1, 28, 28)
         n_classes = 10
         model = BaseModel(use_prob=False).to(device)
-    if data == 'cifar10':
+    elif data == 'cifar10':
         n_features = (3, 32, 32)
         n_classes = 10
         if model_name == 'resnet':

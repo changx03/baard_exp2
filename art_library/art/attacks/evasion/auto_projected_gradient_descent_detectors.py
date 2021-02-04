@@ -22,7 +22,9 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
     """
     attack_params = AutoProjectedGradientDescent.attack_params + [
         "detector",
+        "detector_th",
         "beta",
+        "clf_loss_multiplier",
     ]
 
     _predefined_losses = ["cross_entropy"]
@@ -72,6 +74,12 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         self.beta = beta
         self.detector_th = detector_th
         self.clf_loss_multiplier = clf_loss_multiplier
+
+        if targeted is True:
+            raise NotImplementedError("This attack so far do not works as a "
+                                      "targeted attack. (the objective "
+                                      "function and its gradient function "
+                                      "need a little fix to make it work).")
 
         if isinstance(detector, PyTorchClassifier):
             import torch
@@ -143,6 +151,50 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                         batch_size = batch_size, loss_type = loss_type,
                         verbose = verbose)
 
+    #######################################################
+
+    def _cmpt_grad(self, x, y):
+
+        # set grad equal to the classifier gradient
+        grad= (1 - self.beta) * self.clf_loss_multiplier * \
+                   self.estimator.loss_gradient(x, y) * \
+                   (1 - 2 * int(self.targeted))
+
+        scores = self.estimator.predict(x)
+        y_pred = np.argmax(scores)
+        y_true = np.argmax(y)
+
+        # todo: this work only for indiscriminate attack
+        misclass = y_pred != y_true
+        if misclass.any():
+            grad[misclass] -=  self.beta * \
+                           self.detector.loss_gradient(x[misclass], np.ones(
+                               y[misclass].shape))  # grad wrt malicious class.
+
+        return grad
+
+    def _cmpt_loss_func(self, x, y):
+
+        # set the loss as the clf loss
+        loss = self.estimator.loss(x=x, y=y,
+                                         reduction="none")
+        loss = (1 - self.beta) * self.clf_loss_multiplier * loss
+
+        scores = self.estimator.predict(x)
+        y_pred = np.argmax(scores)
+        y_true = np.argmax(y)
+
+        # fixme: this work only for indiscriminate attack
+        misclass = y_pred != y_true
+        if misclass.any():
+            misclass = y_pred != y_true
+            loss[misclass] -=  self.beta * \
+                           self.detector.loss(x=x, y=y, reduction="none")
+
+        return np.mean(loss)
+
+    ########################################################
+
     def generate(self, x: np.ndarray, y: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
         """
         Generate adversarial samples and return them in an array.
@@ -193,8 +245,9 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
             # stop the attack if all the samples are classified as the
             # attacker want: misclassied (classified as the target class)
             # and predicted by the detector as benign samples
-            if np.sum(sample_is_robust) == 0:
-                break
+            # fixme: re-add
+            #if np.sum(sample_is_robust) == 0:
+            #    break
 
             x_robust = x_adv[sample_is_robust]
             y_robust = y[sample_is_robust]
@@ -250,14 +303,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
                     # Get loss gradient wrt input; invert it if attack is
                     # targeted
-                    grad = (
-                            (1 - self.beta) *
-                            self.estimator.loss_gradient(x_k, y_batch) * \
-                            (1- 2 * int(self.targeted)) - \
-                            self.beta * \
-                            self.detector.loss_gradient(x_k, np.ones(
-                                y_batch.shape)) # grad wrt malicious class.
-                            )
+                    grad = self._cmpt_grad(x_k, y_batch)
 
                     # Apply norm bound
                     if self.norm in [np.inf, "inf"]:
@@ -287,18 +333,9 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                         perturbation = projection(x_1 - x_init_batch, self.eps, self.norm)
                         x_1 = x_init_batch + perturbation
 
-                        # (1-self.beta) * loss_clf + self.beta * loss_detector
-                        f_0 = (1-self.beta) * \
-                              self.estimator.loss(x=x_k, y=y_batch,
-                                                  reduction="mean") - \
-                              self.beta * \
-                              self.detector.loss(x=x_k,  y=y_batch, reduction="mean")
+                        f_0 = self._cmpt_loss_func(x_k, y_batch)
 
-                        f_1 = (1-self.beta) * \
-                              self.estimator.loss(x=x_1, y=y_batch,
-                                                  reduction="mean") -\
-                              self.beta * \
-                              self.detector.loss(x=x_1,  y=y_batch, reduction="mean")
+                        f_1 = self._cmpt_loss_func(x_1, y_batch)
 
                         self.eta_w_j_m_1 = eta
                         self.f_max_w_j_m_1 = f_0
@@ -332,12 +369,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                         perturbation = projection(x_k_p_1 - x_init_batch, self.eps, self.norm)
                         x_k_p_1 = x_init_batch + perturbation
 
-                        f_k_p_1 = (1 - self.beta) * \
-                                   self.estimator.loss(x=x_k_p_1, y=y_batch,
-                                                       reduction="mean") - \
-                                   self.beta * \
-                                   self.detector.loss(x=x_k_p_1, y=y_batch,
-                                                     reduction="mean")
+                        f_k_p_1 = f_1 = self._cmpt_loss_func(x_k_p_1, y_batch)
 
                         if f_k_p_1 > self.f_max:
                             self.count_condition_1 += 1

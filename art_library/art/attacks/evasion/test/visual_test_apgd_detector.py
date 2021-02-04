@@ -333,16 +333,16 @@ detector = net_generation_and_train(X_tr_det, y_tr_det, net_type=Net)
 
 ###############################
 
-# attack the detector with apgd
-# attack = AutoProjectedGradientDescent(estimator=clf, norm=2, eps=3.0)
+# attack the detector with apgd (black box attack)
+#attack = AutoProjectedGradientDescent(estimator=clf, norm=2, eps=2.5)
 
 
-# attack the detector with apgd detector
+# attack the detector with apgd detector (white box against detector)
 attack = AutoProjectedGradientDescentDetectors(estimator = clf,
                                                detector=detector,
                                                norm=2,
-                                               eps = 2.5,
-                                               beta=0.8,
+                                               eps = 3.0,
+                                               beta=0.9,
                                                loss_type=
                                                'cross_entropy',
                                                clf_loss_multiplier = 0.001,
@@ -355,6 +355,7 @@ adv_x = attack.generate(x=X_test, y=y_test)
 #evaluate_attack_efficacy(adv_x)
 
 #plt.subplot(2, 2, 2)
+print("show attacker objective function")
 show_attackers_obj_function(X_test, attack, adv_x)
 
 ##################################################

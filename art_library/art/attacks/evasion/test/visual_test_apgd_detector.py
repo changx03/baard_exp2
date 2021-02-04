@@ -102,19 +102,17 @@ def plot_decision_region(X, clf):
     Z = scores.argmax(axis=1)
 
     Z = Z.reshape(xx.shape)
-    cs = plt.contourf(xx, yy, Z, cmap=plt.cm.RdYlBu)
+    cs = plt.contourf(xx, yy, Z, cmap=plt.cm.seismic)
 
 
 def plot_detector_decision_region(X, clf, detector):
 
-    colors = ['red', 'blue', 'gray', 'black', 'green', 'cyan']
+    colors = ['blue', 'red', 'gray', 'black', 'green', 'cyan']
     cmap = colors[:3]
     # Convert list of colors to colormap
     cmap = ListedColormap(cmap)
 
     plot_step = 0.02
-
-    plt.subplot(1,1,1)
 
     x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
     y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
@@ -127,25 +125,93 @@ def plot_detector_decision_region(X, clf, detector):
 
     points_to_classify = points_to_classify.astype(np.float32)
 
-    scores = clf.predict(points_to_classify)
-    Z = scores.argmax(axis=1)
+    clf_scores = clf.predict(points_to_classify)
+    Z = clf_scores.argmax(axis=1)
 
     det_scores = detector.predict(points_to_classify)
     det_pred = det_scores.argmax(axis=1)
 
-    # set the prediction for the samples rejected by the detector equal to
-    # class 2
+    #set the prediction for the samples rejected by the detector equal to
+    #class 2
     Z[det_pred==1] = 2
 
     Z = Z.reshape(xx.shape)
     cs = plt.contourf(xx, yy, Z, cmap=cmap, alpha = 0.5)
 
 
+def _apgd_det_grad(x, y, attack):
+
+    x = np.expand_dims(x, axis=0)
+    y = np.expand_dims(y, axis=0)
+
+    grad = (
+            (1 - attack.beta) *
+            attack.estimator.loss_gradient(x, y) * \
+            (1 - 2 * int(attack.targeted)) #+ \
+            #attack.beta * \
+            #attack.detector.loss_gradient(x, np.ones(
+            #    y.shape))  # grad wrt malicious class.
+    )
+
+    # normalize the gradient
+    grad /= np.linalg.norm(grad)
+
+    return grad
+
+def _apgd_det_obj_func(x, y, attack):
+
+    loss = (1 - attack.beta) * \
+    attack.estimator.loss(x=x, y=y,
+                        reduction="none") #+ \
+    #attack.beta * \
+    #attack.detector.loss(x=x, y=y, reduction="mean")
+
+    return loss
+
+def plot_attacker_objective_function(X, attack):
+
+    #plot_step = 0.02
+    plot_step = 0.3
+
+    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
+                         np.arange(y_min, y_max, plot_step))
+
+    # chose the colors depending on the classifier predictions
+    points_to_classify = np.c_[xx.ravel(), yy.ravel()]
+    points_to_classify = points_to_classify.astype(np.float32)
+
+    Y = np.zeros((points_to_classify.shape[0], 2))
+    Y[:,1] = 1
+    Z = _apgd_det_obj_func(points_to_classify, Y, attack)
+
+    Z = Z.reshape(xx.shape)
+    cs = plt.contourf(xx, yy, Z, cmap=plt.cm.seismic, alpha = 0.5)
+
+    # plot gradients
+    n_vals = points_to_classify.shape[0]
+    grad_point_values = np.zeros((n_vals, 2))
+    # compute gradient on each grid point
+    for p_idx in range(n_vals):
+        grad_point_values[p_idx, :] = _apgd_det_grad(
+            points_to_classify[p_idx, :].ravel(), Y[p_idx,:], attack)
+
+    U = grad_point_values[:, 0].reshape(
+        (xx.shape[0], xx.shape[1]))
+    V = grad_point_values[:, 1].reshape(
+        (xx.shape[0], xx.shape[1]))
+
+    plt.quiver(xx, yy, U, V)
+
+    plt.tight_layout(h_pad=0.5, w_pad=0.5, pad=2.5)
+
+
 def plot_points(X, y, n_classes, fixed_color = None, edgecolor=None):
     """
     If fixed color is not None plots all the samples using the "fixed_color".
     """
-    plot_colors = ['r', 'b', 'b']
+    plot_colors = ['b', 'r']
 
     # Plot the training points
     for i, color in zip(range(n_classes), plot_colors):
@@ -155,6 +221,61 @@ def plot_points(X, y, n_classes, fixed_color = None, edgecolor=None):
         idx = np.where(y == i)
         plt.scatter(X[idx, 0], X[idx, 1], c=color,
                     cmap=plt.cm.RdYlBu, edgecolor=edgecolor, s=15)
+
+
+def evaluate_attack_efficacy(adv_x):
+
+    # show the detector's decision region and the generated adversarial samples.
+    plot_detector_decision_region(X_tr_det, clf, detector)
+
+    # plot dataset samples
+    plot_points(X_train, y_train, 2)
+
+    # plot dummy adversarial samples
+    plot_points(dummy_adv_x, np.ones((dummy_adv_x.shape[0],)), 2, 'gray')
+
+    # plot adversarial examples
+    plot_points(adv_x, y_test, 2, fixed_color=None,
+                edgecolor='black')
+
+    plt.xlim((-1, 3))
+    plt.ylim((0, 5))
+
+    plt.show()
+
+    scores = clf.predict(adv_x)
+    y_pred = scores.argmax(axis=1)
+    scores = detector.predict(adv_x)
+    detected_as_advx = scores.argmax(axis=1)
+    acc = acc_on_advx(y_pred, y_test, detected_as_advx)
+    print("accuracy on the apgd advx", acc)
+
+
+def show_attackers_obj_function(X_test, attack, adv_x):
+
+    plot_attacker_objective_function(X_test, attack)
+
+    # plot dataset samples
+    plot_points(X_train, y_train, 2)
+
+    # plot dummy adversarial samples
+    plot_points(dummy_adv_x, np.ones((dummy_adv_x.shape[0],)), 2, 'gray')
+
+    # plot adversarial examples
+    plot_points(adv_x, y_test, 2, fixed_color=None,
+                edgecolor='black')
+
+    plt.xlim((-1, 3))
+    plt.ylim((0, 5))
+    #
+    plt.show()
+
+    scores = clf.predict(adv_x)
+    y_pred = scores.argmax(axis=1)
+    scores = detector.predict(adv_x)
+    detected_as_advx = scores.argmax(axis=1)
+    acc = acc_on_advx(y_pred, y_test, detected_as_advx)
+    print("accuracy on the apgd advx", acc)
 
 set_seeds(0)
 
@@ -174,13 +295,6 @@ dummy_adv_x, _ = make_blobs(n_samples=100,
                         cluster_std = 0.50,
                         centers = ((-1,1),(1,2),(2,2),(4,3)),
                         random_state=0)
-# dummy_adv_x2, _ = make_blobs(n_samples=100,
-#                         n_features=2,
-#                         cluster_std = 0.35,
-#                         centers = ((-1,1),(1,2),(2,2),(4,3)),
-#                         random_state=0)
-#dummy_adv_x = np.append(dummy_adv_x1, dummy_adv_x2, axis=0)
-#print("dummmy advx shape ", dummy_adv_x.shape)
 
 # train a detector
 # create a dataset that contains the cleean sample (with label 0) + the
@@ -191,111 +305,56 @@ y_tr_det = np.append(np.zeros((y_test.shape)), np.ones((
 detector = net_generation_and_train(X_tr_det, y_tr_det, net_type=Net)
 
 ###############################
-# attack the detector
-# compute adversarial example using the art apgd detector attack
-# attack = AutoProjectedGradientDescent(estimator = clf, norm=2, eps = 2.0)
-# adv_x = attack.generate(x=X_test, y=y_test)
-#
-# plt.subplot(2, 1, 1)
-#
-# # show the detector's decision region and the generated adversarial samples.
-# plot_detector_decision_region(X_tr_det, clf, detector)
-#
-# # plot dataset samples
-# plot_points(X_train, y_train, 2)
-#
-# # plot dummy adversarial samples
-# plot_points(dummy_adv_x, np.ones((dummy_adv_x.shape[0],)), 2, 'gray')
-#
-# # plot adversarial examples
-# plot_points(adv_x, y_test, 2, fixed_color=None,
-#             edgecolor= 'black')
-#
-# plt.xlim((-1,3))
-# plt.ylim((0,5))
-#
-# plt.show()
-#
-# scores = clf.predict(adv_x)
-# y_pred = scores.argmax(axis=1)
-# scores = detector.predict(adv_x)
-# detected_as_advx = scores.argmax(axis=1)
-# acc = acc_on_advx(y_pred, y_test, detected_as_advx)
-# print("accuracy on the apgd advx", acc)
-# #0.81
 
-# ##################################################
-#
+# attack the detector with apgd
+# attack = AutoProjectedGradientDescent(estimator=clf, norm=2, eps=3.0)
+
+
+# attack the detector with apgd detector
 attack = AutoProjectedGradientDescentDetectors(estimator = clf,
                                                detector=detector,
                                                norm=2,
-                                               eps = 2.0,
-                                               beta=0.00,
+                                               eps = 3.0,
+                                               beta=0.50,
                                                detector_th=0)
+
+# attack the detector
 adv_x = attack.generate(x=X_test, y=y_test)
 
-plt.subplot(2, 1, 2)
+#plt.subplot(1, 2, 1)
+#evaluate_attack_efficacy(adv_x)
 
-# show the detector's decision region and the generated adversarial samples.
-plot_detector_decision_region(X_tr_det, clf, detector)
-
-# plot dataset samples
-plot_points(X_train, y_train, 2)
-
-# plot dummy adversarial samples
-plot_points(dummy_adv_x, np.ones((dummy_adv_x.shape[0],)), 2, 'gray')
-
-# plot adversarial examples
-plot_points(adv_x, y_test, 2, fixed_color=None,
-            edgecolor= 'black')
-
-plt.xlim((-1,3))
-plt.ylim((0,5))
-
-plt.show()
-
-scores = clf.predict(adv_x)
-y_pred = scores.argmax(axis=1)
-scores = detector.predict(adv_x)
-detected_as_advx = scores.argmax(axis=1)
-acc = acc_on_advx(y_pred, y_test, detected_as_advx)
-print("accuracy on the apgd advx", acc)
-
+#plt.subplot(2, 2, 2)
+show_attackers_obj_function(X_test, attack, adv_x)
 
 ##################################################
 # from art.estimators.classification import DetectorClassifier
 #
-# augmented_clf = DetectorClassifier(classifier=clf, detector=detector)
+# class BinaryNetDetector(PyTorchClassifier):
+#
+#     def __init__(self, net_detector):
+#         self.net_detector = net_detector
+#         self._input_shape = net_detector.input_shape
+#         self._nb_classes = net_detector.nb_classes
+#
+#     def predict(self, x: np.ndarray, batch_size: int = 128, **kwargs) -> np.ndarray:
+#         """
+#         Return the scores wrt the malicious class
+#         """
+#         return self.net_detector.predict(x)[:,1]
+#
+# class ClfAugmentedWithBinaryNetDetector(DetectorClassifier):
+#
+#     def loss(self, x: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
+#         pass
+#
+#     def loss_gradient(self, x: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
+#         pass
+#
+# binary_net = BinaryNetDetector(clf)
+# augmented_clf = DetectorClassifier(classifier=clf, detector=binary_net)
 #
 # attack = AutoProjectedGradientDescent(estimator = augmented_clf,
-#                                                norm=2,
-#                                                eps = 2.0)
-#
-# adv_x = attack.generate(x=X_test, y=y_test)
-#
-# plt.subplot(2, 1, 2)
-#
-# # show the detector's decision region and the generated adversarial samples.
-# plot_detector_decision_region(X_tr_det, clf, detector)
-#
-# # plot dataset samples
-# plot_points(X_train, y_train, 2)
-#
-# # plot dummy adversarial samples
-# plot_points(dummy_adv_x, np.ones((dummy_adv_x.shape[0],)), 2, 'gray')
-#
-# # plot adversarial examples
-# plot_points(adv_x, y_test, 2, fixed_color=None,
-#             edgecolor= 'black')
-#
-# plt.xlim((-1,3))
-# plt.ylim((0,5))
-#
-# plt.show()
-#
-# scores = clf.predict(adv_x)
-# y_pred = scores.argmax(axis=1)
-# scores = detector.predict(adv_x)
-# detected_as_advx = scores.argmax(axis=1)
-# acc = acc_on_advx(y_pred, y_test, detected_as_advx)
-# print("accuracy on the apgd advx", acc)
+#                                                 norm=2,
+#                                                 eps = 3.0)
+# evaluate_attack_efficacy(attack)

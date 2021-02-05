@@ -287,10 +287,10 @@ def evaluate_attack_efficacy(adv_x):
     plot_detector_decision_region(X_tr_det, clf, detector)
 
     # plot dataset samples
-    #plot_points(X_train, y_train, 2)
+    plot_points(X_train, y_train, 2)
 
     # plot dummy adversarial samples
-    #plot_points(dummy_adv_x, np.ones((dummy_adv_x.shape[0],)), 2, 'gray')
+    plot_points(dummy_adv_x, np.ones((dummy_adv_x.shape[0],)), 2, 'gray')
 
     # plot adversarial examples
     plot_points(adv_x, y_test, 2, fixed_color=None,
@@ -373,8 +373,8 @@ attack_class = 'apgd_detector'# can be apgd or apgd_detector
 if attack_class == "apgd":
     #attack the detector with apgd (black box attack)
     attack = AutoProjectedGradientDescent(estimator=clf, norm=2, eps=3.0,
-                                          loss_type='cross_entropy',
-                                          #loss_type ='logits_difference',
+                                          #loss_type='cross_entropy',
+                                          loss_type ='logits_difference',
                                           eps_step = 0.5, # 0.5
                                           )
 
@@ -392,7 +392,6 @@ else:
                                                    norm=2,
                                                    eps = 3.0,
                                                    eps_step=0.9,
-                                                   #beta=0.005,
                                                    beta=0.005,
                                                    max_iter=100,
                                                    loss_type=

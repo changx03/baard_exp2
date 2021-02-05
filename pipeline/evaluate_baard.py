@@ -79,16 +79,13 @@ def run_evaluate_baard(data,
 
     print('-------------------------------------------------------------------')
     print('Start training BAARD...')
-    # Run preprocessing
-    tensor_X, tensor_y = get_correct_examples(model, dataset_train, device=device, return_tensor=True)
-    X_baard_train = tensor_X.cpu().detach().numpy()
-    y_baard_train = tensor_y.cpu().detach().numpy()
 
     file_baard_train = os.path.join(path, '{}_{}_baard_s1_train_data.pt'.format(data, model_name))
     if os.path.exists(file_baard_train):
         print('Found existing BAARD preprocess data:', file_baard_train)
         obj = torch.load(file_baard_train)
-        X_baard_train_s1 = obj['X']
+        X_baard_train_s1 = obj['X_s1']
+        X_baard_train= obj['X']
         y_baard_train = obj['y']
     else:
         raise FileNotFoundError('Cannot find BAARD preprocess data:', file_baard_train)
@@ -107,6 +104,8 @@ def run_evaluate_baard(data,
         stages.append(DecidabilityStage(n_classes=n_classes, k=baard_param['k_de'], quantile=baard_param['q3']))
     print('BAARD stages:', len(stages))
     detector = BAARDOperator(stages=stages)
+    assert X_baard_train.shape == X_baard_train_s1.shape, 'Unmatched size: {}, {}'.format(X_baard_train.shape, X_baard_train_s1.shape)
+    assert X_baard_train_s1.shape[0] == y_baard_train.shape[0]
     detector.stages[0].fit(X_baard_train_s1, y_baard_train)
     for stage in detector.stages[1:]:
         stage.fit(X_baard_train, y_baard_train)

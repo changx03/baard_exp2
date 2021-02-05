@@ -127,17 +127,21 @@ def run_full_pipeline_baard(data,
     if os.path.exists(file_baard_train):
         print('Found existing BAARD preprocess data:', file_baard_train)
         obj = torch.load(file_baard_train)
-        X_baard_train_s1 = obj['X']
+        X_baard_train_s1 = obj['X_s1']
+        X_baard_train= obj['X']
         y_baard_train = obj['y']
     else:
+        print('tensor_X', tensor_X.size())
         X_baard_train_s1 = preprocess_baard(data, tensor_X).cpu().detach().numpy()
         obj = {
-            'X': X_baard_train_s1,
+            'X_s1': X_baard_train_s1,
+            'X': X_baard_train,
             'y': y_baard_train
         }
         torch.save(obj, file_baard_train)
         print('Save BAARD training data to:', file_baard_train)
-    print('BAARD train set:', X_baard_train_s1.shape)
+    
+    print('X_baard_train_s1', X_baard_train_s1.shape)
 
     with open(json_param) as j:
         baard_param = json.load(j)
@@ -152,6 +156,8 @@ def run_full_pipeline_baard(data,
         stages.append(DecidabilityStage(n_classes=n_classes, k=baard_param['k_de'], quantile=baard_param['q3']))
     print('BAARD stages:', len(stages))
     detector = BAARDOperator(stages=stages)
+    assert X_baard_train.shape == X_baard_train_s1.shape, 'Unmatched size: {}, {}'.format(X_baard_train.shape, X_baard_train_s1.shape)
+    assert X_baard_train_s1.shape[0] == y_baard_train.shape[0]
     detector.stages[0].fit(X_baard_train_s1, y_baard_train)
     for stage in detector.stages[1:]:
         stage.fit(X_baard_train, y_baard_train)

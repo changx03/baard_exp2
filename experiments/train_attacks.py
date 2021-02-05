@@ -1,8 +1,12 @@
+import os
+import sys
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+print("sys.path ", sys.path)
+
 import argparse
 import datetime
 import json
-import os
-import sys
 import time
 
 import numpy as np

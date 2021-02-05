@@ -209,11 +209,13 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
         loss = np.array(loss)
 
+        print("clf loss: ", np.mean(loss))
+
         scores = self.estimator.predict(x)
         y_pred = np.argmax(scores, axis=1)
         y_true = np.argmax(y, axis=1)
 
-        # fixme: this work only for indiscriminate attack
+        # todo: this work only for indiscriminate attack
         misclass = np.not_equal(y_pred, y_true)
 
         if misclass.any():

@@ -158,12 +158,22 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
     #######################################################
 
+    def _grad_normalization(self, grad):
+        grad_norms = np.linalg.norm(grad, axis = 1, ord=2)
+        grad_bigger_than_0 = grad_norms > 0
+        grad_norms = np.atleast_2d(grad_norms).T
+        grad[grad_bigger_than_0,:] = grad[grad_bigger_than_0,:] / grad_norms[grad_bigger_than_0]
+        return grad
+
     def _cmpt_grad(self, x, y):
 
         # set grad equal to the classifier gradient
         grad= self.clf_loss_multiplier * \
                    self.estimator.loss_gradient(x, y) * \
                    (1 - 2 * int(self.targeted))
+
+        # normalize the gradients
+        grad = self._grad_normalization(grad)
 
         scores = self.estimator.predict(x)
         y_pred = np.argmax(scores, axis=1)
@@ -174,10 +184,15 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         if misclass.any():
             x_misclass = x[misclass, :]
             y_misclass = y[misclass, :]
-            grad[misclass] -=  self.beta * \
+
+            # cmpt detector grad
+            det_grads = self.beta * \
                            self.detector.loss_gradient(x_misclass, np.ones(
                                y_misclass.shape))  # grad wrt malicious
             # class.
+            det_grads = self._grad_normalization(det_grads)
+
+            grad[misclass] -= det_grads
 
         return grad
 
@@ -260,9 +275,8 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
             # stop the attack if all the samples are classified as the
             # attacker want: misclassied (classified as the target class)
             # and predicted by the detector as benign samples
-            # fixme: re-add
-            #if np.sum(sample_is_robust) == 0:
-            #    break
+            if np.sum(sample_is_robust) == 0:
+                break
 
             x_robust = x_adv[sample_is_robust]
             y_robust = y[sample_is_robust]
@@ -274,7 +288,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                 random_sphere(n, m, self.eps, self.norm).reshape(x_robust.shape).astype(ART_NUMPY_DTYPE)
             )
 
-            x_robust = x_robust + random_perturbation
+            x_robust = x_robust + random_perturbation / 100.0
 
             if self.estimator.clip_values is not None:
                 clip_min, clip_max = self.estimator.clip_values
@@ -320,15 +334,6 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                     # targeted
                     grad = self._cmpt_grad(x_k, y_batch)
 
-                    # Apply norm bound
-                    if self.norm in [np.inf, "inf"]:
-                        grad = np.sign(grad)
-                    elif self.norm == 1:
-                        ind = tuple(range(1, len(x_k.shape)))
-                        grad = grad / (np.sum(np.abs(grad), axis=ind, keepdims=True) + tol)
-                    elif self.norm == 2:
-                        ind = tuple(range(1, len(x_k.shape)))
-                        grad = grad / (np.sqrt(np.sum(np.square(grad), axis=ind, keepdims=True)) + tol)
                     assert x_k.shape == grad.shape
 
                     perturbation = grad

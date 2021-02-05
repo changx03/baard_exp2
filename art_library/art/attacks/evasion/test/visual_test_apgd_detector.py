@@ -198,53 +198,18 @@ def _apgd_det_grad(x, y, attack):
     x = np.expand_dims(x, axis=0)
     y = np.expand_dims(y, axis=0)
 
-    grad_clf = attack.clf_loss_multiplier * \
-            attack.estimator.loss_gradient(x, y) * \
-            (1 - 2 * int(attack.targeted))
-
-    scores = attack.estimator.predict(x).ravel()
-    y_pred = np.argmax(scores).item()
-    y_true = np.argmax(y).item()
-    # fixme: this work only for indiscriminate attack
-
-    if y_pred != y_true :
-        grad_det = -  attack.beta * \
-            attack.detector.loss_gradient(x, np.ones(
-                y.shape))  # grad wrt malicious class.
-        grad = grad_clf + grad_det
-    else:
-        grad = grad_clf
-
-    # normalize the gradient for visualization
-    norm = np.linalg.norm(grad)
-    if norm > 0:
-        grad /= norm
+    grad = attack._cmpt_grad(x, y)
 
     return grad
 
 def _apgd_det_obj_func(x, y, attack):
-
     x = np.expand_dims(x, axis=0)
     y = np.expand_dims(y, axis=0)
 
-    loss_clf = attack.estimator.loss(x=x, y=y,
-                        reduction="none")
-    loss_clf =  attack.clf_loss_multiplier * loss_clf
-
-    scores = attack.estimator.predict(x).ravel()
-    y_pred = np.argmax(scores).item()
-    y_true = np.argmax(y).item()
-    # fixme: this work only for indiscriminate attack
-
-    if y_pred != y_true :
-        loss_det =  - \
-        attack.beta * \
-        attack.detector.loss(x=x, y=y, reduction="none")
-        loss = loss_clf + loss_det
-    else:
-        loss = loss_clf
+    loss = attack._cmpt_loss_func(x, y)
 
     return loss
+
 
 def plot_attacker_objective_function(X, attack,attack_obf_fun,grad_obj_fun):
 
@@ -255,6 +220,13 @@ def plot_attacker_objective_function(X, attack,attack_obf_fun,grad_obj_fun):
 
     x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
     y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+
+    #fixme: remove
+    x_min = -3
+    x_max = 8
+    y_min = -4
+    y_max = 8
+
     xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
                          np.arange(y_min, y_max, plot_step))
 
@@ -281,7 +253,7 @@ def plot_attacker_objective_function(X, attack,attack_obf_fun,grad_obj_fun):
     # compute gradient on each grid point
     for p_idx in range(n_vals):
         grad_point_values[p_idx, :] = grad_obj_fun(
-            points_to_classify[p_idx, :].ravel(), Y[p_idx,:], attack)
+            points_to_classify[p_idx, :], Y[p_idx,:], attack)
 
     U = grad_point_values[:, 0].reshape(
         (xx.shape[0], xx.shape[1]))
@@ -401,10 +373,9 @@ attack_class = 'apgd_detector'# can be apgd or apgd_detector
 if attack_class == "apgd":
     #attack the detector with apgd (black box attack)
     attack = AutoProjectedGradientDescent(estimator=clf, norm=2, eps=3.0,
-                                          #loss_type='cross_entropy'
-                                          loss_type =
-                                           #"cross_entropy",
-                                           'logits_difference'
+                                          loss_type='cross_entropy',
+                                          #loss_type ='logits_difference',
+                                          eps_step = 0.5, # 0.5
                                           )
 
     attack_obf_fun = _apgd_obj_func
@@ -420,12 +391,14 @@ else:
                                                    detector=detector,
                                                    norm=2,
                                                    eps = 3.0,
-                                                   beta=0.1,
+                                                   eps_step=0.9,
+                                                   #beta=0.005,
+                                                   beta=0.005,
                                                    max_iter=100,
                                                    loss_type=
                                                    #'cross_entropy',
                                                     'logits_difference',
-                                                   clf_loss_multiplier=0.001,
+                                                   clf_loss_multiplier=0.0001,
                                                    # clf_loss_multiplier
                                                    # chosen to bring the
                                                    # loss in 0 1

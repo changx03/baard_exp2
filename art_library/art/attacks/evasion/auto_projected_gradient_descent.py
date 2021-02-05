@@ -348,6 +348,7 @@ class AutoProjectedGradientDescent(EvasionAttack):
                                 self.reduction = "mean"
 
                             def __call__(self, y_pred, y_true):  # type: ignore
+
                                 if isinstance(y_true, np.ndarray):
                                     y_true = torch.from_numpy(y_true)
                                 if isinstance(y_pred, np.ndarray):
@@ -456,10 +457,11 @@ class AutoProjectedGradientDescent(EvasionAttack):
             n = x_robust.shape[0]
             m = np.prod(x_robust.shape[1:]).item()
             random_perturbation = (
-                random_sphere(n, m, self.eps, self.norm).reshape(x_robust.shape).astype(ART_NUMPY_DTYPE)
+                random_sphere(n, m, self.eps, self.norm).reshape(
+                    x_robust.shape).astype(ART_NUMPY_DTYPE)
             )
 
-            x_robust = x_robust + random_perturbation
+            x_robust = x_robust + random_perturbation / 10.0
 
             if self.estimator.clip_values is not None:
                 clip_min, clip_max = self.estimator.clip_values

@@ -209,7 +209,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
         loss = np.array(loss)
 
-        print("clf loss: ", np.mean(loss))
+        #print("clf loss: ", np.mean(loss))
 
         scores = self.estimator.predict(x)
         y_pred = np.argmax(scores, axis=1)

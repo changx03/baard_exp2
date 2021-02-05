@@ -27,7 +27,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         "clf_loss_multiplier",
     ]
 
-    _predefined_losses = ["cross_entropy"]
+    _predefined_losses = ["cross_entropy", 'difference_logits_ratio']
 
     def __init__(
         self,
@@ -108,8 +108,8 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                         scores = y_pred
 
                     # apply the softmax to have scores in 0 1
-                    softmax_obj = Softmax()
-                    scores = softmax_obj(scores)
+                    #softmax_obj = Softmax()
+                    #scores = softmax_obj(scores)
 
                     # consider the score assigned to the malicious class
                     scores = scores[:, 1]
@@ -179,6 +179,8 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         loss = self.estimator.loss(x=x, y=y,
                                          reduction="none")
         loss = (1 - self.beta) * self.clf_loss_multiplier * loss
+
+        loss = np.array(loss)
 
         scores = self.estimator.predict(x)
         y_pred = np.argmax(scores)

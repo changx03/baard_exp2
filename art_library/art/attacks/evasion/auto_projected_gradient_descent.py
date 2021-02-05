@@ -347,31 +347,36 @@ class AutoProjectedGradientDescent(EvasionAttack):
                             def __init__(self):
                                 self.reduction = "mean"
 
-                            def __call__(self, y_true, y_pred):
+                            def __call__(self, y_pred, y_true):  # type: ignore
                                 if isinstance(y_true, np.ndarray):
-                                    #y_true = torch.from_numpy(y_true)
-                                    y_true = torch.tensor(y_true,
-                                                          requires_grad=True)
+                                    y_true = torch.from_numpy(y_true)
                                 if isinstance(y_pred, np.ndarray):
-                                    #y_pred = torch.from_numpy(y_pred)
-                                    y_pred = torch.tensor(y_pred,
-                                                          requires_grad=True)
+                                    y_pred = torch.from_numpy(y_pred)
+
                                 y_true = y_true.float()
-                                y_pred = y_pred.float()
 
                                 i_y_true = torch.argmax(y_true, axis=1)
-                                i_y_competing = torch.argmin(y_true, axis=1)
+                                i_y_pred_arg = torch.argsort(y_pred, axis=1)
+                                i_z_i_list = list()
 
-                                # scores true class
-                                scores_true = y_pred[:, i_y_true]
-                                scores_competing = y_pred[:, i_y_competing]
+                                for i in range(y_true.shape[0]):
+                                    if i_y_pred_arg[i, -1] != i_y_true[i]:
+                                        i_z_i_list.append(i_y_pred_arg[i, -1])
+                                    else:
+                                        i_z_i_list.append(i_y_pred_arg[i, -2])
 
-                                diff = scores_true - scores_competing
-                                diff = torch.mean(diff.float())
-                                diff = - diff
+                                i_z_i = torch.stack(i_z_i_list)
 
-                                loss = Variable(diff, requires_grad=True)
-                                return loss
+                                z_i = y_pred[:, i_z_i]
+                                z_y = y_pred[:, i_y_true]
+
+                                z_i = torch.diagonal(z_i)
+                                z_y = torch.diagonal(z_y)
+
+                                # - (y_true - competing)
+                                dlr = - ( z_y - z_i)
+
+                                return torch.mean(dlr.float())
 
                         self._loss_object = logits_difference()
 

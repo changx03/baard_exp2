@@ -393,18 +393,18 @@ else:
     grad_obj_fun = _apgd_det_grad
 
     # attack the detector with apgd detector (white box against detector)
-    attack = AutoProjectedGradientDescentDetectors(estimator = clf,
+    attack = AutoProjectedGradientDescentDetectors(estimator=clf,
                                                    detector=detector,
-                                                   detector_clip_fun=clip_fun,
                                                    norm=2,
-                                                   eps = 5.0,
+                                                   eps=5.0,
                                                    eps_step=0.9,
-                                                   beta=0.005,
+                                                   beta=0.5,
                                                    max_iter=100,
                                                    loss_type=
-                                                   #'cross_entropy',
-                                                    'logits_difference',
-                                                   clf_loss_multiplier=0.0001,
+                                                   # 'cross_entropy',
+                                                   'logits_difference',
+                                                   clf_loss_multiplier=0.01,
+                                                   # clf_loss_multiplier = 1,
                                                    # clf_loss_multiplier
                                                    # chosen to bring the
                                                    # loss in 0 1

@@ -36,6 +36,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         detector_th : int = 0.5,
         beta: int = 0.5,
         clf_loss_multiplier: int = 1,
+        detector_clip_fun = None,
         norm: Union[int, float, str] = np.inf,
         eps: float = 0.3,
         eps_step: float = 0.1,
@@ -74,6 +75,8 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         self.beta = beta
         self.detector_th = detector_th
         self.clf_loss_multiplier = clf_loss_multiplier
+
+        self.detector_clip_fun = detector_clip_fun
 
         if targeted is True:
             raise NotImplementedError("This attack so far do not works as a "
@@ -294,6 +297,9 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                 clip_min, clip_max = self.estimator.clip_values
                 x_robust = np.clip(x_robust, clip_min, clip_max)
 
+            if self.detector_clip_fun is not None:
+                x_robust = self.detector_clip_fun(x_robust, y_robust)
+
             perturbation = projection(x_robust - x_init, self.eps, self.norm)
             x_robust = x_init + perturbation
 
@@ -348,6 +354,9 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                         clip_min, clip_max = self.estimator.clip_values
                         z_k_p_1 = np.clip(z_k_p_1, clip_min, clip_max)
 
+                    if self.detector_clip_fun is not None:
+                        z_k_p_1 = self.detector_clip_fun(z_k_p_1, y_batch)
+
                     if k_iter == 0:
                         x_1 = z_k_p_1
                         perturbation = projection(x_1 - x_init_batch, self.eps, self.norm)
@@ -386,10 +395,13 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                             clip_min, clip_max = self.estimator.clip_values
                             x_k_p_1 = np.clip(x_k_p_1, clip_min, clip_max)
 
+                        if self.detector_clip_fun is not None:
+                            x_k_p_1 = self.detector_clip_fun(x_k_p_1, y_batch)
+
                         perturbation = projection(x_k_p_1 - x_init_batch, self.eps, self.norm)
                         x_k_p_1 = x_init_batch + perturbation
 
-                        f_k_p_1 = f_1 = self._cmpt_loss_func(x_k_p_1, y_batch)
+                        f_k_p_1 = self._cmpt_loss_func(x_k_p_1, y_batch)
 
                         if f_k_p_1 > self.f_max:
                             self.count_condition_1 += 1

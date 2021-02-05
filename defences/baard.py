@@ -378,8 +378,18 @@ class DecidabilityStage:
         labels : array of shape (n_samples, 2)
             Returns probability estimates of adversarial examples.
         """
-        likelihoods = self.__get_likelihoods(X, y)
-        return 1.0 - likelihoods
+        n = X.shape[0]
+        X = flatten(X)
+        results = np.zeros(n, dtype=np.float32)
+        for i in trange(self.n_classes, desc='Decidability', disable=not self.verbose):
+            idx = np.where(y == i)[0]
+            if len(idx) == 0:
+                continue
+            x_sub = X[idx]
+            y_sub = y[idx]
+            likelihood = self.__get_likelihoods(x_sub, y_sub)
+            results[idx] = 1 - likelihood
+        return results
 
     def __get_likelihoods(self, x, y):
         neigh_idx = self.tree_.query(x, self.k, return_distance=False)

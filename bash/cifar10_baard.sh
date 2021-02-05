@@ -7,7 +7,7 @@ MODELS=("resnet" "vgg")
 DATA="cifar10"
 for MOD in "${MODELS[@]}"; do
     for ATT in "${ATTACKS[@]}"; do
-        python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --defence $DEF --param "./params/"$DEF"_tune_2.json" --suffix 2stage --adv $DATA"_"$MOD"_"$ATT
-        python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --defence $DEF --param "./params/"$DEF"_tune_3.json" --suffix 3stage --adv $DATA"_"$MOD"_"$ATT
+        python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --defence $DEF --param "./params/"$DEF"_"$DATA"_2.json" --suffix 2stage --adv $DATA"_"$MOD"_"$ATT
+        python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --defence $DEF --param "./params/"$DEF"_"$DATA"_3.json" --suffix 3stage --adv $DATA"_"$MOD"_"$ATT
     done
 done

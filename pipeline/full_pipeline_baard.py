@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import json
 import os
@@ -20,7 +21,7 @@ from misc.util import set_seeds
 from models.torch_util import predict_numpy, validate
 
 from pipeline.preprocess_baard import preprocess_baard
-from pipeline.run_attack import run_attack_untargeted
+from pipeline.run_attack import ATTACKS, run_attack_untargeted
 from pipeline.train_model import train_model
 from pipeline.train_surrogate import get_pretrained_surrogate, train_surrogate
 
@@ -33,11 +34,14 @@ def run_full_pipeline_baard(data,
                             model_name,
                             path,
                             seed,
-                            json_param=os.path.join('params', 'baard_param_3.json'),
+                            json_param=os.path.join('params', 'baard_tune_3.json'),
                             att_name='apgd2',
                             eps=2.0):
     set_seeds(seed)
 
+    # Line attack takes no hyperparameter
+    if att_name == 'line':
+        eps = 1
     print('args:', data, model_name, path, seed, json_param, att_name, eps)
 
     if not os.path.exists(path):
@@ -248,9 +252,17 @@ def run_full_pipeline_baard(data,
 
 
 if __name__ == '__main__':
-    path_json_baard = os.path.join('params', 'baard_param_3.json')
-    attack = 'apgd2'
-    eps = 2.
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--attack', type=str, default='apgd2', choices=ATTACKS)
+    parser.add_argument('--eps', type=float, default=2.0)
+    path_json_baard = os.path.join('params', 'baard_tune_3.json')
+    parser.add_argument('--json', type=str, default=path_json_baard)
+    parser.add_argument('--run', type=int, default=1, choices=list(range(5)))
+    args = parser.parse_args()
+    print(args)
+
+    attack = args.attack
+    eps = args.eps
 
     for i in range(len(SEEDS)):
         path = 'result_{}'.format(str(i))

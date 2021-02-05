@@ -18,7 +18,6 @@ from models.mnist import BaseModel
 from attacks.line_attack import LineAttack
 
 BATCH_SIZE = 128
-ATTACKS = ['apgd', 'apgd2', 'cw2', 'deepfool', 'fgsm', 'line']
 
 def run_attack_untargeted(file_model, X, y, att_name, eps, device):
     path = file_model.split('/')[0]

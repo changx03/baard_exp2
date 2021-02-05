@@ -21,13 +21,14 @@ from misc.util import set_seeds
 from models.torch_util import predict_numpy, validate
 
 from pipeline.preprocess_baard import preprocess_baard
-from pipeline.run_attack import ATTACKS, run_attack_untargeted
+from pipeline.run_attack import run_attack_untargeted
 from pipeline.train_model import train_model
 from pipeline.train_surrogate import get_pretrained_surrogate, train_surrogate
 
 PATH_DATA = 'data'
 EPOCHS = 200
 SEEDS = [65558, 87742, 47709, 33474, 83328]
+ATTACKS = ['apgd', 'apgd2', 'cw2', 'deepfool', 'fgsm', 'line']
 
 
 def run_full_pipeline_baard(data,
@@ -253,6 +254,8 @@ def run_full_pipeline_baard(data,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--data', type=str, default='mnist', choices=['mnist', 'cifar10'])
+    parser.add_argument('--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
     parser.add_argument('--attack', type=str, default='apgd2', choices=ATTACKS)
     parser.add_argument('--eps', type=float, default=2.0)
     path_json_baard = os.path.join('params', 'baard_tune_3.json')
@@ -261,10 +264,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
+    data = args.data
+    model = args.model
     attack = args.attack
     eps = args.eps
+    run = args.run
 
-    for i in range(len(SEEDS)):
+    for i in range(run):
         path = 'result_{}'.format(str(i))
-        run_full_pipeline_baard('mnist', 'dnn', path, att_name=attack, eps=eps, seed=SEEDS[i], json_param=path_json_baard)
-        run_full_pipeline_baard('cifar10', 'resnet', path, att_name=attack, eps=eps, seed=SEEDS[i], json_param=path_json_baard)
+        run_full_pipeline_baard(data, model, path, att_name=attack, eps=eps, seed=SEEDS[i], json_param=path_json_baard)

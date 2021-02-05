@@ -4,4 +4,5 @@ from .preprocess_baard import preprocess_baard
 from .run_attack import run_attack_untargeted
 from .train_defence import train_magnet
 from .train_model import train_model
-from .train_surrogate import get_pretrained_surrogate, train_surrogate
+from .train_surrogate import (SurrogateModel, get_pretrained_surrogate,
+                              train_surrogate)

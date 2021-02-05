@@ -25,9 +25,7 @@ for MOD in "${MODELS[@]}"; do
     python3 ./experiments/train_attacks.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --attack fgsm --eps 1.0
     python3 ./experiments/train_attacks.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --attack fgsm --eps 1.5
     python3 ./experiments/train_attacks.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --attack line --eps 0.0
-    python3 ./experiments/train_attacks.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --attack line --eps 0.5
     python3 ./experiments/train_attacks.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --attack line --eps 1.0
     python3 ./experiments/train_attacks.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --attack watermark --eps 0.3
     python3 ./experiments/train_attacks.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --attack watermark --eps 0.6
-    python3 ./experiments/train_attacks.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --attack watermark --eps 1.0
 done

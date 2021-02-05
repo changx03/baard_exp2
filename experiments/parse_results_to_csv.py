@@ -28,7 +28,7 @@ ATTACKS_CIFAR10 = [
     'cw2_0.0', 'cw2_5.0', 'cw2_10.0',
     'deepfool_1e-06',
     'fgsm_0.031', 'fgsm_0.3', 'fgsm_0.6', 'fgsm_1.0', 'fgsm_1.5',
-    'line_0.0', 'line_0.5', 'line_1.0',
+    'line_0.0', 'line_1.0',
     'watermark_0.3', 'watermark_0.6']
 ATTACKS_MNIST = [
     'apgd_0.063', 'apgd_0.3', 'apgd_0.6', 'apgd_1.0', 'apgd_1.5',
@@ -37,7 +37,7 @@ ATTACKS_MNIST = [
     'cw2_0.0', 'cw2_5.0', 'cw2_10.0',
     'deepfool_1e-06',
     'fgsm_0.063', 'fgsm_0.3', 'fgsm_0.6', 'fgsm_1.0', 'fgsm_1.5',
-    'line_0.0', 'line_0.5', 'line_1.0',
+    'line_1.0',
     'watermark_0.3', 'watermark_0.6']
 DEFENCES_NUM = ['baard_2stage', 'baard_3stage', 'lid', 'rc']
 DEFENCES_IMG = ['fs', 'magnet']

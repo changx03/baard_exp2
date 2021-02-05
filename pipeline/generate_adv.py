@@ -1,13 +1,7 @@
-"""
-This script does not run standalone. Run BAARD first. MagNet will use the same 
-training and validation sets that are used by BAARD.
-"""
 import argparse
-import datetime
 import json
 import os
 import sys
-import time
 
 import numpy as np
 import torch
@@ -18,34 +12,36 @@ from torch.utils.data import DataLoader, TensorDataset
 
 # Adding the parent directory.
 sys.path.append(os.getcwd())
-from defences.util import acc_on_adv, get_correct_examples
+from defences.util import get_correct_examples
 from misc.util import set_seeds
 from models.torch_util import predict_numpy, validate
 
 from pipeline.run_attack import ATTACKS, run_attack_untargeted
-from pipeline.train_defence import train_magnet
 from pipeline.train_model import train_model
 
 PATH_DATA = 'data'
 EPOCHS = 200
 
 
-def run_full_pipeline_magnet(data,
-                             model_name,
-                             path,
-                             seed,
-                             json_param,
-                             att_name,
-                             eps):
+def run_generate_adv(data,
+                     model_name,
+                     path,
+                     seed,
+                     att_name,
+                     eps):
     set_seeds(seed)
 
-    print('args:', data, model_name, path, seed, json_param, att_name, eps)
+    # Line attack takes no hyperparameter
+    if att_name == 'line':
+        eps = [1]
+    print('args:', data, model_name, path, seed, att_name, eps)
 
     if not os.path.exists(path):
         print('Output folder does not exist. Create:', path)
         os.mkdir(path)
 
     # Get data
+    n_classes = 10
     transform = tv.transforms.Compose([tv.transforms.ToTensor()])
     if data == 'mnist':
         dataset_train = datasets.MNIST(PATH_DATA, train=True, download=True, transform=transform)
@@ -86,80 +82,18 @@ def run_full_pipeline_magnet(data,
     print('-------------------------------------------------------------------')
     print('Start generating {} adversarial examples...'.format(len(idx_shuffle)))
 
-    adv, X, y = run_attack_untargeted(file_model, X, y, att_name=att_name, eps=eps, device=device)
+    advs = []
+    for e in eps:
+        adv, X, y = run_attack_untargeted(file_model, X, y, att_name=att_name, eps=e, device=device)
+        advs.append(adv)
+    advs = np.array(advs, dtype=np.float32)
 
     print('-------------------------------------------------------------------')
     print('Start testing adversarial examples...')
-    pred = predict_numpy(model, adv, device)
-    print('Acc on adv:', np.mean(pred == y))
-
-    X_def_test = X[:1000]
-    y_def_test = y[:1000]
-    adv_def_test = adv[:1000]
-    pred_adv_def_test = pred[:1000]
-
-    X_def_val = X[1000:2000]
-    # y_def_val = y[1000:2000]
-    # adv_def_val = adv[1000:2000]
-    # pred_adv_def_val = pred[1000:2000]
-
-    # X_att_test = X[2000:4000]
-    # y_att_test = y[2000:4000]
-    # adv_att_test = adv[2000:4000]
-    # pred_adv_att_test = pred[2000:4000]
-
-    # X_surro_train = X[4000:]
-    # y_surro_train = y[4000:]
-    # adv_surro_train = adv[4000:]
-    # pred_adv_surro_train = pred[4000:]
-
-    print('-------------------------------------------------------------------')
-    print('Start training MagNet...')
-    # Run preprocessing
-    tensor_X, tensor_y = get_correct_examples(model, dataset_train, device=device, return_tensor=True)
-    X_train = tensor_X.cpu().detach().numpy()
-    y_train = tensor_y.cpu().detach().numpy()
-
-    with open(json_param) as j:
-        param = json.load(j)
-
-    time_start = time.time()
-    detector = train_magnet(data, model_name, X_train, y_train, X_def_val, param, device, path, EPOCHS, model=model)
-    time_elapsed = time.time() - time_start
-    print('Total run time:', str(datetime.timedelta(seconds=time_elapsed)))
-
-    print('-------------------------------------------------------------------')
-    print('Start testing MagNet...')
-
-    time_start = time.time()
-    adv_reformed_test, label_adv = detector.detect(adv_def_test, pred_adv_def_test)
-    X_reformed_test, label_clean = detector.detect(X_def_test, y_def_test)
-    time_elapsed = time.time() - time_start
-    print('Total run time:', str(datetime.timedelta(seconds=time_elapsed)))
-
-    pred_adv_reformed = predict_numpy(model, adv_reformed_test, device)
-    acc = acc_on_adv(pred_adv_reformed, y_def_test, label_adv)
-    fpr = np.mean(label_clean)
-    print('Acc_on_adv:', acc)
-    print('FPR:', fpr)
-
-    obj = {
-        'X': X_def_test,
-        'y': y_def_test,
-        'adv': adv_def_test,
-        'label_adv': label_adv,
-        'label_clean': label_clean,
-        'pred_adv': pred_adv_def_test,
-        'X_reformed': X_reformed_test,
-        'adv_reformed': adv_reformed_test,
-        'pred_adv_reformed': pred_adv_reformed
-    }
-    file_detector_output = os.path.join(path, '{}_{}_{}_{}_magnet_output.pt'.format(data, model_name, att_name, int(eps * 1000)))
-    torch.save(obj, file_detector_output)
-    print('Save to:', file_detector_output)
-
-    print('DONE!')
-    print('-------------------------------------------------------------------\n')
+    for i, e in enumerate(eps):
+        adv = advs[i]
+        pred = predict_numpy(model, adv, device)
+        print('Attack: {} Eps={} Acc on adv: {:.4f}'.format(att_name, e, np.mean(pred == y)))
 
 
 if __name__ == '__main__':
@@ -172,19 +106,16 @@ if __name__ == '__main__':
     parser.add_argument('--data', type=str, default='mnist', choices=['mnist', 'cifar10'])
     parser.add_argument('--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
     parser.add_argument('--attack', type=str, default='apgd2', choices=ATTACKS)
-    parser.add_argument('--eps', type=float, default=2.0)
-    path_json_baard = os.path.join('params', 'magnet_param.json')
-    parser.add_argument('--json', type=str, default=path_json_baard)
+    parser.add_argument('--eps', type=float, nargs='+', default=[2.0])
     parser.add_argument('--idx', type=int, default=0, choices=list(range(len(seeds))))
     args = parser.parse_args()
     print(args)
 
     idx = args.idx
-    run_full_pipeline_magnet(
+    run_generate_adv(
         data=args.data,
         model_name=args.model,
         path='result_{}'.format(str(idx)),
         seed=seeds[idx],
-        json_param=args.json,
         att_name=args.attack,
         eps=args.eps)

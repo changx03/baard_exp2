@@ -13,11 +13,13 @@ from attacks.carlini import CarliniWagnerAttackL2
 
 # Adding the parent directory.
 sys.path.append(os.getcwd())
+from attacks.line_attack import LineAttack
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
-from attacks.line_attack import LineAttack
 
+ATTACKS = ['apgd', 'apgd2', 'cw2', 'deepfool', 'fgsm', 'line']
 BATCH_SIZE = 128
+
 
 def run_attack_untargeted(file_model, X, y, att_name, eps, device):
     path = file_model.split('/')[0]
@@ -25,12 +27,12 @@ def run_attack_untargeted(file_model, X, y, att_name, eps, device):
     name_arr = file_str.split('_')
     data = name_arr[0]
     model_name = name_arr[1]
-    file_data = os.path.join(path, '{}_{}_{}_{}.pt'.format(data, model_name, att_name, eps))
+    file_data = os.path.join(path, '{}_{}_{}_{}.pt'.format(data, model_name, att_name, int(eps * 1000)))
 
     if os.path.exists(file_data):
         print('Found existing file:', file_data)
         obj = torch.load(file_data)
-        return obj['adv']
+        return obj['adv'], obj['X'], obj['y']
 
     if data == 'mnist':
         n_features = (1, 28, 28)
@@ -116,4 +118,4 @@ def run_attack_untargeted(file_model, X, y, att_name, eps, device):
     torch.save(obj, file_data)
     print('Save data to:', file_data)
 
-    return adv
+    return adv, X, y

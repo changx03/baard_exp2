@@ -21,23 +21,21 @@ from misc.util import set_seeds
 from models.torch_util import predict_numpy, validate
 
 from pipeline.preprocess_baard import preprocess_baard
-from pipeline.run_attack import run_attack_untargeted
+from pipeline.run_attack import ATTACKS, run_attack_untargeted
 from pipeline.train_model import train_model
 from pipeline.train_surrogate import get_pretrained_surrogate, train_surrogate
 
 PATH_DATA = 'data'
 EPOCHS = 200
-SEEDS = [65558, 87742, 47709, 33474, 83328]
-ATTACKS = ['apgd', 'apgd2', 'cw2', 'deepfool', 'fgsm', 'line']
 
 
 def run_full_pipeline_baard(data,
                             model_name,
                             path,
                             seed,
-                            json_param=os.path.join('params', 'baard_tune_3.json'),
-                            att_name='apgd2',
-                            eps=2.0):
+                            json_param,
+                            att_name,
+                            eps):
     set_seeds(seed)
 
     # Line attack takes no hyperparameter
@@ -91,7 +89,7 @@ def run_full_pipeline_baard(data,
     print('-------------------------------------------------------------------')
     print('Start generating {} adversarial examples...'.format(len(idx_shuffle)))
 
-    adv = run_attack_untargeted(file_model, X, y, att_name=att_name, eps=eps, device=device)
+    adv, X, y = run_attack_untargeted(file_model, X, y, att_name=att_name, eps=eps, device=device)
 
     print('-------------------------------------------------------------------')
     print('Start testing adversarial examples...')
@@ -123,16 +121,23 @@ def run_full_pipeline_baard(data,
     # Run preprocessing
     tensor_X, tensor_y = get_correct_examples(model, dataset_train, device=device, return_tensor=True)
     X_baard_train = tensor_X.cpu().detach().numpy()
-    X_baard_train_s1 = preprocess_baard(data, tensor_X).cpu().detach().numpy()
     y_baard_train = tensor_y.cpu().detach().numpy()
-    print('BAARD train set:', X_baard_train_s1.shape)
+
     file_baard_train = os.path.join(path, '{}_{}_baard_s1_train_data.pt'.format(data, model_name))
-    obj = {
-        'X': X_baard_train_s1,
-        'y': y_baard_train
-    }
-    torch.save(obj, file_baard_train)
-    print('Save BAARD training data to:', file_baard_train)
+    if os.path.exists(file_baard_train):
+        print('Found existing BAARD preprocess data:', file_baard_train)
+        obj = torch.load(file_baard_train)
+        X_baard_train_s1 = obj['X']
+        y_baard_train = obj['y']
+    else:
+        X_baard_train_s1 = preprocess_baard(data, tensor_X).cpu().detach().numpy()
+        obj = {
+            'X': X_baard_train_s1,
+            'y': y_baard_train
+        }
+        torch.save(obj, file_baard_train)
+        print('Save BAARD training data to:', file_baard_train)
+    print('BAARD train set:', X_baard_train_s1.shape)
 
     with open(json_param) as j:
         baard_param = json.load(j)
@@ -182,7 +187,7 @@ def run_full_pipeline_baard(data,
         'label_clean': label_clean,
         'pred_adv': pred_adv_def_test
     }
-    file_baard_output = os.path.join(path, '{}_{}_{}_{}_baard_output.pt'.format(data, model_name, att_name, eps))
+    file_baard_output = os.path.join(path, '{}_{}_{}_{}_baard_output.pt'.format(data, model_name, att_name, int(eps * 1000)))
     torch.save(obj, file_baard_output)
     print('Save to:', file_baard_output)
 
@@ -253,6 +258,11 @@ def run_full_pipeline_baard(data,
 
 
 if __name__ == '__main__':
+    path_cur = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(path_cur, 'seeds.json')) as j:
+        json_obj = json.load(j)
+        seeds = json_obj['seeds']
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', type=str, default='mnist', choices=['mnist', 'cifar10'])
     parser.add_argument('--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
@@ -260,16 +270,16 @@ if __name__ == '__main__':
     parser.add_argument('--eps', type=float, default=2.0)
     path_json_baard = os.path.join('params', 'baard_tune_3.json')
     parser.add_argument('--json', type=str, default=path_json_baard)
-    parser.add_argument('--run', type=int, default=1, choices=list(range(1, 6)))
+    parser.add_argument('--idx', type=int, default=0, choices=list(range(len(seeds))))
     args = parser.parse_args()
     print(args)
 
-    data = args.data
-    model = args.model
-    attack = args.attack
-    eps = args.eps
-    run = args.run
-
-    for i in range(run):
-        path = 'result_{}'.format(str(i))
-        run_full_pipeline_baard(data, model, path, att_name=attack, eps=eps, seed=SEEDS[i], json_param=path_json_baard)
+    idx = args.idx
+    run_full_pipeline_baard(
+        data=args.data,
+        model_name=args.model,
+        path='result_{}'.format(str(idx)),
+        seed=seeds[idx],
+        json_param=args.json,
+        att_name=args.attack,
+        eps=args.eps)

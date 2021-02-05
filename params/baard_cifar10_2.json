@@ -4,5 +4,5 @@
     "q1": 1.0,
     "q2": 0.98,
     "q3": 0.98,
-    "sequence": [true, true, true]
+    "sequence": [true, true, false]
 }

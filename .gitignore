@@ -153,3 +153,4 @@ examples/baard_demo.pt
 *.npy
 *.pt
 ~*
+test2.sh

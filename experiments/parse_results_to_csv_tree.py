@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 sys.path.append(os.getcwd())
 from experiments.util import load_csv, get_dataframe_sklearn
 
-VERSION = 1
+VERSION = 2
 OUTPUT_PATH = 'csv'
 DATASETS = ['banknote', 'breastcancer', 'htru2']
 MODELS = ['tree']

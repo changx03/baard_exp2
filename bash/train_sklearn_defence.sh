@@ -8,8 +8,8 @@ MOD="svm"
 for DATA in "${DATASETS[@]}"; do
     for ATT in "${ATTACKS[@]}"; do
         python3 ./experiments/train_defences_sklearn.py --data $DATA --model $MOD --adv $ATT --defence rc --param "./params/rc_param_"$DATA"_"$MOD".json"
-        python3 ./experiments/train_defences_sklearn.py --data $DATA --model $MOD --adv $ATT --defence baard --param "./params/baard_param_2s.json" --suffix 2stage
-        python3 ./experiments/train_defences_sklearn.py --data $DATA --model $MOD --adv $ATT --defence baard --param "./params/baard_param_3s.json" --suffix 3stage
+        python3 ./experiments/train_defences_sklearn.py --data $DATA --model $MOD --adv $ATT --defence baard --param "./params/baard_tune_2s.json" --suffix 2stage
+        python3 ./experiments/train_defences_sklearn.py --data $DATA --model $MOD --adv $ATT --defence baard --param "./params/baard_tune_3s.json" --suffix 3stage
     done
 done
 
@@ -20,7 +20,7 @@ MOD="tree"
 for DATA in "${DATASETS[@]}"; do
     for ATT in "${ATTACKS[@]}"; do
         python3 ./experiments/train_defences_sklearn.py --data $DATA --model $MOD --adv $ATT --defence rc --param "./params/rc_param_"$DATA"_"$MOD".json"
-        python3 ./experiments/train_defences_sklearn.py --data $DATA --model $MOD --adv $ATT --defence baard --param "./params/baard_param_2s.json" --suffix 2stage
-        python3 ./experiments/train_defences_sklearn.py --data $DATA --model $MOD --adv $ATT --defence baard --param "./params/baard_param_3s.json" --suffix 3stage
+        python3 ./experiments/train_defences_sklearn.py --data $DATA --model $MOD --adv $ATT --defence baard --param "./params/baard_tune_2s.json" --suffix 2stage
+        python3 ./experiments/train_defences_sklearn.py --data $DATA --model $MOD --adv $ATT --defence baard --param "./params/baard_tune_3s.json" --suffix 3stage
     done
 done

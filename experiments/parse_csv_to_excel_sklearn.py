@@ -5,7 +5,7 @@ import numpy as np
 
 DATASETS = ['banknote', 'breastcancer', 'htru2']
 MODEL_NAMES = ['svm', 'tree']
-VERSION = 1
+VERSION = 2
 
 
 def save_excel(data, model_name):

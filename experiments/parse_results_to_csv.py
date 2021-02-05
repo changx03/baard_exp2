@@ -11,7 +11,7 @@ from models.mnist import BaseModel
 from models.numeric import NumericModel
 from experiments.util import get_dataframe
 
-VERSION = 5
+VERSION = 6
 OUTPUT_PATH = 'csv'
 DATASETS = ['banknote', 'breastcancer', 'htru2', 'cifar10', 'cifar10', 'mnist']
 MODEL_NAMES = ['basic16', 'basic120', 'basic32', 'resnet', 'vgg', 'basic']

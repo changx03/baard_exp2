@@ -5,7 +5,7 @@ import numpy as np
 
 DATASETS = ['banknote', 'breastcancer', 'htru2', 'cifar10', 'cifar10', 'mnist']
 MODEL_NAMES = ['basic16', 'basic120', 'basic32', 'resnet', 'vgg', 'basic']
-VERSION = 5
+VERSION = 6
 
 
 def get_csv_path(idx):
@@ -23,8 +23,10 @@ def save_excel(idx):
         columns=['Defence'],
         values=['Acc_on_adv', 'FPR'])
     table = table.replace(-100, np.nan)
-    with pd.ExcelWriter(os.path.join('tables', '{}_{}_{}.xlsx'.format(DATASETS[idx], MODEL_NAMES[idx], VERSION))) as writer:
+    path_excel = os.path.join('tables', '{}_{}_{}.xlsx'.format(DATASETS[idx], MODEL_NAMES[idx], VERSION))
+    with pd.ExcelWriter(path_excel) as writer:
         table.to_excel(writer, sheet_name=DATASETS[idx])
+        print('Save to:', path_excel)
 
 
 if __name__ == '__main__':

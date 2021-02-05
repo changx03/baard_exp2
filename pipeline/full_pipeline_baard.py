@@ -260,7 +260,7 @@ if __name__ == '__main__':
     parser.add_argument('--eps', type=float, default=2.0)
     path_json_baard = os.path.join('params', 'baard_tune_3.json')
     parser.add_argument('--json', type=str, default=path_json_baard)
-    parser.add_argument('--run', type=int, default=1, choices=list(range(5)))
+    parser.add_argument('--run', type=int, default=1, choices=list(range(1, 6)))
     args = parser.parse_args()
     print(args)
 

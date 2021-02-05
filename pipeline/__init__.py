@@ -1,6 +1,7 @@
 from sys import implementation
 
 from .evaluate_baard import run_evaluate_baard
+from .evaluate_magnet import run_evaluate_magnet
 from .full_pipeline_baard import run_full_pipeline_baard
 from .full_pipeline_magnet import run_full_pipeline_magnet
 from .generate_adv import run_generate_adv

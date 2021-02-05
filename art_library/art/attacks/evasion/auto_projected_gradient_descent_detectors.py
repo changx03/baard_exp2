@@ -27,7 +27,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         "clf_loss_multiplier",
     ]
 
-    _predefined_losses = ["cross_entropy", 'difference_logits_ratio']
+    _predefined_losses = ["cross_entropy", 'difference_logits_ratio', "logits_difference"]
 
     def __init__(
         self,
@@ -108,13 +108,18 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                         scores = y_pred
 
                     # apply the softmax to have scores in 0 1
-                    #softmax_obj = Softmax()
-                    #scores = softmax_obj(scores)
+                    softmax_obj = Softmax(dim=1)
+                    scores = softmax_obj(scores)
 
                     # consider the score assigned to the malicious class
                     scores = scores[:, 1]
+                    scores = scores - detector_th
 
-                    scores, _ = torch.max(scores - detector_th, dim=0)
+                    # create a vector of zeros
+                    zero_vector = torch.zeros_like(scores)
+
+                    # get the maximum values between scores - threshold and 0
+                    scores = torch.max(scores, zero_vector)
 
                     if self.reduction == 'mean':
                         return torch.mean(scores)
@@ -161,15 +166,21 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                    (1 - 2 * int(self.targeted))
 
         scores = self.estimator.predict(x)
-        y_pred = np.argmax(scores)
-        y_true = np.argmax(y)
+        y_pred = np.argmax(scores, axis=1)
+        y_true = np.argmax(y, axis=1)
+
+        print(" grad x ", x.shape)
+        print(" grad y ", y.shape)
 
         # todo: this work only for indiscriminate attack
         misclass = y_pred != y_true
         if misclass.any():
+            x_misclass = x[misclass, :]
+            y_misclass = y[misclass, :]
             grad[misclass] -=  self.beta * \
-                           self.detector.loss_gradient(x[misclass], np.ones(
-                               y[misclass].shape))  # grad wrt malicious class.
+                           self.detector.loss_gradient(x_misclass, np.ones(
+                               y_misclass.shape))  # grad wrt malicious
+            # class.
 
         return grad
 
@@ -178,20 +189,39 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         # set the loss as the clf loss
         loss = self.estimator.loss(x=x, y=y,
                                          reduction="none")
+
         loss = (1 - self.beta) * self.clf_loss_multiplier * loss
 
         loss = np.array(loss)
 
         scores = self.estimator.predict(x)
-        y_pred = np.argmax(scores)
-        y_true = np.argmax(y)
+        y_pred = np.argmax(scores, axis=1)
+        y_true = np.argmax(y, axis=1)
+
+        print("y pred ", y_pred.shape)
+        print("y true ", y_true.shape)
+
+        print(" fun x ", x.shape)
+        print(" fun y ", y.shape)
+
+        print("type y_pred ", type(y_pred))
 
         # fixme: this work only for indiscriminate attack
-        misclass = y_pred != y_true
+        misclass = np.not_equal(y_pred, y_true)
+        print("misclass shape", misclass.shape)
+        print("misclass ", misclass)
+
         if misclass.any():
             misclass = y_pred != y_true
+            x_misclass = x[misclass, :]
+            y_misclass = y[misclass, :]
+            print("x misclass ",x_misclass.shape)
+            print("y misclass ", y_misclass.shape)
+            print("detector loss shape ", self.detector.loss(x=x_misclass, y=y_misclass,
+                                              reduction="none").shape )
             loss[misclass] -=  self.beta * \
-                           self.detector.loss(x=x, y=y, reduction="none")
+                           self.detector.loss(x=x_misclass, y=y_misclass,
+                                              reduction="none")
 
         return np.mean(loss)
 

@@ -376,7 +376,10 @@ class AutoProjectedGradientDescent(EvasionAttack):
                                 # - (y_true - competing)
                                 dlr = - ( z_y - z_i)
 
-                                return torch.mean(dlr.float())
+                                if self.reduction == 'mean':
+                                    return torch.mean(dlr.float())
+                                else:
+                                    return dlr.float()
 
                         self._loss_object = logits_difference()
 

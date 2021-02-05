@@ -161,16 +161,13 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
     def _cmpt_grad(self, x, y):
 
         # set grad equal to the classifier gradient
-        grad= (1 - self.beta) * self.clf_loss_multiplier * \
+        grad= self.clf_loss_multiplier * \
                    self.estimator.loss_gradient(x, y) * \
                    (1 - 2 * int(self.targeted))
 
         scores = self.estimator.predict(x)
         y_pred = np.argmax(scores, axis=1)
         y_true = np.argmax(y, axis=1)
-
-        print(" grad x ", x.shape)
-        print(" grad y ", y.shape)
 
         # todo: this work only for indiscriminate attack
         misclass = y_pred != y_true
@@ -190,7 +187,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         loss = self.estimator.loss(x=x, y=y,
                                          reduction="none")
 
-        loss = (1 - self.beta) * self.clf_loss_multiplier * loss
+        loss = self.clf_loss_multiplier * loss
 
         loss = np.array(loss)
 
@@ -198,27 +195,13 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         y_pred = np.argmax(scores, axis=1)
         y_true = np.argmax(y, axis=1)
 
-        print("y pred ", y_pred.shape)
-        print("y true ", y_true.shape)
-
-        print(" fun x ", x.shape)
-        print(" fun y ", y.shape)
-
-        print("type y_pred ", type(y_pred))
-
         # fixme: this work only for indiscriminate attack
         misclass = np.not_equal(y_pred, y_true)
-        print("misclass shape", misclass.shape)
-        print("misclass ", misclass)
 
         if misclass.any():
             misclass = y_pred != y_true
             x_misclass = x[misclass, :]
             y_misclass = y[misclass, :]
-            print("x misclass ",x_misclass.shape)
-            print("y misclass ", y_misclass.shape)
-            print("detector loss shape ", self.detector.loss(x=x_misclass, y=y_misclass,
-                                              reduction="none").shape )
             loss[misclass] -=  self.beta * \
                            self.detector.loss(x=x_misclass, y=y_misclass,
                                               reduction="none")

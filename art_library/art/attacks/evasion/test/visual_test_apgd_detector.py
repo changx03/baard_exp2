@@ -77,7 +77,7 @@ def net_generation_and_train(X_train, y_train, net_type):
     optimizer = optim.SGD(net.parameters(),
                           lr=0.1, momentum=0.9)
 
-    clf = PyTorchClassifier(model=net, loss=loss, input_shape=(2,),
+    clf = PyTorchClassifier(model=net, loss=loss, input_shape=(1,2),
                                 nb_classes=2, optimizer=optimizer)
     clf.fit(X_train, y_train, batch_size=10, nb_epochs=100)
 
@@ -198,7 +198,7 @@ def _apgd_det_grad(x, y, attack):
     x = np.expand_dims(x, axis=0)
     y = np.expand_dims(y, axis=0)
 
-    grad_clf = (1 - attack.beta) * attack.clf_loss_multiplier * \
+    grad_clf = attack.clf_loss_multiplier * \
             attack.estimator.loss_gradient(x, y) * \
             (1 - 2 * int(attack.targeted))
 
@@ -206,6 +206,7 @@ def _apgd_det_grad(x, y, attack):
     y_pred = np.argmax(scores).item()
     y_true = np.argmax(y).item()
     # fixme: this work only for indiscriminate attack
+
     if y_pred != y_true :
         grad_det = -  attack.beta * \
             attack.detector.loss_gradient(x, np.ones(
@@ -228,12 +229,13 @@ def _apgd_det_obj_func(x, y, attack):
 
     loss_clf = attack.estimator.loss(x=x, y=y,
                         reduction="none")
-    loss_clf = (1 - attack.beta) * attack.clf_loss_multiplier * loss_clf
+    loss_clf =  attack.clf_loss_multiplier * loss_clf
 
     scores = attack.estimator.predict(x).ravel()
     y_pred = np.argmax(scores).item()
     y_true = np.argmax(y).item()
     # fixme: this work only for indiscriminate attack
+
     if y_pred != y_true :
         loss_det =  - \
         attack.beta * \
@@ -394,15 +396,15 @@ detector = net_generation_and_train(X_tr_det, y_tr_det, net_type=Net)
 
 ###############################
 
-attack_class = 'apgd_detector' # can be apgd or apgd_detector
+attack_class = 'apgd_detector'# can be apgd or apgd_detector
 
 if attack_class == "apgd":
     #attack the detector with apgd (black box attack)
     attack = AutoProjectedGradientDescent(estimator=clf, norm=2, eps=3.0,
                                           #loss_type='cross_entropy'
                                           loss_type =
-                                           "cross_entropy",
-                                           #'logits_difference'
+                                           #"cross_entropy",
+                                           'logits_difference'
                                           )
 
     attack_obf_fun = _apgd_obj_func
@@ -418,10 +420,15 @@ else:
                                                    detector=detector,
                                                    norm=2,
                                                    eps = 3.0,
-                                                   beta=0.90,
+                                                   beta=0.1,
+                                                   max_iter=100,
                                                    loss_type=
-                                                   'cross_entropy',
-                                                   clf_loss_multiplier = 0.001,
+                                                   #'cross_entropy',
+                                                    'logits_difference',
+                                                   clf_loss_multiplier=0.001,
+                                                   # clf_loss_multiplier
+                                                   # chosen to bring the
+                                                   # loss in 0 1
                                                    detector_th=0.0)
 
 # attack the detector

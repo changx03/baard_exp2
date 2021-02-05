@@ -135,9 +135,9 @@ class ReliabilityStage:
         self.verbose = verbose
 
         self.trees_ = []
-        self.means_ = np.zeros(self.n_classes, dtype=np.float32)
-        self.stds_ = np.zeros(self.n_classes, dtype=np.float32)
-        self.thresholds_ = np.zeros(self.n_classes, dtype=np.float32)
+        self.means_ = np.zeros(self.n_classes, dtype=np.float)
+        self.stds_ = np.zeros(self.n_classes, dtype=np.float)
+        self.thresholds_ = np.zeros(self.n_classes, dtype=np.float)
 
     def fit(self, X, y):
         """Fits the model according to the given training data.
@@ -243,7 +243,7 @@ class ReliabilityStage:
         n = X.shape[0]
         X = flatten(X)
         # Binary classification. 1: Adversarial example; 0: Benign sample.
-        results = np.zeros(n, dtype=np.float32)
+        results = np.zeros(n, dtype=np.float)
         for i in trange(self.n_classes, desc='Reliability', disable=not self.verbose):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
@@ -282,8 +282,8 @@ class DecidabilityStage:
         self.quantile = quantile
         self.verbose = verbose
 
-        self.likelihoods_mean_ = np.zeros((n_classes, n_classes), dtype=np.float32)
-        self.thresholds_ = np.zeros(n_classes, dtype=np.float32)
+        self.likelihoods_mean_ = np.zeros((n_classes, n_classes), dtype=np.float)
+        self.thresholds_ = np.zeros(n_classes, dtype=np.float)
 
     def fit(self, X, y):
         """Fits the model according to the given training data.
@@ -380,7 +380,7 @@ class DecidabilityStage:
         """
         n = X.shape[0]
         X = flatten(X)
-        results = np.zeros(n, dtype=np.float32)
+        results = np.zeros(n, dtype=np.float)
         for i in trange(self.n_classes, desc='Decidability', disable=not self.verbose):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
@@ -484,7 +484,7 @@ class BAARDOperator:
 
     def save(self, path):
         thresholds = []
-        quantiles = np.zeros(3, dtype=np.float32)
+        quantiles = np.zeros(3, dtype=np.float)
         ks = np.zeros(3, dtype=np.long)
         for i, stage in enumerate(self.stages):
             thresholds.append(stage.thresholds_)

@@ -187,7 +187,7 @@ def run_full_pipeline_baard(data,
         'label_clean': label_clean,
         'pred_adv': pred_adv_def_test
     }
-    file_baard_output = os.path.join(path, '{}_{}_{}_{}_baard_output.pt'.format(data, model_name, att_name, int(eps * 1000)))
+    file_baard_output = os.path.join(path, '{}_{}_{}_{}_baard_output.pt'.format(data, model_name, att_name, round(eps * 1000)))
     torch.save(obj, file_baard_output)
     print('Save to:', file_baard_output)
 

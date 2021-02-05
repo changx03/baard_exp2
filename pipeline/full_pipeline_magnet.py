@@ -154,7 +154,7 @@ def run_full_pipeline_magnet(data,
         'adv_reformed': adv_reformed_test,
         'pred_adv_reformed': pred_adv_reformed
     }
-    file_detector_output = os.path.join(path, '{}_{}_{}_{}_magnet_output.pt'.format(data, model_name, att_name, int(eps * 1000)))
+    file_detector_output = os.path.join(path, '{}_{}_{}_{}_magnet_output.pt'.format(data, model_name, att_name, round(eps * 1000)))
     torch.save(obj, file_detector_output)
     print('Save to:', file_detector_output)
 

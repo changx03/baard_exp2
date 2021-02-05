@@ -106,9 +106,9 @@ def run_evaluate_magnet(data,
     print('-------------------------------------------------------------------')
     print('Start evaluating the robustness of the classifier...')
 
-    eps = np.array(eps, dtype=np.float32)
+    eps = np.array(eps, dtype=np.float)
     n_att = eps.shape[0]
-    accs_classifier = np.zeros(n_att, dtype=np.float32)
+    accs_classifier = np.zeros(n_att, dtype=np.float)
     accs_on_adv = np.zeros_like(accs_classifier)
     fprs = np.zeros_like(accs_on_adv)
 
@@ -117,7 +117,7 @@ def run_evaluate_magnet(data,
 
     for i in range(n_att):
         print('Evaluating {} eps={}'.format(att_name, eps[i]))
-        file_data = os.path.join(path, '{}_{}_{}_{}.pt'.format(data, model_name, att_name, int(eps[i] * 1000)))
+        file_data = os.path.join(path, '{}_{}_{}_{}.pt'.format(data, model_name, att_name, round(eps[i] * 1000)))
         obj = torch.load(file_data)
         adv = obj['adv']
 

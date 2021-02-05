@@ -27,7 +27,7 @@ def run_attack_untargeted(file_model, X, y, att_name, eps, device):
     name_arr = file_str.split('_')
     data = name_arr[0]
     model_name = name_arr[1]
-    file_data = os.path.join(path, '{}_{}_{}_{}.pt'.format(data, model_name, att_name, int(eps * 1000)))
+    file_data = os.path.join(path, '{}_{}_{}_{}.pt'.format(data, model_name, att_name, round(eps * 1000)))
 
     if os.path.exists(file_data):
         print('Found existing file:', file_data)

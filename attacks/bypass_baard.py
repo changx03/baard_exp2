@@ -16,10 +16,9 @@ class BAARD_Clipper:
     def __call__(self, X, classifier):
         thresholds = self.baard_detector.stages[0].thresholds_
         pred = classifier.predict(X)
-        return clip_by_threshold(X, pred, thresholds)
+        y_pred = np.argmax(pred, axis=1)
+        return clip_by_threshold(X, y_pred, thresholds)
 
-
-# FIXME: This function still does not work with BAARD.
 def clip_by_threshold(X, y, thresholds):
     n_classes = thresholds.shape[0]
     shape = X.shape
@@ -36,6 +35,7 @@ def clip_by_threshold(X, y, thresholds):
         subset = X_flat[idx]
         subset_clipped = np.clip(subset, low, high)
         out_flat[idx] = subset_clipped
+
     return out_flat.reshape(shape)
 
 

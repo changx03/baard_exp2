@@ -116,7 +116,18 @@ def run_full_pipeline_baard(data,
     X_surro_train = X[4000:]
     y_surro_train = y[4000:]
     adv_surro_train = adv[4000:]
-    pred_adv_surro_train = pred[4000:]
+
+    # concatenate the adversarial examples computed for different epsilon
+    if data == 'mnist':
+        eps_1 = 1
+        eps_2 = 5
+        eps_3 = 8
+    elif data == "cifar10":
+        eps_1 = 0.5
+        eps_2 = 1
+        eps_3 = 4
+    else:
+        raise ValueError("dataset idx unknown")
 
     print('-------------------------------------------------------------------')
     print('Start training BAARD...')
@@ -218,8 +229,31 @@ def run_full_pipeline_baard(data,
             print(X_train.shape, label_train.shape, X_test.shape, label_test.shape)
             print('Labelled as adv:', np.mean(label_train == 1), np.mean(label_test == 1))
         else:
+
+            adv_surro_train_2 = \
+            run_attack_untargeted(file_model, X_surro_train,
+                                  y_surro_train,
+                                  att_name=att_name,
+                                  eps=eps_1, device=device)[0]
+            adv_surro_train_3 = \
+            run_attack_untargeted(file_model, X_surro_train,
+                                  y_surro_train,
+                                  att_name=att_name,
+                                  eps=eps_2, device=device)[0]
+            adv_surro_train_4 = \
+            run_attack_untargeted(file_model, X_surro_train,
+                                  y_surro_train,
+                                  att_name=att_name,
+                                  eps=eps_3, device=device)[0]
+            adv_surro_train = adv_surro_train.append(adv_surro_train_2)
+            adv_surro_train = adv_surro_train.append(adv_surro_train_3)
+            adv_surro_train = adv_surro_train.append(adv_surro_train_4)
+
+            # classify the surrogate set
+            pred_adv_surro_train = predict_numpy(model, adv_surro_train, device)
             label_adv_train = detector.detect(adv_surro_train, pred_adv_surro_train)
             label_X_train = detector.detect(X_surro_train, y_surro_train)
+            # concatenate the clean and the adversarial samples
             X_train = np.concatenate((X_surro_train, adv_surro_train))
             label_train = np.concatenate((label_X_train, label_adv_train))
 

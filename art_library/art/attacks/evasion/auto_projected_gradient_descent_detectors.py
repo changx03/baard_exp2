@@ -295,14 +295,11 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                 random_sphere(n, m, self.eps, self.norm).reshape(x_robust.shape).astype(ART_NUMPY_DTYPE)
             )
 
-            x_robust = x_robust + random_perturbation / 100.0
+            x_robust = x_robust + random_perturbation / 10 # / 100.0
 
             if self.estimator.clip_values is not None:
                 clip_min, clip_max = self.estimator.clip_values
                 x_robust = np.clip(x_robust, clip_min, clip_max)
-
-            if self.detector_clip_fun is not None:
-                x_robust = self.detector_clip_fun(x_robust, self.estimator)
 
             perturbation = projection(x_robust - x_init, self.eps, self.norm)
             x_robust = x_init + perturbation
@@ -358,9 +355,6 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                         clip_min, clip_max = self.estimator.clip_values
                         z_k_p_1 = np.clip(z_k_p_1, clip_min, clip_max)
 
-                    if self.detector_clip_fun is not None:
-                        z_k_p_1 = self.detector_clip_fun(z_k_p_1, self.estimator)
-
                     if k_iter == 0:
                         x_1 = z_k_p_1
                         perturbation = projection(x_1 - x_init_batch, self.eps, self.norm)
@@ -399,9 +393,6 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                             clip_min, clip_max = self.estimator.clip_values
                             x_k_p_1 = np.clip(x_k_p_1, clip_min, clip_max)
 
-                        if self.detector_clip_fun is not None:
-                            x_k_p_1 = self.detector_clip_fun(x_k_p_1, self.estimator)
-
                         perturbation = projection(x_k_p_1 - x_init_batch, self.eps, self.norm)
                         x_k_p_1 = x_init_batch + perturbation
 
@@ -435,6 +426,11 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                         else:
                             x_k_m_1 = x_k
                             x_k = x_k_p_1.copy()
+
+                # at the enx of the iteration apply the detector's clips
+                if self.detector_clip_fun is not None:
+                    x_k = self.detector_clip_fun(x_k,
+                    self.estimator)
 
                 y_pred_adv_k = self.estimator.predict(x_k)
 

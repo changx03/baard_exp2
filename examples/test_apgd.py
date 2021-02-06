@@ -18,7 +18,7 @@ from experiments.util import acc_on_adv, set_seeds
 from models.mnist import BaseModel
 from models.torch_util import predict_numpy
 from pipeline.train_surrogate import SurrogateModel, get_pretrained_surrogate
-from attacks.bypass_baard import clip_baard
+from attacks.bypass_baard import BAARD_Clipper
 
 SEED = 65558  # for result_0
 
@@ -129,11 +129,23 @@ def main():
 
     fpr = 0.051
     loss_multiplier = 1. / 36.
+    clip_fun = BAARD_Clipper(detector)
+
+    X_toy = np.random.rand(128, 1, 28, 28).astype(np.float32)
+    pred_toy = art_classifier.predict(X_toy)
+    rejected_s1 = detector.stages[0].predict(X_toy, pred_toy)
+    print('Without:', np.mean(rejected_s1))
+
+    X_clipped = clip_fun(X_toy, art_classifier)
+    rejected_s1 = detector.stages[0].predict(X_clipped, pred_toy)
+    print('With:', np.mean(rejected_s1))
+
     attack = AutoProjectedGradientDescentDetectors(
         estimator=art_classifier,
         detector=art_detector,
         detector_th=fpr,
         clf_loss_multiplier=loss_multiplier,
+        detector_clip_fun=clip_fun,
         loss_type='logits_difference',
         batch_size=128,
         norm=2,
@@ -142,9 +154,8 @@ def main():
         beta=0.5,
         max_iter=100)
 
-    adv_x = attack.generate(x=X_att_test[:100], y=y_att_test[:100])
+    adv_x = attack.generate(x=X_toy)
     pred_adv = predict_numpy(model, adv_x, device)
-    adv_x = clip_baard(adv_x, pred_adv, thresholds)
     pred_sur = art_detector.predict(adv_x)
     print('From surrogate model:', np.mean(pred_sur == 1))
     labelled_as_adv = detector.detect(adv_x, pred_adv)
@@ -157,6 +168,21 @@ def main():
     print('reject_s2', np.mean(reject_s2))
     reject_s3 = detector.stages[2].predict(adv_x, pred_adv)
     print('reject_s3', np.mean(reject_s3))
+
+    # adv_x = attack.generate(x=X_att_test[:100], y=None)
+    # pred_adv = predict_numpy(model, adv_x, device)
+    # pred_sur = art_detector.predict(adv_x)
+    # print('From surrogate model:', np.mean(pred_sur == 1))
+    # labelled_as_adv = detector.detect(adv_x, pred_adv)
+    # print('From BAARD', np.mean(labelled_as_adv == 1))
+
+    # # Test it stage by stage
+    # reject_s1 = detector.stages[0].predict(adv_x, pred_adv)
+    # print('reject_s1', np.mean(reject_s1))
+    # reject_s2 = detector.stages[1].predict(adv_x, pred_adv)
+    # print('reject_s2', np.mean(reject_s2))
+    # reject_s3 = detector.stages[2].predict(adv_x, pred_adv)
+    # print('reject_s3', np.mean(reject_s3))
     print('Pause')
 
 

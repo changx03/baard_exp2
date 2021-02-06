@@ -18,7 +18,7 @@ from experiments.util import acc_on_adv, set_seeds
 from models.mnist import BaseModel
 from models.torch_util import predict_numpy
 from pipeline.train_surrogate import SurrogateModel, get_pretrained_surrogate
-from attacks.bypass_baard import clip_baard
+from attacks.bypass_baard import clip_by_threshold
 
 SEED = 65558  # for result_0
 
@@ -141,7 +141,7 @@ def main():
     print('adv_x', adv_x.shape)
 
     pred_adv = predict_numpy(model, adv_x, device)
-    adv_x = clip_baard(adv_x, pred_adv, thresholds)
+    adv_x = clip_by_threshold(adv_x, pred_adv, thresholds[0])
     pred_sur = art_detector.predict(adv_x)
     print('From surrogate model:', np.mean(pred_sur == 1))
     labelled_as_adv = stage1.predict(adv_x, pred_adv)
@@ -152,7 +152,7 @@ def main():
     # y_toy = np.concatenate((np.zeros(50), np.ones(50)))
     # rejected = stage1.predict(X_toy, y_toy)
     # print('rejected', np.mean(rejected))
-    # X_bypass = clip_baard(X_toy, y_toy, thresholds)
+    # X_bypass = clip_by_threshold(X_toy, y_toy, thresholds[0])
     # rejected_after = stage1.predict(X_bypass, y_toy)
     # print('rejected_after', np.mean(rejected_after))
 

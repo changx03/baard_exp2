@@ -18,7 +18,7 @@ with open(os.path.join('pipeline', 'seeds.json')) as j:
     seeds = json_obj['seeds']
 
 def run():
-    for i in range(1, 6):
+    for i in range(0, 5):
         run_full_pipeline_baard('mnist', 'dnn', 'result_' + str(i), seeds[i], os.path.join('params', 'baard_mnist_3.json'), 'apgd', 0.3)
         run_full_pipeline_baard('cifar10', 'resnet', 'result_' + str(i), seeds[i], os.path.join('params', 'baard_cifar10_3.json'), 'apgd', 0.3)
 

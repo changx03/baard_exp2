@@ -133,13 +133,13 @@ def main():
     attack = AutoProjectedGradientDescentDetectors(
         estimator=art_classifier,
         detector=art_detector,
-        detector_th=fpr,
+        detector_th=0, #fpr,
         clf_loss_multiplier=loss_multiplier,
         detector_clip_fun=clip_fun,
         loss_type='logits_difference',
         batch_size=128,
         norm=2,
-        eps=5.0,
+        eps=8.0,
         eps_step=0.9,
         beta=0.5,
         max_iter=100)
@@ -167,9 +167,15 @@ def main():
     # reject_s3 = detector.stages[2].predict(adv_x, pred_adv)
     # print('reject_s3', np.mean(reject_s3))
 
-    adv_x = attack.generate(x=X_att_test[:100], y=None)
+    x = X_att_test[:10]
+    y = y_att_test[:10]
+    adv_x = attack.generate(x=x, y=None)
     pred_adv = predict_numpy(model, adv_x, device)
     pred_sur = art_detector.predict(adv_x)
+
+    pred = predict_numpy(model, adv_x, device)
+    print('Acc classifier:', np.mean(pred == y))
+
     print('From surrogate model:', np.mean(pred_sur == 1))
     labelled_as_adv = detector.detect(adv_x, pred_adv)
     print('From BAARD', np.mean(labelled_as_adv == 1))

@@ -20,6 +20,7 @@ with open(os.path.join('pipeline', 'seeds.json')) as j:
 def run():
     for i in range(1, 6):
         run_full_pipeline_baard('mnist', 'dnn', 'result_' + str(i), seeds[i], os.path.join('params', 'baard_mnist_3.json'), 'apgd', 0.3)
+        run_full_pipeline_baard('cifar10', 'resnet', 'result_' + str(i), seeds[i], os.path.join('params', 'baard_cifar10_3.json'), 'apgd', 0.3)
 
 
 if __name__ == '__main__':

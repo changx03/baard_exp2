@@ -383,7 +383,7 @@ def clip_fun(x, clf):
 
     # clip the samples predicted as belonging to class 0
     clip_min = np.array([-1.,3,]).astype(np.float32)
-    clip_max = np.array([3.,5]).astype(np.float32)
+    clip_max = np.array([2.,5]).astype(np.float32)
     x[y_pred == 0,:] = np.clip(x[y_pred == 0,:], clip_min, clip_max)
 
     # clip the samples predicted as belonging to class 1

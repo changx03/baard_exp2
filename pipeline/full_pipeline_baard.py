@@ -134,10 +134,6 @@ def run_full_pipeline_baard(data,
     print('-------------------------------------------------------------------')
     print('Start training BAARD...')
     # Run preprocessing
-    tensor_X, tensor_y = get_correct_examples(model, dataset_train, device=device, return_tensor=True)
-    X_baard_train = tensor_X.cpu().detach().numpy()
-    y_baard_train = tensor_y.cpu().detach().numpy()
-
     file_baard_train = os.path.join(path, '{}_{}_baard_s1_train_data.pt'.format(data, model_name))
     if os.path.exists(file_baard_train):
         print('Found existing BAARD preprocess data:', file_baard_train)
@@ -146,8 +142,15 @@ def run_full_pipeline_baard(data,
         X_baard_train= obj['X']
         y_baard_train = obj['y']
     else:
-        print('tensor_X', tensor_X.size())
-        X_baard_train_s1 = preprocess_baard(data, tensor_X).cpu().detach().numpy()
+        tensor_X, tensor_y = get_correct_examples(model, dataset_train,
+                                                  device=device,
+                                                  return_tensor=True)
+        X_baard_train = tensor_X.cpu().detach().numpy()
+        y_baard_train = tensor_y.cpu().detach().numpy()
+
+        # fixme: this gives an error as it expect a PIL image
+        X_baard_train_s1 = preprocess_baard(data, X_baard_train
+                                            ).cpu().detach().numpy()
         obj = {
             'X_s1': X_baard_train_s1,
             'X': X_baard_train,
@@ -215,79 +218,83 @@ def run_full_pipeline_baard(data,
     print('-------------------------------------------------------------------')
     print('Start training surrogate model...')
     file_surro = os.path.join(path, '{}_{}_baard_surrogate.pt'.format(data, model_name))
-    if os.path.exists(file_surro):
-        print('Found existing surrogate model:', file_surro)
-        surrogate = get_pretrained_surrogate(file_surro, device)
-    else:
+#    if os.path.exists(file_surro):
+#        print('Found existing surrogate model:', file_surro)
+#        surrogate = get_pretrained_surrogate(file_surro, device)
+#    else:
         # Prepare data for surrogate model
-        file_surro_data = os.path.join(path, '{}_{}_surrogate_data.pt'.format(data, model_name))
-        if os.path.exists(file_surro_data):
-            print('Found existing surrogate dataset:', file_surro_data)
-            obj = torch.load(file_surro_data)
-            X_train = obj['X_train']
-            label_train = obj['label_train']
-            X_test = obj['X_test']
-            label_test = obj['label_test']
-            print(X_train.shape, label_train.shape, X_test.shape, label_test.shape)
-            print('Labelled as adv:', np.mean(label_train == 1), np.mean(label_test == 1))
-        else:
+        # file_surro_data = os.path.join(path, '{}_{}_surrogate_data.pt'.format(data, model_name))
+        # if os.path.exists(file_surro_data):
+        #     print('Found existing surrogate dataset:', file_surro_data)
+        #     obj = torch.load(file_surro_data)
+        #     X_train = obj['X_train']
+        #     label_train = obj['label_train']
+        #     X_test = obj['X_test']
+        #     label_test = obj['label_test']
+        #     print(X_train.shape, label_train.shape, X_test.shape, label_test.shape)
+        #     print('Labelled as adv:', np.mean(label_train == 1), np.mean(label_test == 1))
+        # else:
 
-            adv_surro_train_2 = \
-            run_attack_untargeted(file_model, X_surro_train,
-                                  y_surro_train,
-                                  att_name=att_name,
-                                  eps=eps_1, device=device)[0]
-            adv_surro_train_3 = \
-            run_attack_untargeted(file_model, X_surro_train,
-                                  y_surro_train,
-                                  att_name=att_name,
-                                  eps=eps_2, device=device)[0]
-            adv_surro_train_4 = \
-            run_attack_untargeted(file_model, X_surro_train,
-                                  y_surro_train,
-                                  att_name=att_name,
-                                  eps=eps_3, device=device)[0]
-            adv_surro_train_5 = \
-            run_attack_untargeted(file_model, X_surro_train,
-                                  y_surro_train,
-                                  att_name=att_name,
-                                  eps=eps_4, device=device)[0]
-            adv_surro_train = adv_surro_train.append(adv_surro_train_2)
-            adv_surro_train = adv_surro_train.append(adv_surro_train_3)
-            adv_surro_train = adv_surro_train.append(adv_surro_train_4)
-            adv_surro_train = adv_surro_train.append(adv_surro_train_5)
+    file_surro_data = os.path.join(path, '{}_{}_surrogate_data.pt'.format(data,
+                                                                          model_name))
 
-            # classify the surrogate set
-            pred_adv_surro_train = predict_numpy(model, adv_surro_train, device)
-            label_adv_train = detector.detect(adv_surro_train, pred_adv_surro_train)
-            label_X_train = detector.detect(X_surro_train, y_surro_train)
-            # concatenate the clean and the adversarial samples
-            X_train = np.concatenate((X_surro_train, adv_surro_train))
-            label_train = np.concatenate((label_X_train, label_adv_train))
+    adv_surro_train_2 = \
+    run_attack_untargeted(file_model, X_surro_train,
+                          y_surro_train,
+                          att_name=att_name,
+                          eps=eps_1, device=device)[0]
+    adv_surro_train_3 = \
+    run_attack_untargeted(file_model, X_surro_train,
+                          y_surro_train,
+                          att_name=att_name,
+                          eps=eps_2, device=device)[0]
+    adv_surro_train_4 = \
+    run_attack_untargeted(file_model, X_surro_train,
+                          y_surro_train,
+                          att_name=att_name,
+                          eps=eps_3, device=device)[0]
+    adv_surro_train_5 = \
+    run_attack_untargeted(file_model, X_surro_train,
+                          y_surro_train,
+                          att_name=att_name,
+                          eps=eps_4, device=device)[0]
+    adv_surro_train = np.append(adv_surro_train,adv_surro_train_2,axis = 0)
+    adv_surro_train = np.append(adv_surro_train,adv_surro_train_3,axis=0)
+    adv_surro_train = np.append(adv_surro_train,adv_surro_train_4, axis=0)
+    adv_surro_train = np.append(adv_surro_train,adv_surro_train_5, axis=0)
 
-            label_adv_test = detector.detect(adv_att_test[:1000], pred_adv_att_test[:1000])
-            label_X_test = detector.detect(X_att_test[:1000], y_att_test[:1000])
-            X_test = np.concatenate((X_att_test[:1000], adv_att_test[:1000]))
-            label_test = np.concatenate((label_X_test, label_adv_test))
-            print(X_train.shape, label_train.shape, X_test.shape, label_test.shape)
-            print('Labelled as adv:', np.mean(label_train == 1), np.mean(label_test == 1))
+    # classify the surrogate set
+    pred_adv_surro_train = predict_numpy(model, adv_surro_train, device)
+    label_adv_train = detector.detect(adv_surro_train, pred_adv_surro_train)
+    label_X_train = detector.detect(X_surro_train, y_surro_train)
+    # concatenate the clean and the adversarial samples
+    X_train = np.concatenate((X_surro_train, adv_surro_train))
+    label_train = np.concatenate((label_X_train, label_adv_train))
 
-            obj = {
-                'X_train': X_train,
-                'y_train': np.concatenate((y_surro_train, y_surro_train)),
-                'pred_train': np.concatenate((y_surro_train, pred_adv_surro_train)),
-                'label_train': label_train,
-                'X_test': X_test,
-                'y_test': np.concatenate((y_att_test[:1000], y_att_test[:1000])),
-                'pred_test': np.concatenate((y_att_test[:1000], pred_adv_att_test[:1000])),
-                'label_test': label_test
-            }
-            torch.save(obj, file_surro_data)
-            print('Save surrogate training data to:', file_surro_data)
+    label_adv_test = detector.detect(adv_att_test[:1000], pred_adv_att_test[:1000])
+    label_X_test = detector.detect(X_att_test[:1000], y_att_test[:1000])
+    X_test = np.concatenate((X_att_test[:1000], adv_att_test[:1000]))
+    label_test = np.concatenate((label_X_test, label_adv_test))
+    print(X_train.shape, label_train.shape, X_test.shape, label_test.shape)
+    print('Labelled as adv:', np.mean(label_train == 1), np.mean(label_test == 1))
 
-        surrogate = train_surrogate(X_train, X_test, label_train, label_test, epochs=EPOCHS, device=device)
-        torch.save(surrogate.state_dict(), file_surro)
-        print('Save surrogate model to:', file_surro)
+    obj = {
+        'X_train': X_train,
+        'y_train': np.concatenate((y_surro_train, y_surro_train)),
+        'pred_train': np.concatenate((y_surro_train, pred_adv_surro_train)),
+        'label_train': label_train,
+        'X_test': X_test,
+        'y_test': np.concatenate((y_att_test[:1000], y_att_test[:1000])),
+        'pred_test': np.concatenate((y_att_test[:1000], pred_adv_att_test[:1000])),
+        'label_test': label_test
+    }
+
+    torch.save(obj, file_surro_data)
+    print('Save surrogate training data to:', file_surro_data)
+
+    surrogate = train_surrogate(X_train, X_test, label_train, label_test, epochs=EPOCHS, device=device)
+    torch.save(surrogate.state_dict(), file_surro)
+    print('Save surrogate model to:', file_surro)
 
     print('-------------------------------------------------------------------')
     print('Start testing surrogate model...')
@@ -314,12 +321,15 @@ if __name__ == '__main__':
         seeds = json_obj['seeds']
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default='mnist', choices=['mnist', 'cifar10'])
-    parser.add_argument('--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
+    parser.add_argument('--data', type=str, default='cifar10', choices=[
+        'mnist', 'cifar10'])
+    parser.add_argument('--model', type=str, default='resnet', choices=['dnn',
+                                                                   'resnet', 'vgg'])
     parser.add_argument('--attack', type=str, default='apgd2', choices=ATTACKS)
     parser.add_argument('--eps', type=float, default=2.0)
     parser.add_argument('--json', type=str, default=None, help="JSON file BAARD's hyperparameters")
-    parser.add_argument('--idx', type=int, default=0, choices=list(range(len(seeds))))
+    parser.add_argument('--idx', type=int, default=2, choices=list(range(
+        len(seeds))))
     args = parser.parse_args()
     print(args)
     if args.json is None:

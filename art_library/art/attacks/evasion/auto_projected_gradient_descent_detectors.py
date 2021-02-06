@@ -302,7 +302,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                 x_robust = np.clip(x_robust, clip_min, clip_max)
 
             if self.detector_clip_fun is not None:
-                x_robust = self.detector_clip_fun(x_robust, y_robust)
+                x_robust = self.detector_clip_fun(x_robust, self.estimator)
 
             perturbation = projection(x_robust - x_init, self.eps, self.norm)
             x_robust = x_init + perturbation
@@ -359,7 +359,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                         z_k_p_1 = np.clip(z_k_p_1, clip_min, clip_max)
 
                     if self.detector_clip_fun is not None:
-                        z_k_p_1 = self.detector_clip_fun(z_k_p_1, y_batch)
+                        z_k_p_1 = self.detector_clip_fun(z_k_p_1, self.estimator)
 
                     if k_iter == 0:
                         x_1 = z_k_p_1
@@ -400,7 +400,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                             x_k_p_1 = np.clip(x_k_p_1, clip_min, clip_max)
 
                         if self.detector_clip_fun is not None:
-                            x_k_p_1 = self.detector_clip_fun(x_k_p_1, y_batch)
+                            x_k_p_1 = self.detector_clip_fun(x_k_p_1, self.estimator)
 
                         perturbation = projection(x_k_p_1 - x_init_batch, self.eps, self.norm)
                         x_k_p_1 = x_init_batch + perturbation

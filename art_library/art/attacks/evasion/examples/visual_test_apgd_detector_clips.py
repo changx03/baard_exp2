@@ -368,10 +368,26 @@ detector = net_generation_and_train(X_tr_det, y_tr_det, net_type=Net)
 
 ###############################
 
-def clip_fun(x, y):
-    clip_min = np.array([-1.,-1,]).astype(np.float32)
-    clip_max = np.array([5.,5]).astype(np.float32)
-    x = np.clip(x, clip_min, clip_max)
+def clip_fun(x, clf):
+
+    # clip_min = np.array([-1.,-1,]).astype(np.float32)
+    # clip_max = np.array([5.,5]).astype(np.float32)
+    # x = np.clip(x, clip_min, clip_max)
+
+    #print("_____________")
+    y = clf.predict(x)
+    y_pred = np.argmax(y, axis = 1)
+
+    # clip the samples of class 0
+    clip_min = np.array([-1.,2,]).astype(np.float32)
+    clip_max = np.array([3.,5]).astype(np.float32)
+    x[y_pred == 0,:] = np.clip(x[y_pred == 0,:], clip_min, clip_max)
+
+    # clip the samples of class 1
+    clip_min = np.array([1.,3,]).astype(np.float32)
+    clip_max = np.array([0.,1.5]).astype(np.float32)
+    x[y_pred == 1,:] = np.clip(x[y_pred == 1,:], clip_min, clip_max)
+
     return x
 
 attack_class = 'apgd_detector'# can be apgd or apgd_detector
@@ -395,6 +411,7 @@ else:
     # attack the detector with apgd detector (white box against detector)
     attack = AutoProjectedGradientDescentDetectors(estimator=clf,
                                                    detector=detector,
+                                                   detector_clip_fun=clip_fun,
                                                    norm=2,
                                                    eps=5.0,
                                                    eps_step=0.9,

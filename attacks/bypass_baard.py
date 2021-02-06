@@ -11,24 +11,20 @@ sys.path.append(LIB_PATH)
 from defences.baard import flatten
 
 # FIXME: This function still does not work with BAARD.
-def clip_baard(X, y, thresholds, eps=1e-6):
+def clip_baard(X, y, thresholds):
     threshold_s1 = thresholds[0].copy()
     n_classes = threshold_s1.shape[0]
     shape = X.shape
     X_flat = flatten(X)
     out_flat = X_flat.copy()
-    # NOTE: when dtype is converted from float (64bit) to torch.float32, it 
-    # losses precision. To counter that, we make the clipping range slightly 
-    # smaller then the bounding box.
+    
     for c in range(n_classes):
         idx = np.where(y == c)[0]
         if len(idx) == 0:
             continue
         bounding_box = threshold_s1[c]
         low = bounding_box[0]
-        low = low + eps
         high = bounding_box[1]
-        high = high - eps
         subset = X_flat[idx]
         subset_clipped = np.clip(subset, low, high)
         out_flat[idx] = subset_clipped

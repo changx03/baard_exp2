@@ -10,7 +10,7 @@ sys.path.append(LIB_PATH)
 # print("sys.path ", sys.path)
 from defences.baard import flatten
 
-
+# FIXME: This function still does not work with BAARD.
 def clip_baard(X, y, thresholds, eps=1e-6):
     threshold_s1 = thresholds[0].copy()
     n_classes = threshold_s1.shape[0]
@@ -26,9 +26,9 @@ def clip_baard(X, y, thresholds, eps=1e-6):
             continue
         bounding_box = threshold_s1[c]
         low = bounding_box[0]
-        low[low > 0.] = low[low > 0.] + eps
+        low = low + eps
         high = bounding_box[1]
-        high[high < 1.] = high[high < 1.] - eps
+        high = high - eps
         subset = X_flat[idx]
         subset_clipped = np.clip(subset, low, high)
         out_flat[idx] = subset_clipped

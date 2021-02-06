@@ -3,8 +3,10 @@ import sys
 
 import numpy as np
 
-# Adding the parent directory.
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from defences.magnet import Autoencoder1, Autoencoder2, MagNetAutoencoderReformer, MagNetDetector, MagNetOperator
 
 BATCH_SIZE = 256

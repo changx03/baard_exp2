@@ -5,6 +5,9 @@ import numpy as np
 import torch
 
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from defences.baard import flatten
 
 
@@ -29,7 +32,7 @@ def clip_baard(X, y, thresholds):
 
 if __name__ == '__main__':
     # Load adversrial examples
-    path = os.path.join('result_0', 'mnist_dnn_apgd_0.3.pt')
+    path = os.path.join('result_0', 'mnist_dnn_apgd_300.pt')
     obj = torch.load(path)
     X = obj['X']
     adv = obj['adv']

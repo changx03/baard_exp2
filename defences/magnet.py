@@ -282,7 +282,7 @@ class MagNetDetector:
 
     def load(self, path):
         """Load parameters"""
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location=self.device)
         self.lr = checkpoint['lr']
         self.batch_size = checkpoint['batch_size']
         self.weight_decay = checkpoint['weight_decay']

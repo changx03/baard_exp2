@@ -12,8 +12,10 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 from sklearn.tree import ExtraTreeClassifier
 
-# Adding the parent directory.
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
 from defences.region_based_classifier import SklearnRegionBasedClassifier

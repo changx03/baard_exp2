@@ -11,6 +11,9 @@ from torch import optim
 from torch.utils.data import DataLoader, TensorDataset
 
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from models.torch_util import train, validate
 
 from experiments.util import set_seeds

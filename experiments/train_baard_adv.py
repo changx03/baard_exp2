@@ -9,12 +9,15 @@ import torch
 import torch.nn as nn
 import torchvision as tv
 import torchvision.datasets as datasets
-from art.attacks.evasion import AutoProjectedGradientDescent
-from art.classifiers import PyTorchClassifier
 from torch import optim
 from torch.utils.data import DataLoader, TensorDataset
 
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
+from art.attacks.evasion import AutoProjectedGradientDescent
+from art.classifiers import PyTorchClassifier
 from defences.util import get_correct_examples
 from experiments.util import set_seeds
 from models.cifar10 import Resnet, Vgg
@@ -94,7 +97,7 @@ def train_adv(data='mnist',
         raise NotImplementedError
 
     pretrained_path = os.path.join(path_output, pretrained)
-    model.load_state_dict(torch.load(pretrained_path))
+    model.load_state_dict(torch.load(pretrained_path, map_location=device))
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
     loss = nn.CrossEntropyLoss()
     _, acc_test = validate(model, loader_test, loss, device)

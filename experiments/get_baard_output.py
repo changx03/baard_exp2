@@ -9,6 +9,9 @@ import torchvision as tv
 import torchvision.datasets as datasets
 
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage, flatten)
 from defences.util import acc_on_adv, get_correct_examples
@@ -58,7 +61,7 @@ def get_baard_output(data, model_name, data_path, output_path, file_name, param,
         raise NotImplementedError
 
     pretrained_path = os.path.join(output_path, pretrained)
-    model.load_state_dict(torch.load(pretrained_path))
+    model.load_state_dict(torch.load(pretrained_path, map_location=device))
     pred = predict_numpy(model, X, device)
     acc = np.mean(pred == y)
     print('Accuracy on {} clean samples: {}'.format(X.shape[0], acc))

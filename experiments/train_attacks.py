@@ -1,8 +1,9 @@
 import os
 import sys
+sys.path.append(os.getcwd())
 LIB_PATH = os.getcwd() + "/art_library"
 sys.path.append(LIB_PATH)
-print("sys.path ", sys.path)
+# print("sys.path ", sys.path)
 
 import argparse
 import datetime
@@ -16,19 +17,17 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision as tv
 import torchvision.datasets as datasets
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from torch.utils.data import DataLoader, TensorDataset
+from tqdm.auto import trange
+
 from art.attacks.evasion import (AutoProjectedGradientDescent,
                                  BasicIterativeMethod, BoundaryAttack,
                                  CarliniLInfMethod, DeepFool,
                                  FastGradientMethod, SaliencyMapMethod,
                                  ShadowAttack)
 from art.estimators.classification import PyTorchClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-from torch.utils.data import DataLoader, TensorDataset
-from tqdm.auto import trange
-
-# Adding the parent directory.
-sys.path.append(os.getcwd())
 from attacks.carlini import CarliniWagnerAttackL2
 from attacks.line_attack import LineAttack
 from attacks.watermark import WaterMarkAttack
@@ -139,7 +138,7 @@ def main():
                           momentum=0.9, weight_decay=5e-4)
     loss = nn.CrossEntropyLoss()
     pretrained_path = os.path.join(args.output_path, args.pretrained)
-    model.load_state_dict(torch.load(pretrained_path))
+    model.load_state_dict(torch.load(pretrained_path, map_location=device))
 
     _, acc_train = validate(model, dataloader_train, loss, device)
     _, acc_test = validate(model, dataloader_test, loss, device)

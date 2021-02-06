@@ -9,6 +9,9 @@ from torch import optim
 from torch.utils.data import DataLoader, TensorDataset
 
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from models.torch_util import train, validate
 
 BATCH_SIZE = 128
@@ -100,5 +103,5 @@ def get_pretrained_surrogate(file, device):
     else:
         raise NotImplementedError
     model = SurrogateModel(in_channels=n_channels, use_prob=True).to(device)
-    model.load_state_dict(torch.load(file))
+    model.load_state_dict(torch.load(file, map_location=device))
     return model

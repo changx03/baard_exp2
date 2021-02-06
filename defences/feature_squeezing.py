@@ -210,7 +210,7 @@ class FeatureSqueezingTorch:
         torch.save(data, path)
 
     def load(self, path):
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location=self.device)
         for i in range(len(self.squeezed_models_)):
             self.squeezed_models_[i].load_state_dict(checkpoint[i])
 

@@ -12,6 +12,9 @@ import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from defences.util import dataset2tensor
 from models.cifar10 import Resnet, Vgg
 from models.torch_util import print_acc_per_label, train, validate
@@ -75,7 +78,7 @@ def main():
     # Load pre-trained model
     if args.pretrained is not None:
         pretrained_path = os.path.join(args.output_path, args.pretrained)
-        model.load_state_dict(torch.load(pretrained_path))
+        model.load_state_dict(torch.load(pretrained_path, map_location=device))
 
     # Train model
     since = time.time()

@@ -15,6 +15,9 @@ from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import DataLoader, TensorDataset
 
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from defences.util import dataset2tensor
 from models.numeric import NumericModel
 from models.torch_util import print_acc_per_label, train, validate

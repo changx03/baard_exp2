@@ -9,6 +9,9 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.torch_util import train, validate
@@ -53,5 +56,5 @@ def train_model(data, model_name, dataset_train, dataset_test, epochs, device, f
         print('Save base model to:', file_model)
     else:
         print('Found existing file:', file_model)
-        model.load_state_dict(torch.load(file_model))
+        model.load_state_dict(torch.load(file_model, map_location=device))
     return model

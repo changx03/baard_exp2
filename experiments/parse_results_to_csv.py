@@ -6,6 +6,9 @@ import pandas as pd
 import torch
 
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.numeric import NumericModel
@@ -65,7 +68,7 @@ def get_model(idx, device):
     else:
         raise NotImplementedError
     path_model = os.path.join(RESULT_PATH, model_file)
-    model.load_state_dict(torch.load(path_model))
+    model.load_state_dict(torch.load(path_model, map_location=device))
     model = model.to(device)
     return model
 

@@ -11,8 +11,10 @@ import torchvision as tv
 import torchvision.datasets as datasets
 from torch.utils.data import DataLoader, TensorDataset
 
-# Adding the parent directory.
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
 from defences.util import acc_on_adv, get_correct_examples

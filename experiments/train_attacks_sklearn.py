@@ -1,8 +1,8 @@
 import os
 import sys
+sys.path.append(os.getcwd())
 LIB_PATH = os.getcwd() + "/art_library"
 sys.path.append(LIB_PATH)
-print("sys.path ", sys.path)
 
 import argparse
 import json
@@ -11,16 +11,14 @@ import sys
 
 import numpy as np
 import pandas as pd
-from art.attacks.evasion import (BasicIterativeMethod, BoundaryAttack,
-                                 FastGradientMethod, DecisionTreeAttack)
-from art.estimators.classification import SklearnClassifier
 from sklearn.tree import ExtraTreeClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 
-# # Adding the parent directory.
-sys.path.append(os.getcwd())
+from art.attacks.evasion import (BasicIterativeMethod, BoundaryAttack,
+                                 FastGradientMethod, DecisionTreeAttack)
+from art.estimators.classification import SklearnClassifier
 from experiments.util import set_seeds
 
 ATTACKS = ['bim', 'fgsm', 'boundary', 'tree']

@@ -7,6 +7,9 @@ import pandas as pd
 import torch
 
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from defences.util import acc_on_adv
 from models.torch_util import predict_numpy
 

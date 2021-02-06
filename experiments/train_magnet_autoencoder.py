@@ -14,8 +14,10 @@ import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 
-# Adding the parent directory.
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from models.mnist import BaseModel
 from models.cifar10 import Resnet, Vgg
 from defences.util import dataset2tensor
@@ -96,7 +98,7 @@ def main():
 
     loss = nn.CrossEntropyLoss()
     pretrained_path = os.path.join(args.output_path, args.pretrained)
-    model.load_state_dict(torch.load(pretrained_path))
+    model.load_state_dict(torch.load(pretrained_path, map_location=device))
 
     _, acc_train = validate(model, loader_train, loss, device)
     _, acc_test = validate(model, loader_test, loss, device)

@@ -12,8 +12,10 @@ import torchvision as tv
 import torchvision.datasets as datasets
 from torch.utils.data import DataLoader, TensorDataset
 
-# Adding the parent directory.
 sys.path.append(os.getcwd())
+LIB_PATH = os.getcwd() + "/art_library"
+sys.path.append(LIB_PATH)
+# print("sys.path ", sys.path)
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
 from defences.util import acc_on_adv, get_correct_examples
@@ -274,11 +276,14 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
     parser.add_argument('--attack', type=str, default='apgd2', choices=ATTACKS)
     parser.add_argument('--eps', type=float, default=2.0)
-    parser.add_argument('--json', type=str, required=True, help="JSON file BAARD's hyperparameters")
+    parser.add_argument('--json', type=str, default=None, help="JSON file BAARD's hyperparameters")
     parser.add_argument('--idx', type=int, default=0, choices=list(range(len(seeds))))
     args = parser.parse_args()
     print(args)
-
+    if args.json is None:
+        args.json = os.path.join('params', 'baard_{}_3.json'.format(args.data))
+    if not os.path.exists(args.json):
+        raise FileExistsError('Cannot file JSON param file for BAARD.')
     idx = args.idx
     run_full_pipeline_baard(
         data=args.data,

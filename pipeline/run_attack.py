@@ -1,8 +1,9 @@
 import os
 import sys
+sys.path.append(os.getcwd())
 LIB_PATH = os.getcwd() + "/art_library"
 sys.path.append(LIB_PATH)
-print("sys.path ", sys.path)
+# print("sys.path ", sys.path)
 
 import datetime
 import os
@@ -12,13 +13,12 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
+
+from attacks.carlini import CarliniWagnerAttackL2
 from art.attacks.evasion import (AutoProjectedGradientDescent, DeepFool,
                                  FastGradientMethod)
 from art.estimators.classification import PyTorchClassifier
-from attacks.carlini import CarliniWagnerAttackL2
-
-# Adding the parent directory.
-sys.path.append(os.getcwd())
 from attacks.line_attack import LineAttack
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
@@ -56,7 +56,7 @@ def run_attack_untargeted(file_model, X, y, att_name, eps, device):
     else:
         raise NotImplementedError
 
-    model.load_state_dict(torch.load(file_model))
+    model.load_state_dict(torch.load(file_model, map_location=device))
     loss = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
     classifier = PyTorchClassifier(

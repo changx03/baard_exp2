@@ -162,11 +162,13 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
     #######################################################
 
     def _grad_normalization(self, grad):
-        grad_norms = np.linalg.norm(grad, axis = 1, ord=2)
+        shape = grad.shape
+        grad = grad.reshape((grad.shape[0], -1))
+        grad_norms = np.linalg.norm(grad, axis=1, ord=2)
         grad_bigger_than_0 = grad_norms > 0
         grad_norms = np.atleast_2d(grad_norms).T
         grad[grad_bigger_than_0,:] = grad[grad_bigger_than_0,:] / grad_norms[grad_bigger_than_0]
-        return grad
+        return grad.reshape(shape)
 
     def _cmpt_grad(self, x, y):
 
@@ -209,7 +211,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
         loss = np.array(loss)
 
-        #print("abs clf loss: ", np.mean(loss))
+        # print("abs clf loss: ", np.mean(loss))
 
         scores = self.estimator.predict(x)
         y_pred = np.argmax(scores, axis=1)

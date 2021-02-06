@@ -7,8 +7,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 def get_range(data):
     """Returns column-wise min and max values"""
-    x_max = np.max(data, axis=0).astype(np.float32)
-    x_min = np.min(data, axis=0).astype(np.float32)
+    x_max = np.max(data, axis=0).astype(np.float)
+    x_min = np.min(data, axis=0).astype(np.float)
     return (x_min, x_max)
 
 
@@ -108,7 +108,7 @@ def merge_and_generate_labels(X_adv, X_benign, flatten=True):
     if flatten:
         X_adv = X_adv.reshape(X_adv.shape[0], -1)
         X_benign = X_benign.reshape(X_benign.shape[0], -1)
-    X = np.concatenate((X_adv, X_benign)).astype(np.float32)
+    X = np.concatenate((X_adv, X_benign)).astype(np.float)
     y = get_binary_labels(X_adv, X_benign)
     return X, y
 

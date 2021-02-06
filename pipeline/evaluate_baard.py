@@ -79,16 +79,13 @@ def run_evaluate_baard(data,
 
     print('-------------------------------------------------------------------')
     print('Start training BAARD...')
-    # Run preprocessing
-    tensor_X, tensor_y = get_correct_examples(model, dataset_train, device=device, return_tensor=True)
-    X_baard_train = tensor_X.cpu().detach().numpy()
-    y_baard_train = tensor_y.cpu().detach().numpy()
 
     file_baard_train = os.path.join(path, '{}_{}_baard_s1_train_data.pt'.format(data, model_name))
     if os.path.exists(file_baard_train):
         print('Found existing BAARD preprocess data:', file_baard_train)
         obj = torch.load(file_baard_train)
-        X_baard_train_s1 = obj['X']
+        X_baard_train_s1 = obj['X_s1']
+        X_baard_train= obj['X']
         y_baard_train = obj['y']
     else:
         raise FileNotFoundError('Cannot find BAARD preprocess data:', file_baard_train)
@@ -107,6 +104,8 @@ def run_evaluate_baard(data,
         stages.append(DecidabilityStage(n_classes=n_classes, k=baard_param['k_de'], quantile=baard_param['q3']))
     print('BAARD stages:', len(stages))
     detector = BAARDOperator(stages=stages)
+    assert X_baard_train.shape == X_baard_train_s1.shape, 'Unmatched size: {}, {}'.format(X_baard_train.shape, X_baard_train_s1.shape)
+    assert X_baard_train_s1.shape[0] == y_baard_train.shape[0]
     detector.stages[0].fit(X_baard_train_s1, y_baard_train)
     for stage in detector.stages[1:]:
         stage.fit(X_baard_train, y_baard_train)
@@ -130,9 +129,9 @@ def run_evaluate_baard(data,
     print('-------------------------------------------------------------------')
     print('Start evaluating the robustness of the classifier...')
 
-    eps = np.array(eps, dtype=np.float32)
+    eps = np.array(eps, dtype=np.float)
     n_att = eps.shape[0]
-    accs_classifier = np.zeros(n_att, dtype=np.float32)
+    accs_classifier = np.zeros(n_att, dtype=np.float)
     accs_on_adv = np.zeros_like(accs_classifier)
     fprs = np.zeros_like(accs_on_adv)
 
@@ -146,7 +145,7 @@ def run_evaluate_baard(data,
 
     for i in range(n_att):
         print('Evaluating {} eps={}'.format(att_name, eps[i]))
-        file_data = os.path.join(path, '{}_{}_{}_{}.pt'.format(data, model_name, att_name, int(eps[i] * 1000)))
+        file_data = os.path.join(path, '{}_{}_{}_{}.pt'.format(data, model_name, att_name, round(eps[i] * 1000)))
         obj = torch.load(file_data)
         adv = obj['adv']
 
@@ -190,8 +189,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
     parser.add_argument('--attack', type=str, default='apgd2', choices=ATTACKS)
     parser.add_argument('--eps', type=float, default=[2.0], nargs='+')
-    path_json_baard = os.path.join('params', 'baard_tune_3.json')
-    parser.add_argument('--json', type=str, default=path_json_baard)
+    parser.add_argument('--json', type=str, required=True, help="JSON file BAARD's hyperparameters")
     parser.add_argument('--idx', type=int, default=0, choices=list(range(len(seeds))))
     args = parser.parse_args()
     print(args)

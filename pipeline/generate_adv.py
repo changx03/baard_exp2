@@ -86,7 +86,7 @@ def run_generate_adv(data,
     for e in eps:
         adv, X, y = run_attack_untargeted(file_model, X, y, att_name=att_name, eps=e, device=device)
         advs.append(adv)
-    advs = np.array(advs, dtype=np.float32)
+    advs = np.array(advs, dtype=np.float)
 
     print('-------------------------------------------------------------------')
     print('Start testing adversarial examples...')

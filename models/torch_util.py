@@ -44,7 +44,7 @@ def predict(model, loader, device):
 
 def predict_numpy(model, X, device):
     model.eval()
-    dataset = TensorDataset(torch.from_numpy(X))
+    dataset = TensorDataset(torch.from_numpy(X).type(torch.float32))
     loader = DataLoader(dataset, batch_size=512, shuffle=False)
     tensor_pred = -torch.ones(len(X), dtype=torch.long)
 

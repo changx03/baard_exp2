@@ -33,8 +33,8 @@ ATTACKS=("apgd_0.063" "apgd_0.3" "apgd_0.6" "apgd_1.0" "apgd_1.5" "apgd2_1.5" "a
 MOD="basic"
 DATA="mnist"
 for ATT in "${ATTACKS[@]}"; do
-    python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_200.pt" --defence $DEF --param "./params/"$DEF"_tune_2.json" --suffix 2stage --adv $DATA"_"$MOD"_"$ATT
-    python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_200.pt" --defence $DEF --param "./params/"$DEF"_tune_3.json" --suffix 3stage --adv $DATA"_"$MOD"_"$ATT
+    python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_200.pt" --defence $DEF --param "./params/"$DEF"_"$DATA"_2.json" --suffix 2stage --adv $DATA"_"$MOD"_"$ATT
+    python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_200.pt" --defence $DEF --param "./params/"$DEF"_"$DATA"_3.json" --suffix 3stage --adv $DATA"_"$MOD"_"$ATT
 done
 
 
@@ -43,7 +43,7 @@ MODELS=("resnet" "vgg")
 DATA="cifar10"
 for MOD in "${MODELS[@]}"; do
     for ATT in "${ATTACKS[@]}"; do
-        python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --defence $DEF --param "./params/"$DEF"_cifar10_2.json" --suffix 2stage --adv $DATA"_"$MOD"_"$ATT
-        python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --defence $DEF --param "./params/"$DEF"_cifar10_3.json" --suffix 3stage --adv $DATA"_"$MOD"_"$ATT
+        python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --defence $DEF --param "./params/"$DEF"_"$DATA"_2.json" --suffix 2stage --adv $DATA"_"$MOD"_"$ATT
+        python3 ./experiments/train_defences.py --data $DATA --pretrained $DATA"_"$MOD"_200.pt" --defence $DEF --param "./params/"$DEF"_"$DATA"_3.json" --suffix 3stage --adv $DATA"_"$MOD"_"$ATT
     done
 done

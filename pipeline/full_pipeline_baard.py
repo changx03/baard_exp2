@@ -116,7 +116,36 @@ def run_full_pipeline_baard(data,
     X_surro_train = X[4000:]
     y_surro_train = y[4000:]
     adv_surro_train = adv[4000:]
-    pred_adv_surro_train = pred[4000:]
+
+    # concatenate the adversarial examples computed for different epsilon
+    if data == 'mnist':
+        eps_1 = 1
+        eps_2 = 5
+        eps_3 = 8
+    elif data == "cifar10":
+        eps_1 = 0.5
+        eps_2 = 1
+        eps_3 = 4
+    else:
+        raise ValueError("dataset idx unknown")
+
+    adv_surro_train_2= run_attack_untargeted(file_model, X_surro_train,
+                                            y_surro_train,
+                                      att_name=att_name,
+                                      eps=eps_1, device=device)[0]
+    adv_surro_train_3= run_attack_untargeted(file_model, X_surro_train,
+                                            y_surro_train,
+                                      att_name=att_name,
+                                      eps=eps_2, device=device)[0]
+    adv_surro_train_4= run_attack_untargeted(file_model, X_surro_train,
+                                            y_surro_train,
+                                      att_name=att_name,
+                                      eps=eps_3, device=device)[0]
+    adv_surro_train = adv_surro_train.append(adv_surro_train_2)
+    adv_surro_train = adv_surro_train.append(adv_surro_train_3)
+    adv_surro_train = adv_surro_train.append(adv_surro_train_4)
+    pred_adv_surro_train = np.ones((adv_surro_train.shape[0])).astype(
+        np.float32)
 
     print('-------------------------------------------------------------------')
     print('Start training BAARD...')

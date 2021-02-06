@@ -290,7 +290,7 @@ def evaluate_attack_efficacy(adv_x):
     plot_points(X_train, y_train, 2)
 
     # plot dummy adversarial samples
-    plot_points(dummy_adv_x, np.ones((dummy_adv_x.shape[0],)), 2, 'gray')
+    #plot_points(dummy_adv_x, np.ones((dummy_adv_x.shape[0],)), 2, 'gray')
 
     # plot adversarial examples
     plot_points(adv_x, y_test, 2, fixed_color=None,
@@ -299,6 +299,10 @@ def evaluate_attack_efficacy(adv_x):
 # todo: readd
 #    plt.xlim((-1, 3))
 #    plt.ylim((0, 5))
+
+    # todo: readd
+   # plt.xlim((-1, 6))
+    plt.ylim((-1, 6))
 
     plt.show()
 
@@ -430,12 +434,12 @@ else:
 adv_x = attack.generate(x=X_test, y=y_test)
 
 #plt.subplot(1, 2, 1)
-#evaluate_attack_efficacy(adv_x)
+evaluate_attack_efficacy(adv_x)
 
 #plt.subplot(2, 2, 2)
 print("show attacker objective function")
-show_attackers_obj_function(X_test, attack, adv_x, attack_obf_fun,
- grad_obj_fun)
+#show_attackers_obj_function(X_test, attack, adv_x, attack_obf_fun,
+# grad_obj_fun)
 
 ##################################################
 # from art.estimators.classification import DetectorClassifier

@@ -76,9 +76,9 @@ def main():
     y_baard_train = obj['y']
 
     stages = []
-    stages.append(ApplicabilityStage(n_classes=10, quantile=1.))
-    stages.append(ReliabilityStage(n_classes=10, k=10, quantile=1.))
-    stages.append(DecidabilityStage(n_classes=10, k=100, quantile=1.))
+    stages.append(ApplicabilityStage(n_classes=10, quantile=1., verbose=False))
+    stages.append(ReliabilityStage(n_classes=10, k=10, quantile=1., verbose=False))
+    stages.append(DecidabilityStage(n_classes=10, k=100, quantile=1., verbose=False))
     detector = BAARDOperator(stages=stages)
 
     detector.stages[0].fit(X_baard_train_s1, y_baard_train)
@@ -127,18 +127,8 @@ def main():
         optimizer=optimizer_sur
     )
 
-    fpr = 0.051
     loss_multiplier = 1. / 36.
     clip_fun = BAARD_Clipper(detector)
-
-    X_toy = np.random.rand(128, 1, 28, 28).astype(np.float32)
-    pred_toy = art_classifier.predict(X_toy)
-    rejected_s1 = detector.stages[0].predict(X_toy, pred_toy)
-    print('Without:', np.mean(rejected_s1))
-
-    X_clipped = clip_fun(X_toy, art_classifier)
-    rejected_s1 = detector.stages[0].predict(X_clipped, pred_toy)
-    print('With:', np.mean(rejected_s1))
 
     attack = AutoProjectedGradientDescentDetectors(
         estimator=art_classifier,
@@ -154,22 +144,15 @@ def main():
         beta=0.5,
         max_iter=100)
 
-    adv_x = attack.generate(x=X_toy)
-    pred_adv = predict_numpy(model, adv_x, device)
-    pred_sur = art_detector.predict(adv_x)
-    print('From surrogate model:', np.mean(pred_sur == 1))
-    labelled_as_adv = detector.detect(adv_x, pred_adv)
-    print('From BAARD', np.mean(labelled_as_adv == 1))
+    # X_toy = np.random.rand(128, 1, 28, 28).astype(np.float32)
+    # pred_toy = art_classifier.predict(X_toy)
+    # rejected_s1 = detector.stages[0].predict(X_toy, pred_toy)
+    # print('Without:', np.mean(rejected_s1))
 
-    # Test it stage by stage
-    reject_s1 = detector.stages[0].predict(adv_x, pred_adv)
-    print('reject_s1', np.mean(reject_s1))
-    reject_s2 = detector.stages[1].predict(adv_x, pred_adv)
-    print('reject_s2', np.mean(reject_s2))
-    reject_s3 = detector.stages[2].predict(adv_x, pred_adv)
-    print('reject_s3', np.mean(reject_s3))
-
-    # adv_x = attack.generate(x=X_att_test[:100], y=None)
+    # X_clipped = clip_fun(X_toy, art_classifier)
+    # rejected_s1 = detector.stages[0].predict(X_clipped, pred_toy)
+    # print('With:', np.mean(rejected_s1))
+    # adv_x = attack.generate(x=X_toy)
     # pred_adv = predict_numpy(model, adv_x, device)
     # pred_sur = art_detector.predict(adv_x)
     # print('From surrogate model:', np.mean(pred_sur == 1))
@@ -183,7 +166,22 @@ def main():
     # print('reject_s2', np.mean(reject_s2))
     # reject_s3 = detector.stages[2].predict(adv_x, pred_adv)
     # print('reject_s3', np.mean(reject_s3))
-    print('Pause')
+
+    adv_x = attack.generate(x=X_att_test[:100], y=None)
+    pred_adv = predict_numpy(model, adv_x, device)
+    pred_sur = art_detector.predict(adv_x)
+    print('From surrogate model:', np.mean(pred_sur == 1))
+    labelled_as_adv = detector.detect(adv_x, pred_adv)
+    print('From BAARD', np.mean(labelled_as_adv == 1))
+
+    # Test it stage by stage
+    reject_s1 = detector.stages[0].predict(adv_x, pred_adv)
+    print('reject_s1', np.mean(reject_s1))
+    reject_s2 = detector.stages[1].predict(adv_x, pred_adv)
+    print('reject_s2', np.mean(reject_s2))
+    reject_s3 = detector.stages[2].predict(adv_x, pred_adv)
+    print('reject_s3', np.mean(reject_s3))
+    print()
 
 
 if __name__ == '__main__':

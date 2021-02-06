@@ -122,10 +122,12 @@ def run_full_pipeline_baard(data,
         eps_1 = 1
         eps_2 = 5
         eps_3 = 8
+        eps_4 = 3
     elif data == "cifar10":
         eps_1 = 0.5
         eps_2 = 1
         eps_3 = 4
+        eps_4 = 3
     else:
         raise ValueError("dataset idx unknown")
 
@@ -245,9 +247,15 @@ def run_full_pipeline_baard(data,
                                   y_surro_train,
                                   att_name=att_name,
                                   eps=eps_3, device=device)[0]
+            adv_surro_train_5 = \
+            run_attack_untargeted(file_model, X_surro_train,
+                                  y_surro_train,
+                                  att_name=att_name,
+                                  eps=eps_4, device=device)[0]
             adv_surro_train = adv_surro_train.append(adv_surro_train_2)
             adv_surro_train = adv_surro_train.append(adv_surro_train_3)
             adv_surro_train = adv_surro_train.append(adv_surro_train_4)
+            adv_surro_train = adv_surro_train.append(adv_surro_train_5)
 
             # classify the surrogate set
             pred_adv_surro_train = predict_numpy(model, adv_surro_train, device)

@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+from pathlib import Path
 
 sys.path.append(os.getcwd())
 LIB_PATH = os.getcwd() + "/art_library"
@@ -16,12 +17,13 @@ from art.classifiers import PyTorchClassifier
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
 from experiments.util import acc_on_adv, set_seeds
-from models.mnist import BaseModel
 from models.torch_util import predict_numpy
 from pipeline.train_surrogate import SurrogateModel, get_pretrained_surrogate
 from attacks.bypass_baard import BAARD_Clipper
 import json
 from defences.util import acc_on_adv
+from models.mnist import BaseModel
+from models.cifar10 import Resnet
 
 with open(os.path.join('pipeline', 'seeds.json')) as j:
     json_obj = json.load(j)
@@ -31,6 +33,10 @@ def cmpt_and_save_predictions(model, art_detector, detector, device, x, y,
                               pred_folder, eps):
 
     pred_folder = pred_folder + "_{:}".format(eps)
+    if not os.path.exists(pred_folder):
+        path = Path(pred_folder)
+        path.mkdir(parents=True, exist_ok=True)
+        print('Cannot find folder. Created:', pred_folder)
 
     y_pred = predict_numpy(model, x, device)
     pred_sur_det = art_detector.predict(x)
@@ -62,7 +68,7 @@ def cmpt_and_save_predictions(model, art_detector, detector, device, x, y,
 
     print("Predictions saved")
 
-def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
+def main(seed, dataset_name, clf_name, detector_name, epsilon_lst,input_shape):
     set_seeds(SEEDS[seed])
 
     device = device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -73,7 +79,12 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
     file_model = os.path.join('result_{:}'.format(seed),
                               '{:}_{:}_model.pt'.format(dataset_name,
                                                         clf_name))
-    model = BaseModel(use_prob=False).to(device)
+    if clf_name == 'dnn':
+        model = BaseModel(use_prob=False).to(device)
+    elif clf_name == 'resnet':
+        model = Resnet(use_prob=False).to(device)
+    else:
+        raise ValueError("model idx unknown")
     model.load_state_dict(torch.load(file_model, map_location=device))
 
     file_data = os.path.join('result_{:}'.format(seed),
@@ -137,7 +148,7 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
     art_classifier = PyTorchClassifier(
         model=model,
         loss=loss,
-        input_shape=(1, 28, 28),
+        input_shape=input_shape,
         nb_classes=10,
         optimizer=optimizer_clf
     )
@@ -147,7 +158,7 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
     art_detector = PyTorchClassifier(
         model=surrogate,
         loss=loss,
-        input_shape=(1, 28, 28),
+        input_shape=input_shape,
         nb_classes=2,
         optimizer=optimizer_sur
     )
@@ -159,8 +170,8 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
                                                        clf_name, detector_name)
 
     print("compute prediction for samples at epsilon 0")
-    x = X_att_test[:1000]
-    y = y_att_test[:1000]
+    x = X_att_test[:10]
+    y = y_att_test[:10]
 
     # compute and save predictions
     cmpt_and_save_predictions(model, art_detector, detector, device, x, y,
@@ -173,7 +184,7 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
         if dataset_name == 'mnist':
             loss_multiplier = 1. / 36.
         else:
-            raise ValueError("loss multiplier not defined")
+            loss_multiplier = 0.1
 
         attack = AutoProjectedGradientDescentDetectors(
             estimator=art_classifier,
@@ -198,8 +209,10 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default='mnist', choices=['mnist', 'cifar10'])
-    parser.add_argument('--model', type=str, default='dnn', choices=['dnn', 'resnet'])
+    parser.add_argument('--data', type=str, default='cifar10', choices=[
+        'mnist', 'cifar10'])
+    parser.add_argument('--model', type=str, default='resnet', choices=['dnn',
+                                                                   'resnet'])
     parser.add_argument('--i', type=int, default=0, choices=list(range(len(SEEDS))))
     args = parser.parse_args()
     print(args)
@@ -212,10 +225,11 @@ if __name__ == '__main__':
         clf_name = 'dnn'
         detector_name = 'baard'
         epsilon_lst = [1,2,3,5,8]
-
+        input_shape = (1, 28, 28)
     else:
         clf_name = 'resnet'
         detector_name = 'baard'
-        epsilon_lst = [2] #[0.5, 1, 2, 3, 4]
+        epsilon_lst = [0.5, 1, 2, 3, 4]
+        input_shape = (3, 32, 32)
 
-    main(seed, dataset_name, clf_name, detector_name, epsilon_lst)
+    main(seed, dataset_name, clf_name, detector_name, epsilon_lst, input_shape)

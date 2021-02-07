@@ -124,10 +124,14 @@ def run_full_pipeline_baard(data,
         eps_3 = 8
         eps_4 = 3
     elif data == "cifar10":
-        eps_1 = 0.5
-        eps_2 = 1
-        eps_3 = 4
-        eps_4 = 3
+        # eps_1 = 0.5
+        # eps_2 = 1
+        # eps_3 = 4
+        # eps_4 = 3
+        eps_1 = 0.05
+        eps_2 = 0.1
+        eps_3 = 0.5
+        eps_4 = 1
     else:
         raise ValueError("dataset idx unknown")
 

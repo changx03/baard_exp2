@@ -345,3 +345,15 @@ if __name__ == '__main__':
         json_param=args.json,
         att_name=args.attack,
         eps=args.eps)
+
+# python3 ./pipeline/full_pipeline_baard.py --data mnist --model dnn --attack apgd2 --eps 2.0 --json "./params/baard_mnist_3.json" --idx 0
+# python3 ./pipeline/full_pipeline_baard.py --data mnist --model dnn --attack apgd2 --eps 2.0 --json "./params/baard_mnist_3.json" --idx 1
+# python3 ./pipeline/full_pipeline_baard.py --data mnist --model dnn --attack apgd2 --eps 2.0 --json "./params/baard_mnist_3.json" --idx 2
+# python3 ./pipeline/full_pipeline_baard.py --data mnist --model dnn --attack apgd2 --eps 2.0 --json "./params/baard_mnist_3.json" --idx 3
+# python3 ./pipeline/full_pipeline_baard.py --data mnist --model dnn --attack apgd2 --eps 2.0 --json "./params/baard_mnist_3.json" --idx 4
+
+# python3 ./pipeline/full_pipeline_baard.py --data cifar10 --model resnet --attack apgd2 --eps 2.0 --json "./params/baard_mnist_3.json" --idx 0
+# python3 ./pipeline/full_pipeline_baard.py --data cifar10 --model resnet --attack apgd2 --eps 2.0 --json "./params/baard_mnist_3.json" --idx 1
+# python3 ./pipeline/full_pipeline_baard.py --data cifar10 --model resnet --attack apgd2 --eps 2.0 --json "./params/baard_mnist_3.json" --idx 2
+# python3 ./pipeline/full_pipeline_baard.py --data cifar10 --model resnet --attack apgd2 --eps 2.0 --json "./params/baard_mnist_3.json" --idx 3
+# python3 ./pipeline/full_pipeline_baard.py --data cifar10 --model resnet --attack apgd2 --eps 2.0 --json "./params/baard_mnist_3.json" --idx 4

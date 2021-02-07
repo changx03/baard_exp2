@@ -461,5 +461,8 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
             x_adv[sample_is_robust] = x_robust
 
+        if self.detector_clip_fun is not None:
+            x_adv = self.detector_clip_fun(x_adv,
+                                         self.estimator)
         return x_adv
 

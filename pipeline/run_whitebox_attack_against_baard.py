@@ -1,7 +1,6 @@
+import argparse
 import os
 import sys
-import argparse
-
 
 sys.path.append(os.getcwd())
 LIB_PATH = os.getcwd() + "/art_library"
@@ -23,6 +22,10 @@ from pipeline.train_surrogate import SurrogateModel, get_pretrained_surrogate
 from attacks.bypass_baard import BAARD_Clipper
 import json
 from defences.util import acc_on_adv
+
+with open(os.path.join('pipeline', 'seeds.json')) as j:
+    json_obj = json.load(j)
+    SEEDS = json_obj['seeds']
 
 def cmpt_and_save_predictions(model, art_detector, detector, device, x, y,
                               pred_folder, eps):
@@ -170,7 +173,7 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
         if dataset_name == 'mnist':
             loss_multiplier = 1. / 36.
         else:
-            loss_multiplier = 1.
+            raise ValueError("loss multiplier not defined")
 
         attack = AutoProjectedGradientDescentDetectors(
             estimator=art_classifier,
@@ -194,18 +197,16 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
 
 if __name__ == '__main__':
 
-    with open(os.path.join('pipeline', 'seeds.json')) as j:
-        json_obj = json.load(j)
-        seeds = json_obj['seeds']
-
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default='cifar10', choices=[
-        'mnist', 'cifar10'])
-    parser.add_argument('--idx', type=int, required=True,
-                        choices=list(range(len(seeds))))
+    parser.add_argument('--data', type=str, default='mnist', choices=['mnist', 'cifar10'])
+    parser.add_argument('--model', type=str, default='dnn', choices=['dnn', 'resnet'])
+    parser.add_argument('--i', type=int, default=0, choices=list(range(len(SEEDS))))
     args = parser.parse_args()
+    print(args)
 
-    seed = args.idx
+    dataset_name = args.data
+    clf_name = args.model
+    seed = args.i
 
     if args.data == 'mnist':
         clf_name = 'dnn'
@@ -213,7 +214,6 @@ if __name__ == '__main__':
         epsilon_lst = [1,2,3,5,8]
 
     else:
-        dataset_name = 'cifar10'
         clf_name = 'resnet'
         detector_name = 'baard'
         epsilon_lst = [2] #[0.5, 1, 2, 3, 4]

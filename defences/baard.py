@@ -411,7 +411,7 @@ class BAARDOperator:
     def __init__(self, stages):
         self.stages = stages
 
-    def fit(self, X, y):
+    def fit(self, X, y, X_s1=None):
         """Fits models for each stage.
 
         Parameters
@@ -426,8 +426,13 @@ class BAARDOperator:
         -------
         self : object
         """
-        for stage in self.stages:
-            stage.fit(X, y)
+        if X_s1 is not None:
+            self.stages[0].fit(X_s1, y)
+            for stage in self.stages[1:]:
+                stage.fit(X, y)
+        else:
+            for stage in self.stages:
+                stage.fit(X, y)
         return self
 
     def search_thresholds(self, X, y, labels_adv):

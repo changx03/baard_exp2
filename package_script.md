@@ -5,9 +5,7 @@ python3 -m venv ./venv
 . ./venv/bin/activate
 
 pip install --upgrade pip
+pip list
 pip install torch torchvision
-pip install scikit-learn tqdm
-pip install jupyterlab matplotlib
-pip install pandas
-pip install opencv-python
+pip install scikit-learn tqdm jupyterlab matplotlib pandas opencv-python
 ```

@@ -5,33 +5,37 @@ import numpy as np
 import torch
 
 sys.path.append(os.getcwd())
-LIB_PATH = os.getcwd() + "/art_library"
-sys.path.append(LIB_PATH)
-# print("sys.path ", sys.path)
+
 from defences.baard import flatten
 
-# FIXME: This function still does not work with BAARD.
-def clip_baard(X, y, thresholds, eps=1e-6):
-    threshold_s1 = thresholds[0].copy()
-    n_classes = threshold_s1.shape[0]
+
+class BAARD_Clipper:
+    def __init__(self, baard_detector):
+        self.baard_detector = baard_detector
+
+    def __call__(self, X, classifier):
+        thresholds = self.baard_detector.stages[0].thresholds_
+        pred = classifier.predict(X)
+        y_pred = np.argmax(pred, axis=1)
+        return clip_by_threshold(X, y_pred, thresholds)
+
+def clip_by_threshold(X, y, thresholds):
+    n_classes = thresholds.shape[0]
     shape = X.shape
     X_flat = flatten(X)
     out_flat = X_flat.copy()
-    # NOTE: when dtype is converted from float (64bit) to torch.float32, it 
-    # losses precision. To counter that, we make the clipping range slightly 
-    # smaller then the bounding box.
+
     for c in range(n_classes):
         idx = np.where(y == c)[0]
         if len(idx) == 0:
             continue
-        bounding_box = threshold_s1[c]
+        bounding_box = thresholds[c]
         low = bounding_box[0]
-        low = low + eps
         high = bounding_box[1]
-        high = high - eps
         subset = X_flat[idx]
         subset_clipped = np.clip(subset, low, high)
         out_flat[idx] = subset_clipped
+
     return out_flat.reshape(shape)
 
 
@@ -45,8 +49,8 @@ if __name__ == '__main__':
     # Load thresholds
     path = os.path.join('result_0', 'mnist_dnn_baard_threshold.pt')
     obj = torch.load(path)
-    thresholds = obj['thresholds']
-    X_clip = clip_baard(X, y, thresholds)
-    adv_clip = clip_baard(adv, y, thresholds)
+    thresholds = obj['thresholds'][0]
+    X_clip = clip_by_threshold(X, y, thresholds)
+    adv_clip = clip_by_threshold(adv, y, thresholds)
     print('L2 dist X:', np.linalg.norm(X - X_clip))
     print('L2 dist adv:', np.linalg.norm(adv - adv_clip))

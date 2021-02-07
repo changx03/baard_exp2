@@ -18,7 +18,7 @@ from experiments.util import acc_on_adv, set_seeds
 from models.mnist import BaseModel
 from models.torch_util import predict_numpy
 from pipeline.train_surrogate import SurrogateModel, get_pretrained_surrogate
-from attacks.bypass_baard import BAARD_Clipper
+from attacks.bypass_baard import clip_by_threshold
 
 SEED = 65558  # for result_0
 
@@ -26,7 +26,8 @@ SEED = 65558  # for result_0
 def main():
     set_seeds(SEED)
 
-    device = device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = device = torch.device(
+        'cuda' if torch.cuda.is_available() else 'cpu')
     print('device:', device)
 
     # Load classifier
@@ -75,20 +76,12 @@ def main():
     X_baard_train = obj['X']
     y_baard_train = obj['y']
 
-    stages = []
-    stages.append(ApplicabilityStage(n_classes=10, quantile=1., verbose=False))
-    stages.append(ReliabilityStage(n_classes=10, k=10, quantile=1., verbose=False))
-    stages.append(DecidabilityStage(n_classes=10, k=100, quantile=1., verbose=False))
-    detector = BAARDOperator(stages=stages)
-
-    detector.stages[0].fit(X_baard_train_s1, y_baard_train)
-    for stage in detector.stages[1:]:
-        stage.fit(X_baard_train, y_baard_train)
-
     file_baard_threshold = os.path.join(
         'result_0', 'mnist_dnn_baard_threshold.pt')
     thresholds = torch.load(file_baard_threshold)['thresholds']
-    detector.load(file_baard_threshold)
+
+    stage1 = ApplicabilityStage(n_classes=10, quantile=1.)
+    stage1.thresholds_ = thresholds[0]
 
     file_surro = os.path.join('result_0', 'mnist_dnn_baard_surrogate.pt')
     surrogate = get_pretrained_surrogate(file_surro, device)
@@ -96,15 +89,15 @@ def main():
     # Test surrogate model
     X_test = np.concatenate((X_att_test[1000:], adv_att_test[1000:]))
     pred_test = predict_numpy(model, X_test, device)
-    label_test = detector.detect(X_test, pred_test)
-    acc = acc_on_adv(pred_test[1000:], y_att_test[1000:], label_test[1000:])
-    fpr = np.mean(label_test[:1000])
-    print('BAARD Acc_on_adv:', acc)
-    print('BAARD FPR:', fpr)
+    # label_test = detector.detect(X_test, pred_test)
+    # acc = acc_on_adv(pred_test[1000:], y_att_test[1000:], label_test[1000:])
+    # fpr = np.mean(label_test[:1000])
+    # print('BAARD Acc_on_adv:', acc)
+    # print('BAARD FPR:', fpr)
 
     label_surro = predict_numpy(surrogate, X_test, device)
-    acc = np.mean(label_surro == label_test)
-    print('Acc on surrogate:', acc)
+    # acc = np.mean(label_surro == label_test)
+    # print('Acc on surrogate:', acc)
 
     loss = torch.nn.CrossEntropyLoss()
     optimizer_clf = torch.optim.SGD(
@@ -127,67 +120,43 @@ def main():
         optimizer=optimizer_sur
     )
 
-    loss_multiplier = 1. / 36.
-    clip_fun = BAARD_Clipper(detector)
-
+    fpr = 0.05
     attack = AutoProjectedGradientDescentDetectors(
         estimator=art_classifier,
         detector=art_detector,
-        detector_th=0, #fpr,
-        clf_loss_multiplier=loss_multiplier,
-        detector_clip_fun=clip_fun,
+        detector_th=fpr,
+        clf_loss_multiplier=1. / 36.,
         loss_type='logits_difference',
         batch_size=128,
         norm=2,
-        eps=8.0,
+        eps=5.0,
         eps_step=0.9,
         beta=0.5,
         max_iter=100)
 
-    # X_toy = np.random.rand(128, 1, 28, 28).astype(np.float32)
-    # pred_toy = art_classifier.predict(X_toy)
-    # rejected_s1 = detector.stages[0].predict(X_toy, pred_toy)
-    # print('Without:', np.mean(rejected_s1))
+    # adv_x = attack.generate(x=X_att_test[:100], y=y_att_test[:100])
+    file_whitebox_adv = 'mnist_apgd2_3000_whitebox_size100.npy'
+    # np.save(file_whitebox_adv, adv_x)
+    adv_x = np.load(file_whitebox_adv)
+    print('adv_x', adv_x.shape)
 
-    # X_clipped = clip_fun(X_toy, art_classifier)
-    # rejected_s1 = detector.stages[0].predict(X_clipped, pred_toy)
-    # print('With:', np.mean(rejected_s1))
-    # adv_x = attack.generate(x=X_toy)
-    # pred_adv = predict_numpy(model, adv_x, device)
-    # pred_sur = art_detector.predict(adv_x)
-    # print('From surrogate model:', np.mean(pred_sur == 1))
-    # labelled_as_adv = detector.detect(adv_x, pred_adv)
-    # print('From BAARD', np.mean(labelled_as_adv == 1))
-
-    # # Test it stage by stage
-    # reject_s1 = detector.stages[0].predict(adv_x, pred_adv)
-    # print('reject_s1', np.mean(reject_s1))
-    # reject_s2 = detector.stages[1].predict(adv_x, pred_adv)
-    # print('reject_s2', np.mean(reject_s2))
-    # reject_s3 = detector.stages[2].predict(adv_x, pred_adv)
-    # print('reject_s3', np.mean(reject_s3))
-
-    x = X_att_test[:10]
-    y = y_att_test[:10]
-    adv_x = attack.generate(x=x, y=None)
     pred_adv = predict_numpy(model, adv_x, device)
+    adv_x = clip_by_threshold(adv_x, pred_adv, thresholds[0])
     pred_sur = art_detector.predict(adv_x)
-
-    pred = predict_numpy(model, adv_x, device)
-    print('Acc classifier:', np.mean(pred == y))
-
     print('From surrogate model:', np.mean(pred_sur == 1))
-    labelled_as_adv = detector.detect(adv_x, pred_adv)
+    labelled_as_adv = stage1.predict(adv_x, pred_adv)
     print('From BAARD', np.mean(labelled_as_adv == 1))
+    
+    # Testing 
+    # X_toy = np.random.rand(128, 1, 28, 28).astype(np.float32)  # Same size as MNIST in a single batch
+    # y_toy = np.concatenate((np.zeros(50), np.ones(50)))
+    # rejected = stage1.predict(X_toy, y_toy)
+    # print('rejected', np.mean(rejected))
+    # X_bypass = clip_by_threshold(X_toy, y_toy, thresholds[0])
+    # rejected_after = stage1.predict(X_bypass, y_toy)
+    # print('rejected_after', np.mean(rejected_after))
 
-    # Test it stage by stage
-    reject_s1 = detector.stages[0].predict(adv_x, pred_adv)
-    print('reject_s1', np.mean(reject_s1))
-    reject_s2 = detector.stages[1].predict(adv_x, pred_adv)
-    print('reject_s2', np.mean(reject_s2))
-    reject_s3 = detector.stages[2].predict(adv_x, pred_adv)
-    print('reject_s3', np.mean(reject_s3))
-    print()
+    print('Pause')
 
 
 if __name__ == '__main__':

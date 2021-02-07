@@ -157,14 +157,16 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
                                                        clf_name, detector_name)
 
     print("compute prediction for samples at epsilon 0")
-    x = X_att_test[:2]
-    y = y_att_test[:2]
+    x = X_att_test[:1000]
+    y = y_att_test[:1000]
 
     # compute and save predictions
     cmpt_and_save_predictions(model, art_detector, detector, device, x, y,
                               pred_folder, 0)
 
     for eps in epsilon_lst:
+
+        print("epsilon ", eps)
 
         if dataset_name == 'mnist':
             loss_multiplier = 1. / 36.
@@ -197,5 +199,5 @@ if __name__ == '__main__':
     clf_name = 'dnn'
     detector_name = 'baard'
     seed = 1
-    epsilon_lst = [4,5]
+    epsilon_lst = [1,2,3,5,8]
     main(seed, dataset_name, clf_name, detector_name, epsilon_lst)

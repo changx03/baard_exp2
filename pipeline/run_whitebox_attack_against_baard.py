@@ -1,5 +1,7 @@
 import os
 import sys
+import argparse
+
 
 sys.path.append(os.getcwd())
 LIB_PATH = os.getcwd() + "/art_library"
@@ -21,10 +23,6 @@ from pipeline.train_surrogate import SurrogateModel, get_pretrained_surrogate
 from attacks.bypass_baard import BAARD_Clipper
 import json
 from defences.util import acc_on_adv
-
-with open(os.path.join('pipeline', 'seeds.json')) as j:
-    json_obj = json.load(j)
-    SEEDS = json_obj['seeds']
 
 def cmpt_and_save_predictions(model, art_detector, detector, device, x, y,
                               pred_folder, eps):
@@ -51,6 +49,7 @@ def cmpt_and_save_predictions(model, art_detector, detector, device, x, y,
     print('reject_s3', np.mean(reject_s3))
 
     print("Save predictions")
+    np.save(pred_folder + "_{:}".format("y"), y)
     np.save(pred_folder + "_{:}".format("y-pred"), y_pred)
     np.save(pred_folder + "_{:}".format("pred-sur-det"), pred_sur_det)
     np.save(pred_folder + "_{:}".format("pred-baard"), pred_baard)
@@ -171,7 +170,7 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
         if dataset_name == 'mnist':
             loss_multiplier = 1. / 36.
         else:
-            raise ValueError("loss multiplier not defined")
+            loss_multiplier = 1.
 
         attack = AutoProjectedGradientDescentDetectors(
             estimator=art_classifier,
@@ -195,9 +194,28 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
 
 if __name__ == '__main__':
 
-    dataset_name = 'mnist'
-    clf_name = 'dnn'
-    detector_name = 'baard'
-    seed = 1
-    epsilon_lst = [1,2,3,5,8]
+    with open(os.path.join('pipeline', 'seeds.json')) as j:
+        json_obj = json.load(j)
+        seeds = json_obj['seeds']
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data', type=str, default='cifar10', choices=[
+        'mnist', 'cifar10'])
+    parser.add_argument('--idx', type=int, required=True,
+                        choices=list(range(len(seeds))))
+    args = parser.parse_args()
+
+    seed = args.idx
+
+    if args.data == 'mnist':
+        clf_name = 'dnn'
+        detector_name = 'baard'
+        epsilon_lst = [1,2,3,5,8]
+
+    else:
+        dataset_name = 'cifar10'
+        clf_name = 'resnet'
+        detector_name = 'baard'
+        epsilon_lst = [2] #[0.5, 1, 2, 3, 4]
+
     main(seed, dataset_name, clf_name, detector_name, epsilon_lst)

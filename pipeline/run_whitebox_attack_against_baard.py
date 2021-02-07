@@ -170,8 +170,8 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst,input_shape):
                                                        clf_name, detector_name)
 
     print("compute prediction for samples at epsilon 0")
-    x = X_att_test[:10]
-    y = y_att_test[:10]
+    x = X_att_test[:1000]
+    y = y_att_test[:1000]
 
     # compute and save predictions
     cmpt_and_save_predictions(model, art_detector, detector, device, x, y,

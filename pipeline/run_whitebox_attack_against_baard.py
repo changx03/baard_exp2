@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+from pathlib import Path
 
 sys.path.append(os.getcwd())
 LIB_PATH = os.getcwd() + "/art_library"
@@ -31,6 +32,10 @@ def cmpt_and_save_predictions(model, art_detector, detector, device, x, y,
                               pred_folder, eps):
 
     pred_folder = pred_folder + "_{:}".format(eps)
+    if not os.path.exists(pred_folder):
+        path = Path(pred_folder)
+        path.mkdir(parents=True, exist_ok=True)
+        print('Cannot find folder. Created:', pred_folder)
 
     y_pred = predict_numpy(model, x, device)
     pred_sur_det = art_detector.predict(x)

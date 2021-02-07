@@ -8,4 +8,5 @@ pip install --upgrade pip
 pip list
 pip install torch torchvision
 pip install scikit-learn tqdm jupyterlab matplotlib pandas opencv-python
+pip install openpyxl
 ```

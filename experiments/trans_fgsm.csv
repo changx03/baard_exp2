@@ -1,0 +1,6 @@
+,Attack,Adv_param,VGG Acc. from ResNet Att.,VGG BAARD Acc.,ResNet Acc. from VGG Att.,ResNet BAARD Acc.
+0,fgsm,0.031,0.814,0.831,0.419,0.451
+1,fgsm,0.3,0.152,0.986,0.121,0.972
+2,fgsm,0.6,0.128,1.0,0.117,1.0
+3,fgsm,1.0,0.111,1.0,0.121,1.0
+4,fgsm,1.5,0.111,1.0,0.121,1.0

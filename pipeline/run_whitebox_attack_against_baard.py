@@ -29,6 +29,7 @@ with open(os.path.join('pipeline', 'seeds.json')) as j:
     json_obj = json.load(j)
     SEEDS = json_obj['seeds']
 
+
 def cmpt_and_save_predictions(model, art_detector, detector, device, x, y,
                               pred_folder, eps):
 
@@ -105,6 +106,9 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst,input_shape):
     X_att_test = X[2000:3000]
     y_att_test = y[2000:3000]
 
+    print("x attr shape ", X_att_test.shape)
+
+    #########################################################################
     # Load baard
     print("Load baard")
     file_baard_train = os.path.join(
@@ -165,6 +169,8 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst,input_shape):
 
     clip_fun = BAARD_Clipper(detector)
 
+    #########################################################################
+
     pred_folder = 'result_{:}/predictions_wb_eval/{:}_{:}_{:}'.format(seed,
                                                               dataset_name,
                                                        clf_name, detector_name)
@@ -209,9 +215,9 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst,input_shape):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default='cifar10', choices=[
+    parser.add_argument('--data', type=str, default='mnist', choices=[
         'mnist', 'cifar10'])
-    parser.add_argument('--model', type=str, default='resnet', choices=['dnn',
+    parser.add_argument('--model', type=str, default='dnn', choices=['dnn',
                                                                    'resnet'])
     parser.add_argument('--i', type=int, default=0, choices=list(range(len(SEEDS))))
     args = parser.parse_args()
@@ -229,7 +235,7 @@ if __name__ == '__main__':
     else:
         clf_name = 'resnet'
         detector_name = 'baard'
-        epsilon_lst = [0.5, 1, 2, 3, 4]
+        epsilon_lst = [0.05, 0.1, 0.2, 1, 2]
         input_shape = (3, 32, 32)
 
     main(seed, dataset_name, clf_name, detector_name, epsilon_lst, input_shape)

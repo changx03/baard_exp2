@@ -52,6 +52,7 @@ def cmpt_and_save_predictions(model, art_detector, detector, device, x, y,
     print('reject_s3', np.mean(reject_s3))
 
     print("Save predictions")
+    np.save(pred_folder + "_{:}".format("y"), y)
     np.save(pred_folder + "_{:}".format("y-pred"), y_pred)
     np.save(pred_folder + "_{:}".format("pred-sur-det"), pred_sur_det)
     np.save(pred_folder + "_{:}".format("pred-baard"), pred_baard)

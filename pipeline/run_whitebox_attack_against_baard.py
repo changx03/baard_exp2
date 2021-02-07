@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 
@@ -194,10 +195,16 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst):
                                   y, pred_folder, eps)
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data', type=str, default='mnist', choices=['mnist', 'cifar10'])
+    parser.add_argument('--model', type=str, default='dnn', choices=['dnn', 'resnet'])
+    parser.add_argument('--i', type=int, default=0, choices=list(range(len(SEEDS))))
+    args = parser.parse_args()
+    print(args)
 
-    dataset_name = 'mnist'
-    clf_name = 'dnn'
+    dataset_name = args.data
+    clf_name = args.model
     detector_name = 'baard'
-    seed = 1
     epsilon_lst = [1,2,3,5,8]
+    seed = args.i
     main(seed, dataset_name, clf_name, detector_name, epsilon_lst)

@@ -196,7 +196,7 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx):
             print('Save to', path_adv)
 
         acc_naked = model.score(adv, y_att)
-        print('Acc on def:', acc_naked)
+        print('Acc without def:', acc_naked)
         accuracies_no_def.append(acc_naked)
 
         # Preform defence

@@ -1,0 +1,3 @@
+,data,model,attack,adv_param,acc_no_def,acc_on_adv,fpr
+0,banknote,svm,fgsm,0.1,0.14285714285714285,0.9948979591836735,0.0
+1,banknote,svm,fgsm,0.2,0.015306122448979591,1.0,0.005076142131979695

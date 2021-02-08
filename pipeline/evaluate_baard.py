@@ -17,8 +17,7 @@ sys.path.append(LIB_PATH)
 # print("sys.path ", sys.path)
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
-from defences.util import acc_on_adv, get_correct_examples
-from misc.util import set_seeds
+from utils import acc_on_advx, get_correct_examples, set_seeds
 from models.torch_util import predict_numpy, validate
 
 from pipeline.run_attack import ATTACKS
@@ -160,18 +159,18 @@ def run_evaluate_baard(data,
         acc_base = np.mean(pred == y_def_test)
 
         labelled_as_adv = detector.detect(adv_def_test, pred_adv_def_test)
-        acc_def = acc_on_adv(pred_adv_def_test, y_def_test, labelled_as_adv)
+        acc_def = acc_on_advx(pred_adv_def_test, y_def_test, labelled_as_adv)
 
         labelled_false = detector.detect(X_def_test, y_def_test)
         fpr = np.mean(labelled_false)
 
-        print('acc_model: {:.4f}, acc_on_adv: {:.4f}, fpr: {:.4f}'.format(acc_base, acc_def, fpr))
+        print('acc_model: {:.4f}, acc_on_advx: {:.4f}, fpr: {:.4f}'.format(acc_base, acc_def, fpr))
         accs_classifier[i] = acc_base
         accs_on_adv[i] = acc_def
         fprs[i] = fpr
 
     results = np.array([eps, accs_classifier, accs_on_adv, fprs]).transpose()
-    df = pd.DataFrame(data=results, columns=['eps', 'acc_base', 'acc_on_adv', 'fpr'])
+    df = pd.DataFrame(data=results, columns=['eps', 'acc_base', 'acc_on_advx', 'fpr'])
     file_output = os.path.join(path, '{}_{}_{}_{}.csv'.format(data, model_name, DEFENCE, att_name))
     df.to_csv(file_output, index=False)
     print('Saved results to:', file_output)

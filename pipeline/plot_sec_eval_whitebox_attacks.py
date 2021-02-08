@@ -11,7 +11,7 @@ print(*sys.path, sep='\n')
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from experiments.util import acc_on_adv, set_seeds
+from utils import acc_on_advx, set_seeds
 import json
 
 
@@ -43,7 +43,7 @@ def load_predictions_and_compute_acc_on_advx(pred_folder, eps):
 
     #y = np.ones((y_pred.size,))
 
-    acc = acc_on_adv(y_pred, y, pred_baard)
+    acc = acc_on_advx(y_pred, y, pred_baard)
 
     return acc
 

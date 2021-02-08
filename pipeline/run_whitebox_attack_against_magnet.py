@@ -20,12 +20,11 @@ from art.attacks.evasion.auto_projected_gradient_descent_detectors import AutoPr
 from art.classifiers import PyTorchClassifier
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
-from experiments.util import acc_on_adv, set_seeds
+from utils import acc_on_advx, set_seeds
 from models.torch_util import predict_numpy
 from pipeline.train_surrogate import SurrogateModel, get_pretrained_surrogate
 from attacks.bypass_baard import BAARD_Clipper
 import json
-from defences.util import acc_on_adv
 from models.mnist import BaseModel
 from models.cifar10 import Resnet
 import torch.nn as nn
@@ -59,7 +58,7 @@ def cmpt_and_save_predictions(model, detector, device, x, y,
     print('Acc classifier:', np.mean(y_pred == y))
     #print("acc surrogate detector", np.mean(pred_sur_det == y))
     print("acc baard ",np.mean(pred_magnet == y))
-    print("acc on advx sistema completo ", acc_on_adv(y_pred, y,
+    print("acc on advx sistema completo ", acc_on_advx(y_pred, y,
                                                       pred_magnet))
 
     print("Save predictions")

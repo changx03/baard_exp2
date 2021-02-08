@@ -7,8 +7,6 @@ from sklearn.neighbors import BallTree
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 
-from .util import merge_and_generate_labels
-
 
 def get_hidden_layers(sequence, device):
     """Returns a list of functions to compute the outpus in each hidden layer.
@@ -103,7 +101,8 @@ def train_lid(sequence, X, X_noisy, X_adv, before_softmax=False, k=20, batch_siz
         sequence, X, X_noisy, X_adv, k, batch_size, device, before_softmax, verbose=verbose)
     lid_pos = lid_adv
     lid_neg = np.concatenate((lid_benign, lid_noisy))
-    artifacts, labels = merge_and_generate_labels(lid_pos, lid_neg)
+    artifacts = np.concatenate((lid_pos, lid_neg))
+    labels = np.concatenate((np.ones(len(lid_pos), np.zeros(len(lid_neg)))))
     return artifacts, labels
 
 

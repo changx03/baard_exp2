@@ -27,7 +27,7 @@ from defences.magnet import (Autoencoder1, Autoencoder2,
                              MagNetAutoencoderReformer, MagNetDetector,
                              MagNetOperator)
 from defences.region_based_classifier import RegionBasedClassifier
-from defences.util import (acc_on_adv, dataset2tensor, get_correct_examples,
+from defences.util import (acc_on_advx, dataset2tensor, get_correct_examples,
                            get_shape, merge_and_generate_labels)
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
@@ -39,7 +39,7 @@ from experiments.util import load_csv, set_seeds
 
 
 def main():
-    with open('data.json') as data_json:
+    with open('metadata.json') as data_json:
         data_params = json.load(data_json)
 
     parser = argparse.ArgumentParser()
@@ -382,7 +382,7 @@ def main():
         res_test = detector.detect(X_test, pred_test)
         y_pred = pred_test
 
-    acc = acc_on_adv(y_pred[:n], y_test[:n], res_test[:n])
+    acc = acc_on_advx(y_pred[:n], y_test[:n], res_test[:n])
     if args.defence == 'rc':
         fpr = np.mean(y_pred[n:] != y_test[n:])
     else:

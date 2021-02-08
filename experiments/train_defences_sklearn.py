@@ -19,8 +19,7 @@ sys.path.append(LIB_PATH)
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
 from defences.region_based_classifier import SklearnRegionBasedClassifier
-from defences.util import acc_on_adv, merge_and_generate_labels
-from experiments.util import load_csv, set_seeds
+from utils import acc_on_advx, merge_and_generate_labels, load_csv, set_seeds
 
 
 def baard_preprocess(X, eps=0.02, mean=0., std=1., x_min=0.0, x_max=1.0):
@@ -30,7 +29,7 @@ def baard_preprocess(X, eps=0.02, mean=0., std=1., x_min=0.0, x_max=1.0):
 
 
 def main():
-    with open('data.json') as data_json:
+    with open('metadata.json') as data_json:
         data_params = json.load(data_json)
 
     parser = argparse.ArgumentParser()
@@ -166,7 +165,7 @@ def main():
     else:
         raise NotImplementedError
 
-    acc = acc_on_adv(pred_test[:n], y_test[:n], res_test[:n])
+    acc = acc_on_advx(pred_test[:n], y_test[:n], res_test[:n])
     if args.defence == 'rc':
         fpr = np.mean(pred_test[n:] != y_test[n:])
     else:

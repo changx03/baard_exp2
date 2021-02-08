@@ -18,7 +18,7 @@ sys.path.append(os.getcwd())
 LIB_PATH = os.getcwd() + "/art_library"
 sys.path.append(LIB_PATH)
 # print("sys.path ", sys.path)
-from defences.util import (acc_on_adv, dataset2tensor, get_correct_examples,
+from defences.util import (acc_on_advx, dataset2tensor, get_correct_examples,
                            get_shape, merge_and_generate_labels)
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
@@ -55,7 +55,7 @@ def baard_preprocess(data, tensor_X):
 
 
 def main():
-    with open('data.json') as data_json:
+    with open('metadata.json') as data_json:
         data_params = json.load(data_json)
 
     parser = argparse.ArgumentParser()

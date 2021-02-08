@@ -14,12 +14,10 @@ sys.path.append(LIB_PATH)
 # print("sys.path ", sys.path)
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage, flatten)
-from defences.util import acc_on_adv, get_correct_examples
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.torch_util import predict_numpy
-
-from experiments.util import set_seeds
+from utils import acc_on_advx, get_correct_samples, set_seeds
 
 N_CLASSES = 10
 
@@ -134,7 +132,7 @@ def get_baard_output(data, model_name, data_path, output_path, file_name, param,
     s1_blocked = detector.stages[0].predict(adv_clipped, pred_adv_clip)
     print('Blocked by Stage1:', np.sum(s1_blocked))
 
-    acc = acc_on_adv(pred_adv_clip, y, baard_label_adv)
+    acc = acc_on_advx(pred_adv_clip, y, baard_label_adv)
     print('Acc_on_adv:', acc)
 
     baard_label_x = detector.detect(X, y)

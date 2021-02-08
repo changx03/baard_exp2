@@ -9,6 +9,3 @@ from .magnet import (Autoencoder1, Autoencoder2, MagNetAutoencoderReformer,
                      torch_add_noise)
 from .region_based_classifier import (RegionBasedClassifier,
                                       SklearnRegionBasedClassifier)
-from .util import (acc_on_adv, dataset2tensor, get_binary_labels,
-                   get_correct_examples, get_range, get_roc, get_shape,
-                   merge_and_generate_labels, normalize, unnormalize)

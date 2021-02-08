@@ -14,7 +14,7 @@ from art.attacks.evasion.auto_projected_gradient_descent_detectors import AutoPr
 from art.classifiers import PyTorchClassifier
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
-from experiments.util import acc_on_adv, set_seeds
+from utils import acc_on_advx, set_seeds
 from models.mnist import BaseModel
 from models.torch_util import predict_numpy
 from pipeline.train_surrogate import SurrogateModel, get_pretrained_surrogate
@@ -97,7 +97,7 @@ def main():
     X_test = np.concatenate((X_att_test[1000:], adv_att_test[1000:]))
     pred_test = predict_numpy(model, X_test, device)
     label_test = detector.detect(X_test, pred_test)
-    acc = acc_on_adv(pred_test[1000:], y_att_test[1000:], label_test[1000:])
+    acc = acc_on_advx(pred_test[1000:], y_att_test[1000:], label_test[1000:])
     fpr = np.mean(label_test[:1000])
     print('BAARD Acc_on_adv:', acc)
     print('BAARD FPR:', fpr)

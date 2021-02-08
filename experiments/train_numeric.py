@@ -33,7 +33,7 @@ def load_csv(file_path):
 
 
 def main():
-    with open('data.json') as data_json:
+    with open('metadata.json') as data_json:
         data_params = json.load(data_json)
 
     parser = argparse.ArgumentParser()

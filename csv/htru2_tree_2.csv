@@ -1,7 +1,0 @@
-,Attack,Adv_param,Defence,FPR,Acc_on_adv
-0,boundary,,baard_2stage,1.0,19.5
-1,boundary,,baard_3stage,2.5,99.5
-2,boundary,,rc,0.4,95.3
-3,tree,,baard_2stage,1.0,68.0
-4,tree,,baard_3stage,2.5,99.7
-5,tree,,rc,0.4,43.1

@@ -154,3 +154,4 @@ examples/baard_demo.pt
 *.pt
 ~*
 test2.sh
+temp/

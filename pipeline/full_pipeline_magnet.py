@@ -20,8 +20,7 @@ sys.path.append(os.getcwd())
 LIB_PATH = os.getcwd() + "/art_library"
 sys.path.append(LIB_PATH)
 # print("sys.path ", sys.path)
-from defences.util import acc_on_adv, get_correct_examples
-from misc.util import set_seeds
+from utils import acc_on_advx, get_correct_examples, set_seeds
 from models.torch_util import predict_numpy, validate
 
 from pipeline.run_attack import ATTACKS, run_attack_untargeted
@@ -140,7 +139,7 @@ def run_full_pipeline_magnet(data,
     print('Total run time:', str(datetime.timedelta(seconds=time_elapsed)))
 
     pred_adv_reformed = predict_numpy(model, adv_reformed_test, device)
-    acc = acc_on_adv(pred_adv_reformed, y_def_test, label_adv)
+    acc = acc_on_advx(pred_adv_reformed, y_def_test, label_adv)
     fpr = np.mean(label_clean)
     print('Acc_on_adv:', acc)
     print('FPR:', fpr)

@@ -29,7 +29,7 @@ RESULT_PATH = 'results'
 
 
 def read_results(data, model_name):
-    with open('data.json') as data_json:
+    with open('metadata.json') as data_json:
         data_params = json.load(data_json)
 
     # Prepare data

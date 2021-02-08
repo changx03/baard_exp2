@@ -1,27 +1,6 @@
-import numpy as np
 import torch
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import TensorDataset
-
-
-class AddGaussianNoise(torch.nn.Module):
-    """Add Gaussian Noise to a tensor"""
-
-    def __init__(self, mean=0., std=1., eps=0.025, x_min=0., x_max=1.):
-        super().__init__()
-        self.mean = mean
-        self.std = std
-        self.eps = eps
-        self.x_min = x_min
-        self.x_max = x_max
-
-    def forward(self, x):
-        x_noisy = x + self.eps * (torch.randn(x.size()) * self.std + self.mean)
-        x_noisy = torch.clip(x_noisy, self.x_min, self.x_max)
-        return x_noisy
-
-    def __repr__(self):
-        return self.__class__.__name__ + '(mean={}, std={}, eps={})'.format(self.mean, self.std, self.eps)
 
 
 def predict(model, loader, device):
@@ -57,17 +36,6 @@ def predict_numpy(model, X, device):
             tensor_pred[start:end] = outputs.max(1)[1].type(torch.long).cpu().detach()
             start = end
     return tensor_pred.detach().numpy()
-
-
-def print_acc_per_label(model, X, y, device):
-    labels = np.unique(y)
-    for i in labels:
-        idx = np.where(y == i)[0]
-        x_subset = X[idx]
-        y_subset = y[idx]
-        pred = predict_numpy(model, x_subset, device)
-        correct = np.sum(pred == y_subset)
-        print('[{}] {}/{}'.format(i, correct, len(x_subset)))
 
 
 def train(model, loader, loss, optimizer, device):

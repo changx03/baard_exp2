@@ -26,7 +26,7 @@ def baard_preprocess(X, eps=0.02, mean=0., std=1., x_min=0.0, x_max=1.0):
 
 
 def main():
-    with open('data.json') as data_json:
+    with open('metadata.json') as data_json:
         data_params = json.load(data_json)
 
     parser = argparse.ArgumentParser()

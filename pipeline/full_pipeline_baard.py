@@ -18,8 +18,7 @@ sys.path.append(LIB_PATH)
 # print("sys.path ", sys.path)
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
-from defences.util import acc_on_adv, get_correct_examples
-from misc.util import set_seeds
+from utils import acc_on_advx, get_correct_examples, set_seeds
 from models.torch_util import predict_numpy, validate
 
 from pipeline.preprocess_baard import preprocess_baard
@@ -202,7 +201,7 @@ def run_full_pipeline_baard(data,
     time_elapsed = time.time() - time_start
     print('Total run time:', str(datetime.timedelta(seconds=time_elapsed)))
 
-    acc = acc_on_adv(pred_adv_def_test, y_def_test, label_adv)
+    acc = acc_on_advx(pred_adv_def_test, y_def_test, label_adv)
     fpr = np.mean(label_clean)
     print('Acc_on_adv:', acc)
     print('FPR:', fpr)
@@ -305,7 +304,7 @@ def run_full_pipeline_baard(data,
     X_test = np.concatenate((X_att_test[1000:], adv_att_test[1000:]))
     pred_test = predict_numpy(model, X_test, device)
     label_test = detector.detect(X_test, pred_test)
-    acc = acc_on_adv(pred_test[1000:], y_att_test[1000:], label_test[1000:])
+    acc = acc_on_advx(pred_test[1000:], y_att_test[1000:], label_test[1000:])
     fpr = np.mean(label_test[:1000])
     print('BAARD Acc_on_adv:', acc)
     print('BAARD FPR:', fpr)

@@ -71,8 +71,18 @@ def get_defence():
     return None
 
 
-def run_sklearn_evaluate(data_name, model_name, att, epsilons, idx):
+def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx):
     seed = SEEDS[idx]
+
+    path_results = get_output_path(idx, data_name, model_name)
+    if not os.path.exists(path_results):
+        print('Output folder does not exist. Create:', path_results)
+        path = Path(os.path.join(path_results, 'data'))
+        print('Create folder:', path)
+        path.mkdir(parents=True, exist_ok=True)
+        path = Path(os.path.join(path_results, 'results'))
+        path.mkdir(parents=True, exist_ok=True)
+        print('Create folder:', path)
 
     # Prepare data
     data_path = os.path.join(DATA_PATH, METADATA['data'][data_name]['file_name'])
@@ -85,21 +95,21 @@ def run_sklearn_evaluate(data_name, model_name, att, epsilons, idx):
     X = scaler.transform(X)
 
     path_results = get_output_path(idx, data_name, model_name)
-    path_X_train = os.path.join(path_results, '{}_{}_X_train.pt'.format(data_name, model_name))
+    path_X_train = os.path.join(path_results, 'data', '{}_{}_X_train.npy'.format(data_name, model_name))
     if os.path.exists(path_X_train):
         print('Found existing data:', path_X_train)
         X_train = np.load(path_X_train)
-        X_test = np.load(os.path.join(path_results, '{}_{}_X_test.pt'.format(data_name, model_name)))
-        y_train = np.load(os.path.join(path_results, '{}_{}_y_tain.pt'.format(data_name, model_name)))
-        y_test = np.load(os.path.join(path_results, '{}_{}_y_test.pt'.format(data_name, model_name)))
+        X_test = np.load(os.path.join(path_results, 'data', '{}_{}_X_test.npy'.format(data_name, model_name)))
+        y_train = np.load(os.path.join(path_results, 'data', '{}_{}_y_tain.npy'.format(data_name, model_name)))
+        y_test = np.load(os.path.join(path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)))
     else:
         print('Cannot found:', path_X_train)
         n_test = METADATA['data'][data_name]['n_test']
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=n_test, random_state=seed)
         np.save(path_X_train, X_train)
-        np.save(os.path.join(path_results, '{}_{}_X_test.pt'.format(data_name, model_name)), X_test)
-        np.save(os.path.join(path_results, '{}_{}_y_tain.pt'.format(data_name, model_name)), y_train)
-        np.save(os.path.join(path_results, '{}_{}_y_test.pt'.format(data_name, model_name)), y_test)
+        np.save(os.path.join(path_results, 'data', '{}_{}_X_test.npy'.format(data_name, model_name)), X_test)
+        np.save(os.path.join(path_results, 'data', '{}_{}_y_tain.npy'.format(data_name, model_name)), y_train)
+        np.save(os.path.join(path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)), y_test)
         print('Save to:', path_X_train)
 
     # Train model
@@ -146,7 +156,7 @@ def run_sklearn_evaluate(data_name, model_name, att, epsilons, idx):
         step_size=0.02,
         stop_value=0.4)
 
-    path_best_r = os.path.join(path_results, '{}_{}.json'.format(data_name, model_name))
+    path_best_r = os.path.join(path_results, 'results', '{}_{}.json'.format(data_name, model_name))
     if os.path.exists(path_best_r):
         with open(path_best_r) as j:
             obj_r = json.load(j)
@@ -176,7 +186,7 @@ def run_sklearn_evaluate(data_name, model_name, att, epsilons, idx):
     for e in epsilons:
         # Load/Create adversarial examples
         attack = get_attack(att, classifier, e)
-        path_adv = os.path.join(path_results, '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
+        path_adv = os.path.join(path_results, 'data','{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
         if os.path.exists(path_adv):
             print('Find:', path_adv)
             adv = np.load(path_adv)
@@ -190,13 +200,16 @@ def run_sklearn_evaluate(data_name, model_name, att, epsilons, idx):
         accuracies_no_def.append(acc_naked)
 
         # Preform defence
-        pred_test = detector.detect(X_test, pred_test)
-        res_test = np.zeros_like(pred_test)
-        acc = acc_on_advx(pred_test[:n], y_test[:n], res_test[:n])
+        pred_adv = detector.detect(adv)
+        print('pred_adv:', pred_adv.shape)
+        res_test = np.zeros_like(pred_adv)
+        acc = acc_on_advx(pred_adv, y_att, res_test)
         acc_on_advs.append(acc)
-        fpr = np.mean(pred_test[n:] != y_test[n:])
-        fprs.append(fpr)
         print('acc_on_advx:', acc)
+
+        pred_benign = detector.detect(X_att)
+        fpr = np.mean(pred_benign != y_att)
+        fprs.append(fpr)
         print('fpr:', fpr)
     data = {
         'data': np.repeat(data_name, len(epsilons)),
@@ -208,7 +221,7 @@ def run_sklearn_evaluate(data_name, model_name, att, epsilons, idx):
         'fpr': np.array(fprs)
     }
     df = pd.DataFrame(data)
-    path_csv = os.path.join(path_results, '{}_{}_{}_{}.csv'.format(data_name, model_name, att, DEF_NAME))
+    path_csv = os.path.join(path_results, 'results', '{}_{}_{}_{}.csv'.format(data_name, model_name, att, DEF_NAME))
     df.to_csv(path_csv)
     print('Save to:', path_csv)
     print()
@@ -229,14 +242,6 @@ if __name__ == '__main__':
 
     data = args.data
     model_name = args.model
-
-    path_results = get_output_path(idx, data, model_name)
-    if not os.path.exists(path_results):
-        path_results = get_output_path(idx, data, model_name)
-        print('Output folder does not exist. Create:', path_results)
-        path = Path(path_results)
-        path.mkdir(parents=True, exist_ok=True)
-
     att = args.attack
     epsilons = args.eps
     seed = SEEDS[args.idx]
@@ -245,7 +250,7 @@ if __name__ == '__main__':
     print('attack:', att)
     print('epsilons:', epsilons)
     print('seed:', seed)
-    run_sklearn_evaluate(data, model_name, att, epsilons, idx)
+    sklearn_attack_against_rc(data, model_name, att, epsilons, idx)
 
 # python3 ./run_exp/sklearn_attack_against_rc.py -d banknote -m svm -i 0 -a fgsm -e 0.1 0.2
 # python3 ./run_exp/sklearn_attack_against_rc.py -d banknote -m tree -i 0 -a tree

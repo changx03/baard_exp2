@@ -365,7 +365,7 @@ class SklearnRegionBasedClassifier:
             pred[i] = np.bincount(pred_rng).argmax()
         return pred
 
-    def detect(self, X, y):
+    def detect(self, X, y=None):
         return self.predict(X)
 
     def predict_proba(self, X, r=None):

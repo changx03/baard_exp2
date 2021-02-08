@@ -16,7 +16,8 @@ from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import TensorDataset
 import types
 
-from art.attacks.evasion.auto_projected_gradient_descent_detectors import AutoProjectedGradientDescentDetectors
+from art.attacks.evasion.auto_projected_gradient_descent_detectors_Magnet import \
+    AutoProjectedGradientDescentDetectorsMagnet
 from art.classifiers import PyTorchClassifier
 from defences.baard import (ApplicabilityStage, BAARDOperator,
                             DecidabilityStage, ReliabilityStage)
@@ -40,7 +41,8 @@ with open(os.path.join('pipeline', 'seeds.json')) as j:
     SEEDS = json_obj['seeds']
 
 
-def cmpt_and_save_predictions(model, detector, device, x, y,
+def cmpt_and_save_predictions(model, detector, pred_attack_detector, device,
+                              x, y,
                               pred_folder, eps):
 
     pred_folder = pred_folder + "_{:}".format(eps)
@@ -58,9 +60,12 @@ def cmpt_and_save_predictions(model, detector, device, x, y,
     print("Show results:")
     print('Acc classifier:', np.mean(y_pred == y))
     #print("acc surrogate detector", np.mean(pred_sur_det == y))
-    print("acc baard ",np.mean(pred_magnet == y))
+    print("acc magnet ",np.mean(pred_magnet == 1))
     print("acc on advx sistema completo ", acc_on_adv(y_pred, y,
                                                       pred_magnet))
+
+    print("detected by detector used by attack ", np.mean(
+        pred_attack_detector == 1))
 
     print("Save predictions")
     np.save(pred_folder + "_{:}".format("y"), y)
@@ -130,32 +135,49 @@ class NNModuleModelWithReformer(nn.Module):
         self.__batch_size = batch_size
         self.device = device
 
+    # cosi funziona tutto ma non riesce a calcolare il gradiente
+    # def forward(self, x):
+    #     """Reform the samples and classify them."""
+    #     # works with tensors
+    #
+    #     # fixme. reformer must work with tensors
+    #     # Reform all samples in X
+    #     # reformer takes in input a numpy array (and is a tensor)
+    #     if not isinstance(x, np.ndarray):
+    #         x = x.detach().numpy()
+    #     X_reformed = self.reformer.reform(x)
+    #
+    #     # classify the sample
+    #     # convert to pytorch
+    #     X_reformed = torch.from_numpy(X_reformed)
+    #     scores = self.classifier(X_reformed)
+    #
+    #     # scores is a tensor
+    #     scores = scores.detach()
+    #
+    #     # return the logits
+    #     return scores
+
+    # cosi il grad lo calcola il problema e il reformer
+    # def forward(self, x):
+    #     """Reform the samples and classify them."""
+    #     # works with tensors
+    #     scores = self.classifier(x)
+    #
+    #     # return the logits
+    #     return scores
+
     def forward(self, x):
         """Reform the samples and classify them."""
+        # This function works with tensors.
 
-       # print("forward model with reformer")
-        #print(x)
-        #print(x.shape)
-        #print("type x ", type(x))
-
-        # Reform all samples in X
-        #print("before reforming ")
-        # reformer takes in input a numpy array (and is a tensor)
-        if not isinstance(x, np.ndarray):
-            x = x.detach().numpy()
-        X_reformed = self.reformer.reform(x)
-        #print("after reforming ")
+        #Reform all samples in X
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x)
+        X_reformed = self.reformer.reform_tensors(x)
 
         # classify the sample
-        #print("before classification")
-        # convert to pytorch
-        X_reformed = torch.from_numpy(X_reformed)
         scores = self.classifier(X_reformed)
-        #print("after classification")
-
-        # scores is a tensor
-        scores = scores.detach()
-        #print("scores shape ", scores.shape)
 
         # return the logits
         return scores
@@ -193,41 +215,58 @@ class NNModuleMagnetDetector(nn.Module):
         A vector n_samples * 2 where the second colum represent the score of
         the malicious class.
         """
+        # This function works with tensors.
 
-#        print("forward NNModuleMagnetDetector")
-
-        # detect advx
-        if not isinstance(x, np.ndarray):
-            x = x.detach().numpy()
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x)
 
         scores = self.detector.cmpt_detector_scores(x)
-
-        scores = torch.from_numpy(scores)
 
         # those are the logits (n_samples, 2)
         return scores
 
+def predict_tensors(self, X):
+    """Returns reconstructed samples via the autoencoder."""
+    # this function get and return tensors
+
+    dataset = TensorDataset(X)
+    loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
+    outputs = torch.zeros_like(X)
+    self.encoder.eval()
+
+    start = 0
+    with torch.no_grad():
+        for x in loader:
+            x = x[0].to(self.device)
+            end = start + x.size(0)
+            outputs[start:end] = self.encoder(x).cpu()
+            start = end
+    return outputs
+
 # method that we add to the Magnet detector after loading
 def cmpt_detector_scores(self, X):
     """Returns the scores in output from the detector.
+    This function work with tensors
     """
-    if not isinstance(X, np.ndarray):
-        raise ValueError('X must be a ndarray.')
-
     n = X.shape[0]
-    X_ae = self.predict(X)
+
+    # predict_tensors works with tensors
+    X_ae = self.predict_tensors(X)
+
     if self.algorithm == 'error':
-        X = X.reshape(n, -1)
-        X_ae = X_ae.reshape(n, -1)
-        diff = np.abs(X - X_ae)
-        scores = np.mean(np.power(diff, self.p), axis=1)
+
+        X = torch.reshape(X, (n, -1))
+        X_ae = torch.reshape(X_ae, (n, -1))
+
+        diff = torch.abs(X - X_ae)
+        scores = torch.mean(torch.pow(diff, self.p), dim=1)
+
     else:  # self.algorithm == 'prob'
-        scores = self.__get_js_divergence(
-            torch.from_numpy(X).type(torch.float32),
-            torch.from_numpy(X_ae).type(torch.float32))
+        # __get_js_divergence works with tensors
+        scores = self.__get_js_divergence(X, X_ae)
 
     # create a binary vector
-    scores_array = np.ones((scores.size, 2)) * self.threshold
+    scores_array = torch.ones(scores.shape[0], 2) * self.threshold
     scores_array[:,1] = scores[:]
 
     return scores_array
@@ -335,11 +374,17 @@ def loadmagnet(data, model_name, param, device, path, model):
 
     print("detector created ")
 
-    # bind a new method to the detector object
+    # bind two new method to the detector object that avoid breaking the
+    # computational graph
+    full_magnet.detectors[-1]\
+        .predict_tensors = types.MethodType(predict_tensors,
+                                                 full_magnet.detectors[-1])
+
+
     full_magnet.detectors[-1]\
         .cmpt_detector_scores = types.MethodType(cmpt_detector_scores,
                                                  full_magnet.detectors[-1])
-    print("new function binded to the detector object")
+    print("new functions binded to the detector object")
 
     # both the following objects inherith form
 
@@ -354,6 +399,8 @@ def loadmagnet(data, model_name, param, device, path, model):
         detector = full_magnet.detectors[-1],
         batch_size=BATCH_SIZE,
         device=device)
+
+    #model_with_reformer_nn_module = model
 
     return model_with_reformer_nn_module, full_detector_nn_module, full_magnet
 
@@ -417,8 +464,8 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst,
         optimizer=None
     )
 
-    y_pred = model_with_reformer_nn_module(X)
-    print("model_with_reformer_nn_module", y_pred.shape)
+    # y_pred = model_with_reformer_nn_module(X)
+    # print("model_with_reformer_nn_module", y_pred.shape)
 
     y_pred = art_classifier.predict(X)
     print("art_classifier",y_pred.shape )
@@ -445,9 +492,14 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst,
     )
 
     print("check art detector")
-    y_pred = art_detector.predict(X)
+    y_pred = art_detector.predict(X+1000)
     print("detector_nn_module", y_pred.shape)
     print("art detector ok")
+
+    print("y pred ", y_pred)
+    print("detected by detector used by attack ", np.mean(
+        y_pred.argmax(axis=1) == 1))
+
 
     clip_fun = None
     #################################################################
@@ -457,40 +509,39 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst,
                                                        clf_name, detector_name)
 
     print("compute prediction for samples at epsilon 0")
-    x = X_att_test[:1000]
-    y = y_att_test[:1000]
+    x = X_att_test[:10]
+    y = y_att_test[:10]
 
     # compute and save predictions
-    cmpt_and_save_predictions(art_classifier, full_magnet_orig, device, x, y,
+    cmpt_and_save_predictions(art_classifier, full_magnet_orig,
+                              art_detector, device, x, y,
                               pred_folder, 0)
 
     for eps in epsilon_lst:
 
         print("epsilon ", eps)
 
-        if dataset_name == 'mnist':
-            loss_multiplier = 1. / 36.
-        else:
-            loss_multiplier = 0.1
+        print("detector threshold ", detector_nn_module.detector.threshold)
 
-        attack = AutoProjectedGradientDescentDetectors(
+        attack = AutoProjectedGradientDescentDetectorsMagnet(
             estimator=art_classifier,
             detector=art_detector,
             detector_th=0,
-            clf_loss_multiplier=loss_multiplier,
             detector_clip_fun=clip_fun,
             loss_type='logits_difference',
             batch_size=128,
             norm=2,
             eps=eps,
             eps_step=0.9,
-            beta=0.5,
+            beta=1.0,
             max_iter=100)
 
         adv_x = attack.generate(x=x, y=None)
 
         # compute and save predictions
-        cmpt_and_save_predictions(art_classifier,  full_magnet_orig, device, adv_x,
+        cmpt_and_save_predictions(art_classifier,  full_magnet_orig,
+                                  art_detector,
+                                  device, adv_x,
                                   y, pred_folder, eps)
 
 if __name__ == '__main__':

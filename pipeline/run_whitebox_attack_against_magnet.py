@@ -520,7 +520,8 @@ if __name__ == '__main__':
         input_shape = (1, 28, 28)
     else:
         clf_name = 'resnet'
-        epsilon_lst = [0.5, 1, 2, 3, 4]
+        detector_name = 'baard'
+        epsilon_lst = [0.05, 0.1, 0.2, 1, 2]
         input_shape = (3, 32, 32)
 
     main(seed, dataset_name, clf_name, detector_name, epsilon_lst,

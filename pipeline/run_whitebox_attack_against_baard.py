@@ -51,7 +51,7 @@ def cmpt_and_save_predictions(model, art_detector, detector, device, x, y,
     print("Show results:")
     print('Acc classifier:', np.mean(y_pred == y))
     print("acc surrogate detector", np.mean(pred_sur_det == y))
-    print("acc baard ",np.mean(pred_sur_det == y))
+    print("acc baard ",np.mean(pred_sur_det == 1))
     print("acc on advx sistema completo ", acc_on_adv(y_pred, y,
                                                       pred_baard))
     print('reject_s1', np.mean(reject_s1))
@@ -176,8 +176,8 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst,input_shape):
                                                        clf_name, detector_name)
 
     print("compute prediction for samples at epsilon 0")
-    x = X_att_test[:1000]
-    y = y_att_test[:1000]
+    x = X_att_test[:10]
+    y = y_att_test[:10]
 
     # compute and save predictions
     cmpt_and_save_predictions(model, art_detector, detector, device, x, y,
@@ -196,7 +196,6 @@ def main(seed, dataset_name, clf_name, detector_name, epsilon_lst,input_shape):
             estimator=art_classifier,
             detector=art_detector,
             detector_th=0,
-            clf_loss_multiplier=loss_multiplier,
             detector_clip_fun=clip_fun,
             loss_type='logits_difference',
             batch_size=128,
@@ -219,7 +218,8 @@ if __name__ == '__main__':
         'mnist', 'cifar10'])
     parser.add_argument('--model', type=str, default='dnn', choices=['dnn',
                                                                    'resnet'])
-    parser.add_argument('--i', type=int, default=0, choices=list(range(len(SEEDS))))
+    parser.add_argument('--i', type=int, default=1, choices=list(range(len(
+        SEEDS))))
     args = parser.parse_args()
     print(args)
 

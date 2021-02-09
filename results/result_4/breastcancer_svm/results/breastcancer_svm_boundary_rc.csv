@@ -1,2 +1,0 @@
-,data,model,attack,adv_param,acc_no_def,acc_on_adv,fpr
-0,breastcancer,svm,boundary,0,0.2828282828282828,0.36363636363636365,0.0

@@ -138,19 +138,20 @@ dmypy.json
 cython_debug/
 
 # Additional datasets
-data/cifar-10-batches-py/
-data/MNIST/
-cifar-10-python.tar.gz
+.err
 .pylintrc
-nohup.out
 .vscode/
-baard_venv/
-test.py
-test.sh
-test.ipynb
-*.out
-examples/baard_demo.pt
 *.npy
+*.out
 *.pt
 ~*
-test2.sh
+baard_venv/
+*.tar.gz
+data/cifar-10-batches-py/
+data/MNIST/
+log/
+nohup.out
+results/
+test.ipynb
+test.py
+test.sh

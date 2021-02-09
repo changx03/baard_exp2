@@ -19,3 +19,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# Example: Running from terminal
+# nohup python3 ./run/benchmark_svm_rc.py > ./log/benchmark_svm_rc.out 2> ./log/benchmark_svm_rc.err & tail -f ./log/benchmark_svm_rc.out

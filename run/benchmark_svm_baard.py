@@ -26,3 +26,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# Example: Running from terminal
+# nohup python3 ./run/benchmark_svm_baard.py > ./log/benchmark_svm_baard.out 2> ./log/benchmark_svm_baard.err & tail -f ./log/benchmark_svm_baard.out

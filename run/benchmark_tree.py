@@ -17,8 +17,9 @@ for b in range(1, 4):
 
 def main():
     attacks = ['tree', 'boundary']
+    datasets = ['banknote', 'breastcancer', 'htru2']
     for i in range(5):
-        for d in ['banknote', 'breastcancer', 'htru2']:
+        for d in datasets:
             for a in attacks:
                 sklearn_attack_against_rc(d, MODEL, a, epsilons=[0], idx=i)
                 for p in params:
@@ -27,5 +28,6 @@ def main():
 
 if __name__ == '__main__':
     main()
-    # sklearn_attack_against_rc('banknote', 'tree', 'boundary', epsilons=[0], idx=i)
-    # sklearn_attack_against_baard('banknote', MODEL, 'boundary', epsilons=[0], idx=0, baard_param=params[-1])
+
+# Example: Running from terminal
+# nohup python3 ./run/benchmark_tree.py > ./log/benchmark_tree.out 2> ./log/benchmark_tree.err & tail -f ./log/benchmark_tree.out

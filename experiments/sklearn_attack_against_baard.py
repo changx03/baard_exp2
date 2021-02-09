@@ -81,7 +81,7 @@ def preprocess_baard(X, std=1., eps=0.025):
     return X_noisy
 
 
-def get_defence(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_param):
+def get_defence(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_param, restart):
     # Prepare training data
     path_results = get_output_path(idx, data_name, model_name)
 
@@ -112,7 +112,7 @@ def get_defence(data_name, model_name, idx, X_train, y_train, X_val, y_val, baar
         sequence = baard_param['sequence']
         path_param_backup = os.path.join(path_results, 'results', '{}_{}_baard_{}.json'.format(data_name, model_name, np.sum(sequence)))
         json.dump(baard_param, open(path_param_backup, 'w'))
-        print('Save to:', path_param_backup )
+        print('Save to:', path_param_backup)
     print('Param:', baard_param)
     stages = []
     if sequence[0]:
@@ -132,7 +132,7 @@ def get_defence(data_name, model_name, idx, X_train, y_train, X_val, y_val, baar
 
     # Set thresholds
     file_baard_threshold = os.path.join(path_results, 'data', '{}_{}_baard_threshold_{}.pt'.format(data_name, model_name, len(stages)))
-    if os.path.exists(file_baard_threshold):
+    if os.path.exists(file_baard_threshold) or restart:
         print('Found existing BAARD thresholds:', file_baard_threshold)
         detector.load(file_baard_threshold)
     else:
@@ -142,7 +142,7 @@ def get_defence(data_name, model_name, idx, X_train, y_train, X_val, y_val, baar
     return detector
 
 
-def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baard_param):
+def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baard_param, fresh_att=False, fresh_def=True):
     seed = SEEDS[idx]
 
     path_results = get_output_path(idx, data_name, model_name)
@@ -226,7 +226,8 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
         y_train=y_train,
         X_val=X_val,
         y_val=y_val,
-        baard_param=baard_param)
+        baard_param=baard_param,
+        restart=fresh_def)
 
     # Override epsilon
     if att == 'boundary' or att == 'tree':
@@ -240,7 +241,7 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
         # Load/Create adversarial examples
         attack = get_attack(att, classifier, e)
         path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
-        if os.path.exists(path_adv):
+        if os.path.exists(path_adv) or fresh_att:
             print('Find:', path_adv)
             adv = np.load(path_adv)
         else:
@@ -306,5 +307,5 @@ if __name__ == '__main__':
     print('param:', param)
     sklearn_attack_against_baard(data, model_name, att, epsilons, idx, param)
 
-# python3 ./run_exp/sklearn_attack_against_baard.py -d banknote -m svm -i 0 -a fgsm -e 0.1 0.2 -p ./params/baard_tune_3s.json
-# python3 ./run_exp/sklearn_attack_against_baard.py -d banknote -m tree -i 0 -a tree -p ./params/baard_tune_3s.json
+    # Testing
+    # sklearn_attack_against_baard('breastcancer', 'svm', 'fgsm', [0.2], 10, './params/baard_tune_1s.json', fresh_att=False, fresh_def=True)

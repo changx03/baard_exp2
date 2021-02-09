@@ -31,12 +31,14 @@ class ApplicabilityStage:
         Quantile to compute, which must be between 0 and 1 inclusive.
     """
 
-    def __init__(self, n_classes=10, quantile=0.99, verbose=True):
+    def __init__(self, n_classes=10, quantile=0.99, fpr=0.01, verbose=True):
         self.n_classes = n_classes
         self.quantile = quantile
+        self.fpr = fpr
         self.verbose = verbose
 
         self.k = 0  # A dummy variable
+        self.n_tolerance_ = np.zeros(self.n_classes, dtype=np.int)
 
     def fit(self, X=None, y=None):
         """Fits the model according to the given training data.
@@ -69,10 +71,17 @@ class ApplicabilityStage:
         self.thresholds_ = np.array(thresholds)
         return self
 
-    def search_thresholds(self, X=None, y=None, labels_adv=None):
-        """Applicability stage does not require searching for thresholds.
+    def search_thresholds(self, X, y, labels_adv=None):
+        """Find tolerate based on False Positive Rate.
         """
-        pass
+        fpr = self.fpr
+        idx = np.where(labels_adv == 0)[0]
+        X = X[idx]
+        y = y[idx]
+        n_outs = self.predict_prob(X, y)
+        for i in range(self.n_classes):
+            idx = np.where(y == i)[0]
+            self.n_tolerance_[i] = np.quantile(n_outs[idx], 1 - fpr)
 
     def predict(self, X, y):
         """Detects outliers.
@@ -93,6 +102,35 @@ class ApplicabilityStage:
         n = X.shape[0]
         X = flatten(X)
         results = np.zeros(n, dtype=np.long)
+        n_outs = self.predict_prob(X, y)
+        for i in range(self.n_classes):
+            idx = np.where(y == i)[0]
+            n_tolerance = self.n_tolerance_[i]
+            blocked = np.where(n_outs[idx] > n_tolerance)[0]
+            results[blocked] = 1
+        return results
+
+    def predict_prob(self, X, y):
+        """Detects outliers. It returns the number of features which is outside 
+        the bounding boxes.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Samples.
+
+        y : array-like of shape (n_samples, )
+            Predicted labels from the initial model.
+
+        Returns
+        -------
+        n_features : array of shape (n_samples,)
+            Returns the number of features which is outside the bounding boxes 
+            for each sample.
+        """
+        n = X.shape[0]
+        X = flatten(X)
+        results = np.zeros(n, dtype=np.float)
         for i in trange(self.n_classes, desc='Applicability', disable=not self.verbose):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
@@ -100,13 +138,10 @@ class ApplicabilityStage:
             x_subset = X[idx]
             lower = self.thresholds_[i, 0]
             upper = self.thresholds_[i, 1]
-            # blocked_idx_of_idx = np.where(np.logical_or(np.any(x_subset < lower, axis=1), np.any(x_subset > upper, axis=1)))[0]
-            below = np.any(x_subset < lower, axis=1)
-            above = np.any(x_subset > upper, axis=1)
-            out_of_box = np.logical_or(below, above)
-            blocked_idx_of_idx = np.where(out_of_box)[0]
-            blocked_idx = idx[blocked_idx_of_idx]
-            results[blocked_idx] = 1
+            n_below = np.sum(x_subset < lower, axis=1)
+            n_above = np.sum(x_subset > upper, axis=1)
+            n_out = n_below + n_above
+            results[idx] = n_out
         return results
 
 

@@ -6,10 +6,10 @@ LIB_PATH = os.getcwd() + "/art_library"
 sys.path.append(LIB_PATH)
 
 import argparse
-import json
-from pathlib import Path
-import time
 import datetime
+import json
+import time
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -17,12 +17,12 @@ import torch
 from art.attacks.evasion import (BasicIterativeMethod, BoundaryAttack,
                                  DecisionTreeAttack, FastGradientMethod)
 from art.estimators.classification import SklearnClassifier
+from defences.region_based_classifier import SklearnRegionBasedClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 from sklearn.tree import ExtraTreeClassifier
 from utils import acc_on_advx, load_csv, set_seeds
-from defences.region_based_classifier import SklearnRegionBasedClassifier
 
 ATTACKS = ['bim', 'fgsm', 'boundary', 'tree']
 DATA_PATH = 'data'
@@ -71,7 +71,7 @@ def get_defence():
     return None
 
 
-def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx):
+def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_att=False, fresh_def=True):
     seed = SEEDS[idx]
 
     path_results = get_output_path(idx, data_name, model_name)
@@ -157,7 +157,7 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx):
         stop_value=0.4)
 
     path_best_r = os.path.join(path_results, 'results', '{}_{}.json'.format(data_name, model_name))
-    if os.path.exists(path_best_r):
+    if os.path.exists(path_best_r) or fresh_def:
         with open(path_best_r) as j:
             obj_r = json.load(j)
         r_best = obj_r['r']
@@ -186,8 +186,8 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx):
     for e in epsilons:
         # Load/Create adversarial examples
         attack = get_attack(att, classifier, e)
-        path_adv = os.path.join(path_results, 'data','{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
-        if os.path.exists(path_adv):
+        path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
+        if os.path.exists(path_adv) or fresh_att:
             print('Find:', path_adv)
             adv = np.load(path_adv)
         else:

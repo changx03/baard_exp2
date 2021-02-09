@@ -1,0 +1,10 @@
+,data,model,attack,adv_param,acc_no_def,acc_on_adv,fpr
+0,banknote,svm,fgsm,0.05,0.8461538461538461,0.841025641025641,0.0
+1,banknote,svm,fgsm,0.1,0.19487179487179487,0.2358974358974359,0.0
+2,banknote,svm,fgsm,0.2,0.010256410256410256,0.020512820512820513,0.005128205128205128
+3,banknote,svm,fgsm,0.4,0.0,0.0,0.0
+4,banknote,svm,fgsm,0.6,0.0,0.0,0.0
+5,banknote,svm,fgsm,0.8,0.0,0.0,0.0
+6,banknote,svm,fgsm,1.0,0.0,0.0,0.0
+7,banknote,svm,fgsm,1.2,0.0,0.0,0.0
+8,banknote,svm,fgsm,1.4,0.0,0.0,0.0

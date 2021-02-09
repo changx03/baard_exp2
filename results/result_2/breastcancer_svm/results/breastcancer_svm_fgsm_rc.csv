@@ -1,0 +1,10 @@
+,data,model,attack,adv_param,acc_no_def,acc_on_adv,fpr
+0,breastcancer,svm,fgsm,0.05,0.7083333333333334,0.7083333333333334,0.0
+1,breastcancer,svm,fgsm,0.1,0.3125,0.3229166666666667,0.0
+2,breastcancer,svm,fgsm,0.2,0.020833333333333332,0.020833333333333332,0.0
+3,breastcancer,svm,fgsm,0.4,0.0,0.0,0.0
+4,breastcancer,svm,fgsm,0.6,0.0,0.0,0.0
+5,breastcancer,svm,fgsm,0.8,0.0,0.0,0.0
+6,breastcancer,svm,fgsm,1.0,0.0,0.0,0.0
+7,breastcancer,svm,fgsm,1.2,0.0,0.0,0.0
+8,breastcancer,svm,fgsm,1.4,0.0,0.0,0.0

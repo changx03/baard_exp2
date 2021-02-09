@@ -117,7 +117,8 @@ class DecisionTreeAttack(EvasionAttack):
             position = -2
             adv_path = [-1]
             ancestor = path[position]
-            while np.abs(position) < (len(path) - 1) or adv_path[0] == -1:
+            while np.abs(position) < (len(path) - 1):
+            # while np.abs(position) < (len(path) - 1) or adv_path[0] == -1:
                 ancestor = path[position]
                 current_child = path[position + 1]
                 # search in right subtree

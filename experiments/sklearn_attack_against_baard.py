@@ -132,7 +132,7 @@ def get_defence(data_name, model_name, idx, X_train, y_train, X_val, y_val, baar
 
     # Set thresholds
     file_baard_threshold = os.path.join(path_results, 'data', '{}_{}_baard_threshold_{}.pt'.format(data_name, model_name, len(stages)))
-    if os.path.exists(file_baard_threshold) or restart:
+    if os.path.exists(file_baard_threshold) and not restart:
         print('Found existing BAARD thresholds:', file_baard_threshold)
         detector.load(file_baard_threshold)
     else:
@@ -241,7 +241,7 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
         # Load/Create adversarial examples
         attack = get_attack(att, classifier, e)
         path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
-        if os.path.exists(path_adv) or fresh_att:
+        if os.path.exists(path_adv) and not fresh_att:
             print('Find:', path_adv)
             adv = np.load(path_adv)
         else:

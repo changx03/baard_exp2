@@ -257,6 +257,7 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
         pred_adv = model.predict(X_att)
         acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
         acc_on_advs.append(acc)
+        print('acc_on_adv:', acc)
 
         labelled_benign_as_adv = detector.detect(X_att, y_att)
         fpr = np.mean(labelled_benign_as_adv)

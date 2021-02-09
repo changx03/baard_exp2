@@ -34,7 +34,7 @@ with open('SEEDS') as f:
     SEEDS = [int(s) for s in f.read().split(',')]
 BATCH_SIZE = 128
 N_SAMPLES = 2000
-DEF_NAME = 'rc'
+DEF_NAME = 'baard'
 
 
 def get_output_path(i, data, model_name):
@@ -77,16 +77,15 @@ def get_correct_examples_sklearn(estimator, X, y):
 
 
 def preprocess_baard(X, std=1., eps=0.025):
-    X_noisy = X + eps * np.random.normal(loc=0, scale=std, size=X.size())
+    X_noisy = X + eps * np.random.normal(0, std, size=X.shape)
     return X_noisy
 
 
-def get_defence(data_name, model_name, idx, model, X_train, y_train, X_val, y_val, baard_param):
+def get_defence(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_param):
     # Prepare training data
     path_results = get_output_path(idx, data_name, model_name)
 
-    file_baard_train = os.path.join(path_results, '{}_{}_baard_s1_train_data.pt'.format(
-        data, model_name))
+    file_baard_train = os.path.join(path_results, 'data', '{}_{}_baard_s1_train_data.pt'.format(data_name, model_name))
     if os.path.exists(file_baard_train):
         print('Found existing BAARD preprocess data:', file_baard_train)
         obj = torch.load(file_baard_train)
@@ -110,27 +109,29 @@ def get_defence(data_name, model_name, idx, model, X_train, y_train, X_val, y_va
     # Load each stage
     with open(baard_param) as j:
         baard_param = json.load(j)
+        sequence = baard_param['sequence']
+        path_param_backup = os.path.join(path_results, 'results', '{}_{}_baard_{}.json'.format(data_name, model_name, np.sum(sequence)))
+        json.dump(baard_param, open(path_param_backup, 'w'))
+        print('Save to:', path_param_backup )
     print('Param:', baard_param)
-    sequence = baard_param['sequence']
     stages = []
     if sequence[0]:
-        s1 = ApplicabilityStage(n_classes=n_classes, quantile=baard_param['q1'])
+        s1 = ApplicabilityStage(n_classes=n_classes, quantile=baard_param['q1'], verbose=False)
         s1.fit(X_train_s1, y_train)
         stages.append(s1)
     if sequence[1]:
-        s2 = ReliabilityStage(n_classes=n_classes, k=baard_param['k_re'], quantile=baard_param['q2'])
+        s2 = ReliabilityStage(n_classes=n_classes, k=baard_param['k_re'], quantile=baard_param['q2'], verbose=False)
         s2.fit(X_train, y_train)
         stages.append(s2)
     if sequence[2]:
-        s3 = DecidabilityStage(n_classes=n_classes, k=baard_param['k_de'], quantile=baard_param['q3'])
+        s3 = DecidabilityStage(n_classes=n_classes, k=baard_param['k_de'], quantile=baard_param['q3'], verbose=False)
         s3.fit(X_train, y_train)
         stages.append(s3)
     print('BAARD stages:', len(stages))
     detector = BAARDOperator(stages=stages)
 
     # Set thresholds
-    file_baard_threshold = os.path.join(path_results, '{}_{}_baard_threshold.pt'.format(
-        data, model_name))
+    file_baard_threshold = os.path.join(path_results, 'data', '{}_{}_baard_threshold_{}.pt'.format(data_name, model_name, len(stages)))
     if os.path.exists(file_baard_threshold):
         print('Found existing BAARD thresholds:', file_baard_threshold)
         detector.load(file_baard_threshold)
@@ -158,24 +159,19 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     data_path = os.path.join(DATA_PATH, METADATA['data'][data_name]['file_name'])
     print('Read file: {}'.format(data_path))
     X, y = load_csv(data_path)
-    n_classes = len(np.unique(y))
 
     # Apply scaling
     scaler = MinMaxScaler().fit(X)
     X = scaler.transform(X)
 
     path_results = get_output_path(idx, data_name, model_name)
-    path_X_train = os.path.join(path_results, 'data', '{}_{}_X_train.npy'.format(
-        data_name, model_name))
+    path_X_train = os.path.join(path_results, 'data', '{}_{}_X_train.npy'.format(data_name, model_name))
     if os.path.exists(path_X_train):
         print('Found existing data:', path_X_train)
         X_train = np.load(path_X_train)
-        X_test = np.load(os.path.join(path_results, 'data', '{}_{}_X_test.npy'.format(
-            data_name, model_name)))
-        y_train = np.load(os.path.join(path_results, 'data', '{}_{}_y_tain.npy'.format
-                                       (data_name, model_name)))
-        y_test = np.load(os.path.join(path_results, 'data', '{}_{}_y_test.npy'.format(
-            data_name, model_name)))
+        X_test = np.load(os.path.join(path_results, 'data', '{}_{}_X_test.npy'.format(data_name, model_name)))
+        y_train = np.load(os.path.join(path_results, 'data', '{}_{}_y_tain.npy'.format(data_name, model_name)))
+        y_test = np.load(os.path.join(path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)))
     else:
         print('Cannot found:', path_X_train)
         n_test = METADATA['data'][data_name]['n_test']
@@ -224,15 +220,13 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     print('Correct train set:', X_train.shape, y_train.shape)
     detector = get_defence(
         data_name=data_name,
-        model_name=mod,
+        model_name=model_name,
         idx=idx,
-        model=model,
         X_train=X_train,
         y_train=y_train,
         X_val=X_val,
         y_val=y_val,
-        baard_param=baard_param
-    )
+        baard_param=baard_param)
 
     # Override epsilon
     if att == 'boundary' or att == 'tree':
@@ -245,8 +239,7 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     for e in epsilons:
         # Load/Create adversarial examples
         attack = get_attack(att, classifier, e)
-        path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(
-            data_name, model_name, att, str(float(e))))
+        path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
         if os.path.exists(path_adv):
             print('Find:', path_adv)
             adv = np.load(path_adv)
@@ -260,15 +253,13 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
         accuracies_no_def.append(acc_naked)
 
         # Preform defence
-        labelled_as_adv = detector.detect(adv)
-        print('labelled_as_adv:', labelled_as_adv)
+        labelled_as_adv = detector.detect(adv, y_att)
         pred_adv = model.predict(X_att)
         acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
         acc_on_advs.append(acc)
-        print('acc_on_advx:', acc)
 
-        labelled_as_adv = detector.detect(X_att)
-        fpr = np.mean(labelled_as_adv == y_att)
+        labelled_benign_as_adv = detector.detect(X_att, y_att)
+        fpr = np.mean(labelled_benign_as_adv)
         fprs.append(fpr)
         print('fpr:', fpr)
     data = {
@@ -281,8 +272,7 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
         'fpr': np.array(fprs)
     }
     df = pd.DataFrame(data)
-    path_csv = os.path.join(path_results, 'results', '{}_{}_{}_{}_{}.csv'.format(
-        data_name, model_name, att, DEF_NAME, len(detector.stages)))
+    path_csv = os.path.join(path_results, 'results', '{}_{}_{}_{}_{}.csv'.format(data_name, model_name, att, DEF_NAME, len(detector.stages)))
     df.to_csv(path_csv)
     print('Save to:', path_csv)
     print()

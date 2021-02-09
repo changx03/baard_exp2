@@ -270,10 +270,15 @@ def run_full_pipeline_baard(data,
     X_surro_train_replicated = np.append(X_surro_train_replicated, X_surro_train, axis=0)
     X_surro_train_replicated = np.append(X_surro_train_replicated, X_surro_train, axis=0)
 
+    y_surro_train_replicated = np.append(y_surro_train,y_surro_train)
+    y_surro_train_replicated = np.append(y_surro_train_replicated, y_surro_train)
+    y_surro_train_replicated = np.append(y_surro_train_replicated, y_surro_train)
+    y_surro_train_replicated = np.append(y_surro_train_replicated, y_surro_train)
+
     # classify the surrogate set
     pred_adv_surro_train = predict_numpy(model, adv_surro_train, device)
     label_adv_train = detector.detect(adv_surro_train, pred_adv_surro_train)
-    label_X_train = detector.detect(X_surro_train_replicated, y_surro_train)
+    label_X_train = detector.detect(X_surro_train_replicated, y_surro_train_replicated)
     # concatenate the clean and the adversarial samples
     X_train = np.concatenate((X_surro_train_replicated, adv_surro_train))
     label_train = np.concatenate((label_X_train, label_adv_train))

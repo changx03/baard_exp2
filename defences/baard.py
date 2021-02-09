@@ -531,9 +531,10 @@ class BAARDOperator:
             ks[i] = stage.k
             quantiles[i] = stage.quantile
         obj = {
-            "thresholds": thresholds,
-            "quantiles": quantiles,
-            "ks": ks}
+            'thresholds': thresholds,
+            'quantiles': quantiles,
+            'ks': ks,
+            'n_tolerance': self.stages[0].n_tolerance_}
         torch.save(obj, path)
         print('Save to:', path)
 
@@ -543,4 +544,5 @@ class BAARDOperator:
             self.stages[i].thresholds_ = obj['thresholds'][i]
             self.stages[i].quantile = obj['quantiles'][i]
             self.stages[i].k = obj['ks'][i]
+        self.stages[0].n_tolerance_ = obj['n_tolerance']
         print('Load from:', path)

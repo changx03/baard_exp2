@@ -4,7 +4,7 @@ import sys
 sys.path.append(os.getcwd())
 print(*sys.path, sep='\n')
 
-from run_exp import sklearn_attack_against_rc
+from experiments import sklearn_attack_against_rc
 
 
 def main():

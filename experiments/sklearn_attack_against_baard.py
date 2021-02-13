@@ -51,20 +51,24 @@ def get_attack(att_name, classifier, eps=None):
             eps_step=eps_step,
             max_iter=100,
             targeted=False,
-            batch_size=BATCH_SIZE)
+            batch_size=BATCH_SIZE,
+            verbose=False)
     elif att_name == 'boundary':
         attack = BoundaryAttack(
             estimator=classifier,
             max_iter=1000,
-            targeted=False)
+            targeted=False,
+            verbose=False)
     elif att_name == 'fgsm':
         attack = FastGradientMethod(
             estimator=classifier,
             eps=eps,
-            batch_size=BATCH_SIZE)
+            batch_size=BATCH_SIZE,
+            verbose=False)
     elif att_name == 'tree':
         attack = DecisionTreeAttack(
-            classifier=classifier)
+            classifier=classifier,
+            verbose=False)
     else:
         raise NotImplementedError
     return attack
@@ -262,7 +266,7 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
             labelled_benign_as_adv = detector.detect(X_att, y_att)
             fpr = np.mean(labelled_benign_as_adv)
             print('fpr:', fpr)
-        except Exception as e: 
+        except Exception as e:
             print(e)
             acc_naked = np.nan
             acc = np.nan

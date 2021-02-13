@@ -48,20 +48,24 @@ def get_attack(att_name, classifier, eps=None):
             eps_step=eps_step,
             max_iter=100,
             targeted=False,
-            batch_size=BATCH_SIZE)
+            batch_size=BATCH_SIZE,
+            verbose=False)
     elif att_name == 'boundary':
         attack = BoundaryAttack(
             estimator=classifier,
             max_iter=1000,
-            targeted=False)
+            targeted=False,
+            verbose=False)
     elif att_name == 'fgsm':
         attack = FastGradientMethod(
             estimator=classifier,
             eps=eps,
-            batch_size=BATCH_SIZE)
+            batch_size=BATCH_SIZE,
+            verbose=False)
     elif att_name == 'tree':
         attack = DecisionTreeAttack(
-            classifier=classifier)
+            classifier=classifier,
+            verbose=False)
     else:
         raise NotImplementedError
     return attack

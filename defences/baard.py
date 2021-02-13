@@ -31,7 +31,7 @@ class ApplicabilityStage:
         Quantile to compute, which must be between 0 and 1 inclusive.
     """
 
-    def __init__(self, n_classes=10, quantile=0.99, fpr=0.01, verbose=True):
+    def __init__(self, n_classes=10, quantile=0.999, fpr=0.001, verbose=True):
         self.n_classes = n_classes
         self.quantile = quantile
         self.fpr = fpr
@@ -163,7 +163,7 @@ class ReliabilityStage:
         Quantile to compute, which must be between 0 and 1 inclusive.
     """
 
-    def __init__(self, n_classes=10, k=10, quantile=0.99, verbose=True):
+    def __init__(self, n_classes=10, k=10, quantile=0.999, verbose=True):
         self.n_classes = n_classes
         self.k = k
         self.quantile = quantile
@@ -311,7 +311,7 @@ class DecidabilityStage:
         Quantile to compute, which must be between 0 and 1 inclusive.
     """
 
-    def __init__(self, n_classes=10, k=100, quantile=0.99, verbose=True):
+    def __init__(self, n_classes=10, k=100, quantile=0.999, verbose=True):
         self.n_classes = n_classes
         self.k = k
         self.quantile = quantile

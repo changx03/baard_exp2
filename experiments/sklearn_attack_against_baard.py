@@ -238,32 +238,40 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     acc_on_advs = []
     fprs = []
     for e in epsilons:
-        # Load/Create adversarial examples
-        attack = get_attack(att, classifier, e)
-        path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
-        if os.path.exists(path_adv) and not fresh_att:
-            print('Find:', path_adv)
-            adv = np.load(path_adv)
-        else:
-            adv = attack.generate(X_att)
-            np.save(path_adv, adv)
-            print('Save to', path_adv)
+        try:
+            # Load/Create adversarial examples
+            attack = get_attack(att, classifier, e)
+            path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
+            if os.path.exists(path_adv) and not fresh_att:
+                print('Find:', path_adv)
+                adv = np.load(path_adv)
+            else:
+                adv = attack.generate(X_att)
+                np.save(path_adv, adv)
+                print('Save to', path_adv)
 
-        acc_naked = model.score(adv, y_att)
-        print('Acc without def:', acc_naked)
-        accuracies_no_def.append(acc_naked)
+            acc_naked = model.score(adv, y_att)
+            print('Acc without def:', acc_naked)
 
-        # Preform defence
-        labelled_as_adv = detector.detect(adv, y_att)
-        pred_adv = model.predict(X_att)
-        acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
-        acc_on_advs.append(acc)
-        print('acc_on_adv:', acc)
+            # Preform defence
+            labelled_as_adv = detector.detect(adv, y_att)
+            pred_adv = model.predict(X_att)
+            acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
+            print('acc_on_adv:', acc)
 
-        labelled_benign_as_adv = detector.detect(X_att, y_att)
-        fpr = np.mean(labelled_benign_as_adv)
-        fprs.append(fpr)
-        print('fpr:', fpr)
+            labelled_benign_as_adv = detector.detect(X_att, y_att)
+            fpr = np.mean(labelled_benign_as_adv)
+            print('fpr:', fpr)
+        except Exception as e: 
+            print(e)
+            acc_naked = np.nan
+            acc = np.nan
+            fpr = np.nan
+        finally:
+            accuracies_no_def.append(acc_naked)
+            acc_on_advs.append(acc)
+            fprs.append(fpr)
+
     data = {
         'data': np.repeat(data_name, len(epsilons)),
         'model': np.repeat(model_name, len(epsilons)),

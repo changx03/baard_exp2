@@ -63,8 +63,7 @@ def get_attack(att_name, classifier, eps=None):
         attack = FastGradientMethod(
             estimator=classifier,
             eps=eps,
-            batch_size=BATCH_SIZE,
-            verbose=False)
+            batch_size=BATCH_SIZE)
     elif att_name == 'tree':
         attack = DecisionTreeAttack(
             classifier=classifier,

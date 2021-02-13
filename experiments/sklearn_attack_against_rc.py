@@ -48,8 +48,7 @@ def get_attack(att_name, classifier, eps=None):
             eps_step=eps_step,
             max_iter=100,
             targeted=False,
-            batch_size=BATCH_SIZE,
-            verbose=False)
+            batch_size=BATCH_SIZE)
     elif att_name == 'boundary':
         attack = BoundaryAttack(
             estimator=classifier,

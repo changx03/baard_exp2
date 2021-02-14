@@ -13,8 +13,10 @@ from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.torch_util import train, validate
 
+EPOCHS = 200
 
-def train_model(data, model_name, dataset_train, dataset_test, epochs, device, file_model, use_prob=False):
+
+def train_model(data, model_name, dataset_train, dataset_test, device, file_model, use_prob=False, epochs=EPOCHS):
     dataloader_train = DataLoader(dataset_train, batch_size=128, shuffle=True)
     dataloader_test = DataLoader(dataset_test, batch_size=128, shuffle=False)
     print('[CLASSIFIER] Train set: {}, Test set: {}'.format(len(dataset_train), len(dataset_test)))

@@ -32,7 +32,6 @@ with open('SEEDS') as f:
 BATCH_SIZE = 128
 N_SAMPLES = 2000
 DEF_NAME = 'baard'
-EPOCHS = 200
 
 
 def pytorch_attack_against_baard(data_name, model_name, att, epsilons, idx, baard_param, fresh_att=False, fresh_def=True):
@@ -74,7 +73,7 @@ def pytorch_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     file_model = os.path.join(path_results, 'data', '{}_{}_model.pt'.format(data_name, model_name))
     print('[CLASSIFIER] Start training {} model on {}...'.format(model_name, data_name))
     start = time.time()
-    model = train_model(data_name, model_name, dataset_train, dataset_test, EPOCHS, device, file_model)
+    model = train_model(data_name, model_name, dataset_train, dataset_test, device, file_model)
     time_elapsed = time.time() - start
     print('[CLASSIFIER] Time spend on training classifier: {}'.format(str(datetime.timedelta(seconds=time_elapsed))))
 

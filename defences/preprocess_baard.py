@@ -8,7 +8,7 @@ sys.path.append(os.getcwd())
 from models import AddGaussianNoise
 
 
-def preprocess_baard(data, tensor_X):
+def preprocess_baard_img(data, tensor_X):
     """Preprocess training data"""
     if data == 'cifar10':
         # return tensor_X

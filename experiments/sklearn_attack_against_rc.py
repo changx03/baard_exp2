@@ -75,6 +75,7 @@ def get_defence():
 
 def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_att=False, fresh_def=True):
     seed = SEEDS[idx]
+    set_seeds(seed)
 
     path_results = get_output_path(idx, data_name, model_name)
     if not os.path.exists(path_results):
@@ -247,8 +248,6 @@ if __name__ == '__main__':
     print('args:', args)
 
     idx = args.idx
-    set_seeds(SEEDS[idx])
-
     data = args.data
     model_name = args.model
     att = args.attack

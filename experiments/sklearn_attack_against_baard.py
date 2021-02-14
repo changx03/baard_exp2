@@ -1,6 +1,5 @@
 import os
 import sys
-from operator import mod
 
 sys.path.append(os.getcwd())
 LIB_PATH = os.getcwd() + "/art_library"
@@ -146,6 +145,7 @@ def get_defence(data_name, model_name, idx, X_train, y_train, X_val, y_val, baar
 
 def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baard_param, fresh_att=False, fresh_def=True):
     seed = SEEDS[idx]
+    set_seeds(seed)
 
     path_results = get_output_path(idx, data_name, model_name)
     if not os.path.exists(path_results):
@@ -302,8 +302,6 @@ if __name__ == '__main__':
     print('args:', args)
 
     idx = args.idx
-    set_seeds(SEEDS[idx])
-
     data = args.data
     model_name = args.model
     att = args.attack

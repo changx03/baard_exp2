@@ -27,13 +27,12 @@ class ApplicabilityStage:
     n_classes : int, default=10
         The number of output classes.
 
-    quantile : float, default=0.99
-        Quantile to compute, which must be between 0 and 1 inclusive.
+    fpr : float, default=0.001
+        Determines the False Positive Rate in the validation set.
     """
 
-    def __init__(self, n_classes=10, quantile=0.999, fpr=0.001, verbose=True):
+    def __init__(self, n_classes=10, fpr=0.001, verbose=True):
         self.n_classes = n_classes
-        self.quantile = quantile
         self.fpr = fpr
         self.verbose = verbose
 
@@ -55,29 +54,31 @@ class ApplicabilityStage:
         -------
         self : object
         """
-        X = flatten(X)
-        self.n_features_ = X.shape[1]
-        # Holds min and max
-        thresholds = []
-        low = (1 - self.quantile) / 2.0
-        high = 1 - low
-        for i in range(self.n_classes):
-            idx = np.where(y == i)[0]
-            if len(idx) == 0:
-                print('Class {:d} has no training samples!'.format(i))
-                continue
-            x_subset = X[idx]
-            thresholds.append(np.quantile(x_subset, [low, high], axis=0))
-        self.thresholds_ = np.array(thresholds)
+        self.dtype_ = X.dtype
+        self.X_train_ = flatten(X)
+        self.y_train_ = y
         return self
 
     def search_thresholds(self, X, y, labels_adv=None):
         """Find tolerate based on False Positive Rate.
         """
-        fpr = self.fpr
+        # Only uses bengin samples.
         idx = np.where(labels_adv == 0)[0]
         X = X[idx]
         y = y[idx]
+
+        # First, find thresholds.
+        candidates = np.concatenate((np.arange(self.fpr, 0., -0.001), [0.]))
+        for t in candidates:
+            thresholds = self.__search_boundingboxes(t)
+            rejected = self.predict_prob(X, y, thresholds)
+            fpr_eval = np.mean(rejected)
+            if fpr_eval <= self.fpr:
+                break
+        self.thresholds_ = thresholds
+
+        # Second, find tolerance.
+        fpr = self.fpr
         n_outs = self.predict_prob(X, y)
         for i in range(self.n_classes):
             idx = np.where(y == i)[0]
@@ -110,7 +111,7 @@ class ApplicabilityStage:
             results[blocked] = 1
         return results
 
-    def predict_prob(self, X, y):
+    def predict_prob(self, X, y, thresholds=None):
         """Detects outliers. It returns the number of features which is outside 
         the bounding boxes.
 
@@ -128,6 +129,9 @@ class ApplicabilityStage:
             Returns the number of features which is outside the bounding boxes 
             for each sample.
         """
+        if thresholds is None:
+            thresholds = self.thresholds_
+
         n = X.shape[0]
         X = flatten(X)
         results = np.zeros(n, dtype=np.float)
@@ -136,13 +140,26 @@ class ApplicabilityStage:
             if len(idx) == 0:
                 continue
             x_subset = X[idx]
-            lower = self.thresholds_[i, 0]
-            upper = self.thresholds_[i, 1]
+            lower = thresholds[i, 0]
+            upper = thresholds[i, 1]
             n_below = np.sum(x_subset < lower, axis=1)
             n_above = np.sum(x_subset > upper, axis=1)
             n_out = n_below + n_above
             results[idx] = n_out
         return results
+
+    def __search_boundingboxes(self, t):
+        low = t / 2.
+        high = 1. - low
+        thresholds = []
+        for i in range(self.n_classes):
+            idx = np.where(self.y_train_ == i)[0]
+            if len(idx) == 0:
+                print('Class {:d} has no training samples!'.format(i))
+                continue
+            x_subset = self.X_train_[idx]
+            thresholds.append(np.quantile(x_subset, [low, high], axis=0))
+        return np.array(thresholds, dtype=self.dtype_)
 
 
 class ReliabilityStage:
@@ -159,14 +176,14 @@ class ReliabilityStage:
     k : int, default=10
         Number of neighbours required for each sample.
 
-    quantile : float, default=0.99
-        Quantile to compute, which must be between 0 and 1 inclusive.
+    fpr : float, default=0.001
+        Determines the False Positive Rate in the validation set.
     """
 
-    def __init__(self, n_classes=10, k=10, quantile=0.999, verbose=True):
+    def __init__(self, n_classes=10, k=10, fpr=0.001, verbose=True):
         self.n_classes = n_classes
         self.k = k
-        self.quantile = quantile
+        self.fpr = fpr
         self.verbose = verbose
 
         self.trees_ = []
@@ -215,6 +232,7 @@ class ReliabilityStage:
             Target adversarial labels. 1 is adversarial example, 0 is benign.
         """
         X = flatten(X)
+        quantile = 1 - self.fpr
         for i in trange(self.n_classes, desc='Reliability', disable=not self.verbose):
             idx = np.where(np.logical_and(y == i, labels_adv == 0))[0]
             if len(idx) == 0:
@@ -224,7 +242,7 @@ class ReliabilityStage:
             tree = self.trees_[i]
             dist, _ = tree.query(x_subset, k=self.k)
             avg_dist = np.sum(dist, axis=1) / self.k
-            self.thresholds_[i] = np.quantile(avg_dist, self.quantile, axis=0)
+            self.thresholds_[i] = np.quantile(avg_dist, quantile, axis=0)
 
     def predict(self, X, y):
         """Detect adversarial examples for samples in X.
@@ -307,14 +325,14 @@ class DecidabilityStage:
     k : int, default=100
         Number of neighbours required for each sample.
 
-    quantile : float, default=0.99
-        Quantile to compute, which must be between 0 and 1 inclusive.
+    fpr : float, default=0.001
+        Determines the False Positive Rate in the validation set.
     """
 
-    def __init__(self, n_classes=10, k=100, quantile=0.999, verbose=True):
+    def __init__(self, n_classes=10, k=100, fpr=0.001, verbose=True):
         self.n_classes = n_classes
         self.k = k
-        self.quantile = quantile
+        self.fpr = fpr
         self.verbose = verbose
 
         self.likelihoods_mean_ = np.zeros((n_classes, n_classes), dtype=np.float)
@@ -354,6 +372,7 @@ class DecidabilityStage:
         labels_adv : array-like of shape (n_samples, )
             Target adversarial labels. 1 is adversarial example, 0 is benign.
         """
+        quantile = 1 - self.fpr
         X = flatten(X)
         for i in trange(self.n_classes, desc='Decidability', disable=not self.verbose):
             idx = np.where(np.logical_and(y == i, labels_adv == 0))[0]
@@ -364,7 +383,7 @@ class DecidabilityStage:
             x_sub = X[idx]
             y_sub = y[idx]
             likelihood = self.__get_likelihoods(x_sub, y_sub)
-            self.thresholds_[i] = np.quantile(likelihood, 1 - self.quantile, axis=0)
+            self.thresholds_[i] = np.quantile(likelihood, 1 - quantile, axis=0)
 
     def predict(self, X, y):
         """Detect adversarial examples for samples in X.
@@ -524,15 +543,15 @@ class BAARDOperator:
 
     def save(self, path):
         thresholds = []
-        quantiles = np.zeros(3, dtype=np.float)
+        fprs = np.zeros(3, dtype=np.float)
         ks = np.zeros(3, dtype=np.long)
         for i, stage in enumerate(self.stages):
             thresholds.append(stage.thresholds_)
             ks[i] = stage.k
-            quantiles[i] = stage.quantile
+            fprs[i] = stage.fpr
         obj = {
             'thresholds': thresholds,
-            'quantiles': quantiles,
+            'fprs': fprs,
             'ks': ks,
             'n_tolerance': self.stages[0].n_tolerance_}
         torch.save(obj, path)
@@ -542,7 +561,7 @@ class BAARDOperator:
         obj = torch.load(path)
         for i in range(len(self.stages)):
             self.stages[i].thresholds_ = obj['thresholds'][i]
-            self.stages[i].quantile = obj['quantiles'][i]
+            self.stages[i].fpr = obj['fprs'][i]
             self.stages[i].k = obj['ks'][i]
         self.stages[0].n_tolerance_ = obj['n_tolerance']
         print('Load from:', path)

@@ -118,15 +118,15 @@ def get_defence(data_name, model_name, idx, X_train, y_train, X_val, y_val, baar
     print('Param:', baard_param)
     stages = []
     if sequence[0]:
-        s1 = ApplicabilityStage(n_classes=n_classes, quantile=baard_param['q1'], verbose=False)
+        s1 = ApplicabilityStage(n_classes=n_classes, fpr=baard_param['fpr1'], verbose=False)
         s1.fit(X_train_s1, y_train)
         stages.append(s1)
     if sequence[1]:
-        s2 = ReliabilityStage(n_classes=n_classes, k=baard_param['k_re'], quantile=baard_param['q2'], verbose=False)
+        s2 = ReliabilityStage(n_classes=n_classes, k=baard_param['k_re'], fpr=baard_param['fpr2'], verbose=False)
         s2.fit(X_train, y_train)
         stages.append(s2)
     if sequence[2]:
-        s3 = DecidabilityStage(n_classes=n_classes, k=baard_param['k_de'], quantile=baard_param['q3'], verbose=False)
+        s3 = DecidabilityStage(n_classes=n_classes, k=baard_param['k_de'], fpr=baard_param['fpr3'], verbose=False)
         s3.fit(X_train, y_train)
         stages.append(s3)
     print('BAARD stages:', len(stages))
@@ -317,5 +317,6 @@ if __name__ == '__main__':
     print('param:', param)
     sklearn_attack_against_baard(data, model_name, att, epsilons, idx, param)
 
-    # Testing
-    # sklearn_attack_against_baard('breastcancer', 'svm', 'fgsm', [0.2], 10, './params/baard_tune_1s.json', fresh_att=False, fresh_def=True)
+# # Testing
+# if __name__ == '__main__':
+#     sklearn_attack_against_baard('banknote', 'svm', 'fgsm', [0.2], 10, './params/baard_test.json', fresh_att=False, fresh_def=True)

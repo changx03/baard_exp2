@@ -4,5 +4,5 @@
     "fpr1": 0.001,
     "fpr2": 0.001,
     "fpr3": 0.001,
-    "sequence": [true, true, true]
+    "sequence": [true, false, false]
 }

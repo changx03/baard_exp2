@@ -10,13 +10,10 @@ import torch
 from art.attacks.evasion import (AutoProjectedGradientDescent,
                                  BasicIterativeMethod, BoundaryAttack,
                                  CarliniLInfMethod, DeepFool,
-                                 FastGradientMethod, SaliencyMapMethod,
-                                 ShadowAttack)
+                                 FastGradientMethod)
 from art.estimators.classification import PyTorchClassifier
-
 from attacks.carlini import CarliniWagnerAttackL2
 from attacks.line_attack import LineAttack
-from attacks.watermark import WaterMarkAttack
 
 
 def get_advx_untargeted(model, data_name, att_name, eps, device, X, y=None, batch_size=128):
@@ -48,16 +45,8 @@ def get_advx_untargeted(model, data_name, att_name, eps, device, X, y=None, batc
             eps_step=eps_step,
             max_iter=1000,
             batch_size=batch_size,
-            targeted=False)
-    elif att_name == 'apgd1':
-        attack = AutoProjectedGradientDescent(
-            estimator=classifier,
-            norm=1,
-            eps=eps,
-            eps_step=0.1,
-            max_iter=1000,
-            batch_size=batch_size,
-            targeted=False)
+            targeted=False,
+            verbose=False)
     elif att_name == 'apgd2':
         attack = AutoProjectedGradientDescent(
             estimator=classifier,
@@ -66,7 +55,8 @@ def get_advx_untargeted(model, data_name, att_name, eps, device, X, y=None, batc
             eps_step=0.1,
             max_iter=1000,
             batch_size=batch_size,
-            targeted=False)
+            targeted=False,
+            verbose=False)
     elif att_name == 'bim':
         eps_step = eps / 10.0
         attack = BasicIterativeMethod(
@@ -81,37 +71,35 @@ def get_advx_untargeted(model, data_name, att_name, eps, device, X, y=None, batc
             estimator=classifier,
             max_iter=1000,
             sample_size=batch_size,
-            targeted=False)
+            targeted=False,
+            verbose=False)
     elif att_name == 'cw2':
         attack = CarliniWagnerAttackL2(
-            model=classifier._model,
+            model=classifier._model._model,
             n_classes=n_classes,
             confidence=eps,
-            verbose=True,
             check_prob=False,
             batch_size=batch_size,
-            targeted=False)
+            targeted=False,
+            verbose=False)
     elif att_name == 'cwinf':
         attack = CarliniLInfMethod(
             classifier=classifier,
             confidence=eps,
             max_iter=1000,
             batch_size=batch_size,
-            targeted=False)
+            targeted=False,
+            verbose=False)
     elif att_name == 'deepfool':
         attack = DeepFool(
             classifier=classifier,
             epsilon=eps,
-            batch_size=batch_size)
+            batch_size=batch_size,
+            verbose=False)
     elif att_name == 'fgsm':
         attack = FastGradientMethod(
             estimator=classifier,
             eps=eps,
-            batch_size=batch_size)
-    elif att_name == 'jsma':
-        attack = SaliencyMapMethod(
-            classifier=classifier,
-            gamma=eps,
             batch_size=batch_size)
     elif att_name == 'line':
         if data_name == 'mnist':
@@ -121,19 +109,6 @@ def get_advx_untargeted(model, data_name, att_name, eps, device, X, y=None, batc
         else:
             raise NotImplementedError
         attack = LineAttack(color=color, thickness=1)
-    elif att_name == 'shadow':
-        attack = ShadowAttack(
-            estimator=classifier,
-            batch_size=batch_size,
-            targeted=False,
-            verbose=False)
-    elif att_name == 'watermark':
-        attack = WaterMarkAttack(
-            eps=eps,
-            n_classes=n_classes,
-            x_min=0.0,
-            x_max=1.0,
-            targeted=False)
     else:
         raise NotImplementedError
 

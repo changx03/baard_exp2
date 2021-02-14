@@ -1,7 +1,7 @@
 {
     "k_re": 10,
     "k_de": 100,
-    "fpr1": 0.001,
+    "fpr1": 0.01,
     "fpr2": 0.01,
     "fpr3": 0.01,
     "sequence": [true, false, false]

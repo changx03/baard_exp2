@@ -7,7 +7,5 @@ ATTACKS = [
     'cwinf',
     'deepfool',
     'fgsm',
-    'jsma',
     'line',
-    'watermark'
 ]

@@ -72,10 +72,14 @@ class ApplicabilityStage:
         for t in candidates:
             thresholds = self.__search_boundingboxes(t)
             rejected = self.predict_prob(X, y, thresholds)
-            fpr_eval = np.mean(rejected)
+            fpr_eval = np.mean(rejected > 0)
             if fpr_eval <= self.fpr:
+                thresholds = self.__search_boundingboxes(t + 0.001)
                 break
+        print('[BAARD] s1 final t:', t)
         self.thresholds_ = thresholds
+        pred = self.predict_prob(X, y) > 0
+        print('[BAARD] s1 eval. fpr (only thresholds):', np.mean(pred == 1))
 
         # Second, find tolerance.
         fpr = self.fpr
@@ -83,6 +87,11 @@ class ApplicabilityStage:
         for i in range(self.n_classes):
             idx = np.where(y == i)[0]
             self.n_tolerance_[i] = np.quantile(n_outs[idx], 1 - fpr)
+        print('[BAARD] s1 tolerance:', self.n_tolerance_)
+
+        # Show FPR on validation set
+        pred = self.predict(X, y)
+        print('[BAARD] s1 eval. fpr (thresholds + tolerance):', np.mean(pred == 1))
 
     def predict(self, X, y):
         """Detects outliers.
@@ -231,10 +240,15 @@ class ReliabilityStage:
         labels_adv : array-like of shape (n_samples, )
             Target adversarial labels. 1 is adversarial example, 0 is benign.
         """
+        # Only uses bengin samples.
+        idx = np.where(labels_adv == 0)[0]
+        X = X[idx]
         X = flatten(X)
-        quantile = 1 - self.fpr
+        y = y[idx]
+
+        quantile = 1. - self.fpr
         for i in trange(self.n_classes, desc='Reliability', disable=not self.verbose):
-            idx = np.where(np.logical_and(y == i, labels_adv == 0))[0]
+            idx = np.where(y == i)[0]
             if len(idx) == 0:
                 print('Class {:d} has no training samples!'.format(i))
                 continue
@@ -243,6 +257,10 @@ class ReliabilityStage:
             dist, _ = tree.query(x_subset, k=self.k)
             avg_dist = np.sum(dist, axis=1) / self.k
             self.thresholds_[i] = np.quantile(avg_dist, quantile, axis=0)
+
+        # Show FPR on validation set
+        pred = self.predict(X, y)
+        print('[BAARD] s2 eval. fpr:', np.mean(pred == 1))
 
     def predict(self, X, y):
         """Detect adversarial examples for samples in X.
@@ -372,10 +390,14 @@ class DecidabilityStage:
         labels_adv : array-like of shape (n_samples, )
             Target adversarial labels. 1 is adversarial example, 0 is benign.
         """
-        quantile = 1 - self.fpr
+        # Only uses bengin samples.
+        idx = np.where(labels_adv == 0)[0]
+        X = X[idx]
         X = flatten(X)
+        y = y[idx]
+
         for i in trange(self.n_classes, desc='Decidability', disable=not self.verbose):
-            idx = np.where(np.logical_and(y == i, labels_adv == 0))[0]
+            idx = np.where(y == i)[0]
             n = len(idx)
             if n == 0:
                 print('Class {:d} has no training samples!'.format(i))
@@ -383,7 +405,11 @@ class DecidabilityStage:
             x_sub = X[idx]
             y_sub = y[idx]
             likelihood = self.__get_likelihoods(x_sub, y_sub)
-            self.thresholds_[i] = np.quantile(likelihood, 1 - quantile, axis=0)
+            self.thresholds_[i] = np.quantile(likelihood, self.fpr, axis=0)
+
+        # Show FPR on validation set
+        pred = self.predict(X, y)
+        print('[BAARD] s3 eval. fpr:', np.mean(pred == 1))
 
     def predict(self, X, y):
         """Detect adversarial examples for samples in X.

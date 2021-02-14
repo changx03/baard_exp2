@@ -14,7 +14,7 @@ from models.mnist import BaseModel
 from models.torch_util import train, validate
 
 
-def train_model(data, model_name, dataset_train, dataset_test, epochs, device, file_model):
+def train_model(data, model_name, dataset_train, dataset_test, epochs, device, file_model, use_prob=False):
     dataloader_train = DataLoader(dataset_train, batch_size=128, shuffle=True)
     dataloader_test = DataLoader(dataset_test, batch_size=128, shuffle=False)
     print('Train set: {}, Test set: {}'.format(len(dataset_train), len(dataset_test)))
@@ -23,11 +23,11 @@ def train_model(data, model_name, dataset_train, dataset_test, epochs, device, f
     print('Device: {}'.format(device))
 
     if data == 'mnist':
-        model = BaseModel(use_prob=True).to(device)
+        model = BaseModel(use_prob=use_prob).to(device)
     elif data == 'cifar10' and model_name == 'resnet':
-        model = Resnet(use_prob=True).to(device)
+        model = Resnet(use_prob=use_prob).to(device)
     elif data == 'cifar10' and model_name == 'vgg':
-        model = Vgg(use_prob=True).to(device)
+        model = Vgg(use_prob=use_prob).to(device)
     else:
         raise NotImplementedError
 

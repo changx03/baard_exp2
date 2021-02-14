@@ -182,27 +182,29 @@ def pytorch_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
 
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
-    # parser.add_argument('-m', '--model', type=str, default='svm', choices=['svm', 'tree'])
-    # parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
-    # parser.add_argument('-a', '--attack', type=str, default='fgsm', choices=ATTACKS)
-    # parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
-    # parser.add_argument('-p', '--param', type=str, required=True, default=os.pah.join('params', 'baard_num_3.json'))
-    # args = parser.parse_args()
-    # print('args:', args)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
+    parser.add_argument('-m', '--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
+    parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
+    parser.add_argument('-a', '--attack', type=str, default='fgsm', choices=ATTACKS)
+    parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
+    parser.add_argument('-p', '--param', type=str, required=True)
+    args = parser.parse_args()
+    print('args:', args)
 
-    # idx = args.idx
-    # data = args.data
-    # model_name = args.model
-    # att = args.attack
-    # epsilons = args.eps
-    # seed = SEEDS[args.idx]
-    # print('data:', data)
-    # print('model_name:', model_name)
-    # print('attack:', att)
-    # print('epsilons:', epsilons)
-    # print('seed:', seed)
-    # pytorch_attack_against_baard(data, model_name, att, epsilons, idx)
+    idx = args.idx
+    data = args.data
+    model_name = args.model
+    att = args.attack
+    epsilons = args.eps
+    seed = SEEDS[args.idx]
+    print('data:', data)
+    print('model_name:', model_name)
+    print('attack:', att)
+    print('epsilons:', epsilons)
+    print('seed:', seed)
+    pytorch_attack_against_baard(data, model_name, att, epsilons, idx)
 
-    pytorch_attack_against_baard('mnist', 'dnn', 'fgsm', [0.3], 10, './params/baard_mnist_3.json', fresh_att=False, fresh_def=False)
+# # Testing
+# if __name__ == '__main__':
+#     pytorch_attack_against_baard('mnist', 'dnn', 'fgsm', [0.3], 10, './params/baard_mnist_3.json', fresh_att=False, fresh_def=False)

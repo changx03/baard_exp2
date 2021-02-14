@@ -4,11 +4,11 @@ import sys
 sys.path.append(os.getcwd())
 print(*sys.path, sep='\n')
 
-from experiments import sklearn_attack_against_rc
+from experiments.sklearn_attack_against_rc import sklearn_attack_against_rc
 
 
 def main():
-    eps = [0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4]
+    eps = [0.05, 0.1, 0.3, 0.6, 1.0, 1.5, 2.0]
     attacks = ['fgsm', 'bim']
     for i in range(5):
         for d in ['banknote', 'breastcancer', 'htru2']:

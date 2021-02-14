@@ -69,10 +69,6 @@ def get_attack(att_name, classifier, eps=None):
     return attack
 
 
-def get_defence():
-    return None
-
-
 def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_att=False, fresh_def=True):
     seed = SEEDS[idx]
     set_seeds(seed)
@@ -260,5 +256,6 @@ if __name__ == '__main__':
     print('seed:', seed)
     sklearn_attack_against_rc(data, model_name, att, epsilons, idx)
 
-# python3 ./run_exp/sklearn_attack_against_rc.py -d banknote -m svm -i 0 -a fgsm -e 0.1 0.2
-# python3 ./run_exp/sklearn_attack_against_rc.py -d banknote -m tree -i 0 -a tree
+# # Testing
+# if __name__ == '__main__':
+#     sklearn_attack_against_rc('banknote', 'svm', 'fgsm', ['0.2'], 10)

@@ -4,7 +4,7 @@ import sys
 sys.path.append(os.getcwd())
 print(*sys.path, sep='\n')
 
-from experiments import sklearn_attack_against_rc
+from experiments.sklearn_attack_against_rc import sklearn_attack_against_rc
 
 MODEL = 'tree'
 

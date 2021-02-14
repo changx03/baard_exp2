@@ -4,7 +4,7 @@ import sys
 sys.path.append(os.getcwd())
 print(*sys.path, sep='\n')
 
-from experiments import sklearn_attack_against_baard
+from experiments.sklearn_attack_against_baard import sklearn_attack_against_baard
 
 MODEL = 'tree'
 

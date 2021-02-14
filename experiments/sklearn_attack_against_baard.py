@@ -6,24 +6,22 @@ LIB_PATH = os.getcwd() + "/art_library"
 sys.path.append(LIB_PATH)
 
 import argparse
-import datetime
 import json
-import time
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import torch
 from art.attacks.evasion import (BasicIterativeMethod, BoundaryAttack,
                                  DecisionTreeAttack, FastGradientMethod)
 from art.estimators.classification import SklearnClassifier
-from defences import (ApplicabilityStage, BAARDOperator, DecidabilityStage,
-                      ReliabilityStage)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 from sklearn.tree import ExtraTreeClassifier
-from utils import acc_on_advx, load_csv, set_seeds
+from utils import (acc_on_advx, get_correct_examples_sklearn, load_csv,
+                   set_seeds)
+
+from experiments import get_baard, get_output_path
 
 ATTACKS = ['bim', 'fgsm', 'boundary', 'tree']
 DATA_PATH = 'data'
@@ -34,11 +32,6 @@ with open('SEEDS') as f:
 BATCH_SIZE = 128
 N_SAMPLES = 2000
 DEF_NAME = 'baard'
-
-
-def get_output_path(i, data, model_name):
-    return os.path.join('results', 'result_' + str(i), '{}_{}'.format(
-        data, model_name))
 
 
 def get_attack(att_name, classifier, eps=None):
@@ -71,78 +64,6 @@ def get_attack(att_name, classifier, eps=None):
     return attack
 
 
-def get_correct_examples_sklearn(estimator, X, y):
-    pred = estimator.predict(X)
-    idx = np.where(pred == y)[0]
-    return X[idx], y[idx]
-
-
-def preprocess_baard(X, std=1., eps=0.025):
-    X_noisy = X + eps * np.random.normal(0, std, size=X.shape)
-    return X_noisy
-
-
-def get_defence(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_param, restart):
-    # Prepare training data
-    path_results = get_output_path(idx, data_name, model_name)
-
-    file_baard_train = os.path.join(path_results, 'data', '{}_{}_baard_s1_train_data.pt'.format(data_name, model_name))
-    if os.path.exists(file_baard_train):
-        print('Found existing BAARD preprocess data:', file_baard_train)
-        obj = torch.load(file_baard_train)
-        X_train_s1 = obj['X_s1']
-        X_train = obj['X']
-        y_train = obj['y']
-    else:
-        X_train_s1 = preprocess_baard(X_train)
-        obj = {
-            'X_s1': X_train_s1,
-            'X': X_train,
-            'y': y_train
-        }
-        torch.save(obj, file_baard_train)
-        print('Save to:', file_baard_train)
-    assert X_train_s1.shape == X_train.shape
-    print('X_train_s1', X_train_s1.shape)
-    n_classes = len(np.unique(y_train))
-    print('n_classes:', n_classes)
-
-    # Load each stage
-    with open(baard_param) as j:
-        baard_param = json.load(j)
-        sequence = baard_param['sequence']
-        path_param_backup = os.path.join(path_results, 'results', '{}_{}_baard_{}.json'.format(data_name, model_name, np.sum(sequence)))
-        json.dump(baard_param, open(path_param_backup, 'w'))
-        print('Save to:', path_param_backup)
-    print('Param:', baard_param)
-    stages = []
-    if sequence[0]:
-        s1 = ApplicabilityStage(n_classes=n_classes, fpr=baard_param['fpr1'], verbose=False)
-        s1.fit(X_train_s1, y_train)
-        stages.append(s1)
-    if sequence[1]:
-        s2 = ReliabilityStage(n_classes=n_classes, k=baard_param['k_re'], fpr=baard_param['fpr2'], verbose=False)
-        s2.fit(X_train, y_train)
-        stages.append(s2)
-    if sequence[2]:
-        s3 = DecidabilityStage(n_classes=n_classes, k=baard_param['k_de'], fpr=baard_param['fpr3'], verbose=False)
-        s3.fit(X_train, y_train)
-        stages.append(s3)
-    print('BAARD stages:', len(stages))
-    detector = BAARDOperator(stages=stages)
-
-    # Set thresholds
-    file_baard_threshold = os.path.join(path_results, 'data', '{}_{}_baard_threshold_{}.pt'.format(data_name, model_name, len(stages)))
-    if os.path.exists(file_baard_threshold) and not restart:
-        print('Found existing BAARD thresholds:', file_baard_threshold)
-        detector.load(file_baard_threshold)
-    else:
-        # Search thresholds
-        detector.search_thresholds(X_val, y_val, np.zeros_like(y_val))
-        detector.save(file_baard_threshold)
-    return detector
-
-
 def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baard_param, fresh_att=False, fresh_def=True):
     seed = SEEDS[idx]
     set_seeds(seed)
@@ -166,7 +87,6 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     scaler = MinMaxScaler().fit(X)
     X = scaler.transform(X)
 
-    path_results = get_output_path(idx, data_name, model_name)
     path_X_train = os.path.join(path_results, 'data', '{}_{}_X_train.npy'.format(data_name, model_name))
     if os.path.exists(path_X_train):
         print('Found existing data:', path_X_train)
@@ -220,7 +140,7 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     print('Start training BAARD...')
     X_train, y_train = get_correct_examples_sklearn(model, X_train, y_train)
     print('Correct train set:', X_train.shape, y_train.shape)
-    detector = get_defence(
+    detector = get_baard(
         data_name=data_name,
         model_name=model_name,
         idx=idx,
@@ -257,7 +177,7 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
 
             # Preform defence
             labelled_as_adv = detector.detect(adv, y_att)
-            pred_adv = model.predict(X_att)
+            pred_adv = model.predict(adv)
             acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
             print('acc_on_adv:', acc)
 

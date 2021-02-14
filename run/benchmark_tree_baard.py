@@ -28,4 +28,4 @@ if __name__ == '__main__':
     main()
 
 # Example: Running from terminal
-# nohup python3 ./run/benchmark_tree.py > ./log/benchmark_tree.out 2> ./log/benchmark_tree.err & tail -f ./log/benchmark_tree.out
+# nohup python3 ./run/benchmark_tree_baard.py > ./log/benchmark_tree_baard.out 2> ./log/benchmark_tree_baard.err & tail -f ./log/benchmark_tree_baard.out

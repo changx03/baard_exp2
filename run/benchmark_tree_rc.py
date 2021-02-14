@@ -27,4 +27,4 @@ if __name__ == '__main__':
     main()
 
 # Example: Running from terminal
-# nohup python3 ./run/benchmark_tree.py > ./log/benchmark_tree.out 2> ./log/benchmark_tree.err & tail -f ./log/benchmark_tree.out
+# nohup python3 ./run/benchmark_tree_rc.py > ./log/benchmark_tree_rc.out 2> ./log/benchmark_tree_rc.err & tail -f ./log/benchmark_tree_rc.out

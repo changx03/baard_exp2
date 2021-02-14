@@ -297,7 +297,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
     parser.add_argument('-a', '--attack', type=str, default='fgsm', choices=ATTACKS)
     parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
-    parser.add_argument('-p', '--param', type=str, required=True, default=os.pah.join('params', 'baard_tune_3s.json'))
+    parser.add_argument('-p', '--param', type=str, required=True, default=os.pah.join('params', 'baard_num_3.json'))
     args = parser.parse_args()
     print('args:', args)
 

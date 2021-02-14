@@ -8,7 +8,7 @@ from experiments import sklearn_attack_against_baard
 
 params = []
 for i in range(1, 4):
-    path = os.path.join('params', 'baard_tune_{}s.json'.format(i))
+    path = os.path.join('params', 'baard_num_{}.json'.format(i))
     params.append(path)
 
 

@@ -11,8 +11,8 @@ def run_mnist(i):
     data = 'mnist'
     model = 'dnn'
     params = []
-    for i in range(1, 4):
-        path = os.path.join('params', 'baard_mnist_{}.json'.format(i))
+    for j in range(1, 4):
+        path = os.path.join('params', 'baard_mnist_{}.json'.format(j))
         params.append(path)
 
     eps = [0.063, 0.1, 0.3, 0.6, 1.0, 1.5, 2.0]
@@ -51,8 +51,8 @@ def run_cifar10_resnet(i):
     data = 'cifar10'
     model = 'resnet'
     params = []
-    for i in range(1, 4):
-        path = os.path.join('params', 'baard_mnist_{}.json'.format(i))
+    for j in range(1, 4):
+        path = os.path.join('params', 'baard_cifar10_{}.json'.format(j))
         params.append(path)
 
     eps = [0.031, 0.1, 0.3, 0.6, 1.0, 1.5, 2.0]
@@ -63,11 +63,6 @@ def run_cifar10_resnet(i):
 
     eps = [1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
     att = 'apgd2'
-    for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
-
-    eps = [0.]
-    att = 'boundary'
     for p in params:
         pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
@@ -91,8 +86,8 @@ def run_cifar10_vgg(i):
     data = 'cifar10'
     model = 'vgg'
     params = []
-    for i in range(1, 4):
-        path = os.path.join('params', 'baard_mnist_{}.json'.format(i))
+    for j in range(1, 4):
+        path = os.path.join('params', 'baard_cifar10_{}.json'.format(j))
         params.append(path)
 
     eps = [0.031, 0.1, 0.3, 0.6, 1.0, 1.5, 2.0]
@@ -103,11 +98,6 @@ def run_cifar10_vgg(i):
 
     eps = [1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
     att = 'apgd2'
-    for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
-
-    eps = [0.]
-    att = 'boundary'
     for p in params:
         pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 

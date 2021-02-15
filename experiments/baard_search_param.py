@@ -162,7 +162,7 @@ def pytorch_baard_search_param(data_name, model_name, att, eps):
         y_train = obj['y']
     else:
         if data_name in ['mnist', 'cifar10']:
-            X_train_s1 = preprocess_baard_img(torch.from_numpy(X_train))
+            X_train_s1 = preprocess_baard_img(data_name, torch.from_numpy(X_train))
             X_train_s1 = X_train_s1.cpu().detach().numpy()
         else:
             X_train_s1 = preprocess_baard_numpy(X_train)
@@ -254,37 +254,37 @@ def pytorch_baard_search_param(data_name, model_name, att, eps):
     print()
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
-    parser.add_argument('-m', '--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
-    parser.add_argument('-a', '--attack', type=str, default='fgsm', choices=ATTACKS)
-    parser.add_argument('-e', '--eps', type=float, default=0.3, required=True)
-    args = parser.parse_args()
-    print('args:', args)
+# if __name__ == '__main__':
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
+#     parser.add_argument('-m', '--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
+#     parser.add_argument('-a', '--attack', type=str, default='fgsm', choices=ATTACKS)
+#     parser.add_argument('-e', '--eps', type=float, default=0.3, required=True)
+#     args = parser.parse_args()
+#     print('args:', args)
 
-    seed = SEEDS[args.idx]
-    data = args.data
-    model_name = args.model
-    att = args.attack
-    eps = args.eps
-    print('seed:', seed)
-    print('data:', data)
-    print('model_name:', model_name)
-    print('attack:', att)
-    print('eps:', eps)
-    pytorch_baard_search_param(data, model_name, att, eps)
+#     seed = SEEDS[args.idx]
+#     data = args.data
+#     model_name = args.model
+#     att = args.attack
+#     eps = args.eps
+#     print('seed:', seed)
+#     print('data:', data)
+#     print('model_name:', model_name)
+#     print('attack:', att)
+#     print('eps:', eps)
+#     pytorch_baard_search_param(data, model_name, att, eps)
 
 
 # # Testing
-# if __name__ == '__main__':
+if __name__ == '__main__':
 #     pytorch_baard_search_param('mnist', 'dnn', 'apgd', 0.3)
 #     pytorch_baard_search_param('mnist', 'dnn', 'apgd2', 2.)
-#     pytorch_baard_search_param('cifar10', 'resnet', 'apgd', 0.3)
-#     pytorch_baard_search_param('cifar10', 'resnet', 'apgd2', 2.)
-#     pytorch_baard_search_param('banknote', 'dnn', 'apgd', 0.3)
-#     pytorch_baard_search_param('banknote', 'dnn', 'apgd2', 2.)
-#     pytorch_baard_search_param('breastcancer', 'dnn', 'apgd', 0.3)
-#     pytorch_baard_search_param('breastcancer', 'dnn', 'apgd2', 2.)
-#     pytorch_baard_search_param('htru2', 'dnn', 'apgd', 0.3)
-#     pytorch_baard_search_param('htru2', 'dnn', 'apgd2', 2.)
+    pytorch_baard_search_param('cifar10', 'resnet', 'apgd', 0.3)
+    pytorch_baard_search_param('cifar10', 'resnet', 'apgd2', 2.)
+    pytorch_baard_search_param('banknote', 'dnn', 'apgd', 0.3)
+    pytorch_baard_search_param('banknote', 'dnn', 'apgd2', 2.)
+    pytorch_baard_search_param('breastcancer', 'dnn', 'apgd', 0.3)
+    pytorch_baard_search_param('breastcancer', 'dnn', 'apgd2', 2.)
+    pytorch_baard_search_param('htru2', 'dnn', 'apgd', 0.3)
+    pytorch_baard_search_param('htru2', 'dnn', 'apgd2', 2.)

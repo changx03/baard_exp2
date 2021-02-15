@@ -8,9 +8,9 @@ sys.path.append(os.getcwd())
 from models import AddGaussianNoise
 
 
-def preprocess_baard_img(data, tensor_X):
+def preprocess_baard_img(data_name, tensor_X):
     """Preprocess training data"""
-    if data == 'cifar10':
+    if data_name == 'cifar10':
         # return tensor_X
         transform = tv.transforms.Compose([
             tv.transforms.RandomHorizontalFlip(),
@@ -18,7 +18,7 @@ def preprocess_baard_img(data, tensor_X):
             AddGaussianNoise(mean=0., std=1., eps=0.02)
         ])
         return transform(tensor_X)
-    elif data == 'mnist':
+    elif data_name == 'mnist':
         # return tensor_X
         transform = tv.transforms.Compose([
             tv.transforms.RandomRotation(5)

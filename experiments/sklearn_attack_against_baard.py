@@ -127,8 +127,6 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
         n = N_SAMPLES
     else:
         n = len(X_test)
-    # X_benign = X_test[:n]
-    # y_true = y_test[:n]
     n = n // 2
     print('n:', n)
     X_att = X_test[:n]

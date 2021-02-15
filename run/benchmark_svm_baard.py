@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 
@@ -12,20 +13,28 @@ for i in range(1, 4):
     params.append(path)
 
 
-def main():
+def run_inner(i):
     eps = [0.05, 0.1, 0.3, 0.6, 1.0, 1.5, 2.0]
     attacks = ['fgsm', 'bim']
-    for i in range(5):
-        for d in ['banknote', 'breastcancer', 'htru2']:
-            for a in attacks:
-                for p in params:
-                    sklearn_attack_against_baard(d, 'svm', a, epsilons=eps, idx=i, baard_param=p)
+    for d in ['banknote', 'breastcancer', 'htru2']:
+        for a in attacks:
             for p in params:
-                sklearn_attack_against_baard(d, 'svm', att='boundary', epsilons=[0], idx=i, baard_param=p)
+                sklearn_attack_against_baard(d, 'svm', a, epsilons=eps, idx=i, baard_param=p)
+        for p in params:
+            sklearn_attack_against_baard(d, 'svm', att='boundary', epsilons=[0], idx=i, baard_param=p)
+
+
+def run(n):
+    for i in range(n):
+        run_inner(i)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n', '--n_times', type=int, default=1)
+    args = parser.parse_args()
+    print('args:', args)
+    run(args.n_times)
 
 # Example: Running from terminal
-# nohup python3 ./run/benchmark_svm_baard.py > ./log/benchmark_svm_baard.out 2> ./log/benchmark_svm_baard.err & tail -f ./log/benchmark_svm_baard.out
+# nohup python3 ./run/benchmark_svm_baard.py -n 2 > ./log/benchmark_svm_baard.out 2> ./log/benchmark_svm_baard.err & tail -f ./log/benchmark_svm_baard.out

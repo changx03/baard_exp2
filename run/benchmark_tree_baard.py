@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 
@@ -14,18 +15,26 @@ for b in range(1, 4):
     params.append(path)
 
 
-def main():
+def run_inner(i):
     attacks = ['tree', 'boundary']
     datasets = ['banknote', 'breastcancer', 'htru2']
-    for i in range(5):
-        for d in datasets:
-            for a in attacks:
-                for p in params:
-                    sklearn_attack_against_baard(d, MODEL, a, epsilons=[0], idx=i, baard_param=p)
+    for d in datasets:
+        for a in attacks:
+            for p in params:
+                sklearn_attack_against_baard(d, MODEL, a, epsilons=[0], idx=i, baard_param=p)
+
+
+def run(n):
+    for i in range(n):
+        run_inner(i)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n', '--n_times', type=int, default=1)
+    args = parser.parse_args()
+    print('args:', args)
+    run(args.n_times)
 
 # Example: Running from terminal
-# nohup python3 ./run/benchmark_tree_baard.py > ./log/benchmark_tree_baard.out 2> ./log/benchmark_tree_baard.err & tail -f ./log/benchmark_tree_baard.out
+# nohup python3 ./run/benchmark_tree_baard.py -n 2 > ./log/benchmark_tree_baard.out 2> ./log/benchmark_tree_baard.err & tail -f ./log/benchmark_tree_baard.out

@@ -68,19 +68,11 @@ class ApplicabilityStage:
         y = y[idx]
 
         # First, find thresholds.
-        candidates = np.concatenate((np.arange(self.fpr, 0., -0.001), [0.]))
-        for t in candidates:
-            thresholds = self.__search_boundingboxes(t)
-            rejected = self.predict_prob(X, y, thresholds)
-            fpr_eval = np.mean(rejected > 0)
-            if fpr_eval <= self.fpr:
-                t += 0.001
-                thresholds = self.__search_boundingboxes(t)
-                break
-        # print('[BAARD] s1 final t:', t)
+        print('[BAARD] s1 self.fpr:', self.fpr)
+        thresholds = self.__search_boundingboxes(self.fpr)
         self.thresholds_ = thresholds
-        # pred = self.predict_prob(X, y) > 0
-        # print('[BAARD] s1 eval. fpr (only thresholds):', np.mean(pred == 1))
+        pred = self.predict_prob(X, y) > 0
+        print('[BAARD] s1 eval. fpr (only thresholds):', np.mean(pred == 1))
 
         # Second, find tolerance.
         fpr = self.fpr
@@ -88,11 +80,11 @@ class ApplicabilityStage:
         for i in range(self.n_classes):
             idx = np.where(y == i)[0]
             self.n_tolerance_[i] = np.quantile(n_outs[idx], 1 - fpr)
-        # print('[BAARD] s1 tolerance:', self.n_tolerance_)
+        print('[BAARD] s1 tolerance:', self.n_tolerance_)
 
         # Show FPR on validation set
-        # pred = self.predict(X, y)
-        # print('[BAARD] s1 eval. fpr (thresholds + tolerance):', np.mean(pred == 1))
+        pred = self.predict(X, y)
+        print('[BAARD] s1 eval. fpr (thresholds + tolerance):', np.mean(pred == 1))
 
     def predict(self, X, y):
         """Detects outliers.

@@ -5,6 +5,7 @@ sys.path.append(os.getcwd())
 LIB_PATH = os.getcwd() + "/art_library"
 sys.path.append(LIB_PATH)
 
+import json
 import numpy as np
 import torch
 from art.attacks.evasion import (AutoProjectedGradientDescent,
@@ -15,15 +16,15 @@ from art.estimators.classification import PyTorchClassifier
 from attacks.carlini import CarliniWagnerAttackL2
 from attacks.line_attack import LineAttack
 
+with open('metadata.json') as data_json:
+    METADATA = json.load(data_json)
+
 
 def get_advx_untargeted(model, data_name, att_name, eps, device, X, y=None, batch_size=128):
-    n_classes = 10
-    if data_name == 'mnist':
-        input_shape = (1, 28, 28)
-    elif data_name == 'cifar10':
-        input_shape = (3, 32, 32)
-    else:
-        raise NotImplementedError
+    n_classes = METADATA['data'][data_name]['n_classes']
+    n_features = METADATA['data'][data_name]['n_features']
+    input_shape = (n_features,) if isinstance(n_features, int) else tuple(n_features)
+
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
     device_type = 'cpu' if device == 'cpu' else 'gpu'
@@ -93,7 +94,7 @@ def get_advx_untargeted(model, data_name, att_name, eps, device, X, y=None, batc
     elif att_name == 'deepfool':
         attack = DeepFool(
             classifier=classifier,
-            epsilon=eps,
+            # epsilon=eps,
             batch_size=batch_size,
             verbose=False)
     elif att_name == 'fgsm':

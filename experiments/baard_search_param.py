@@ -24,6 +24,7 @@ from sklearn.metrics import roc_curve
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
 from utils import get_correct_examples, load_csv, set_seeds
 
 from experiments import (ATTACKS, get_advx_untargeted, get_output_path,
@@ -186,7 +187,7 @@ def pytorch_baard_search_param(data_name, model_name, att, eps):
     tpr1 = []
     fpr1 = []
     print('Training Stage 1')
-    for i in param1:
+    for i in tqdm(param1, desc='Stage 1'):
         s1.fpr = i
         s1.search_thresholds(X_val, y_val, np.zeros_like(y_val))
         output_adv = s1.predict(adv, pred_adv)
@@ -278,8 +279,8 @@ def pytorch_baard_search_param(data_name, model_name, att, eps):
 
 # # Testing
 if __name__ == '__main__':
-#     pytorch_baard_search_param('mnist', 'dnn', 'apgd', 0.3)
-#     pytorch_baard_search_param('mnist', 'dnn', 'apgd2', 2.)
+    #     pytorch_baard_search_param('mnist', 'dnn', 'apgd', 0.3)
+    #     pytorch_baard_search_param('mnist', 'dnn', 'apgd2', 2.)
     pytorch_baard_search_param('cifar10', 'resnet', 'apgd', 0.3)
     pytorch_baard_search_param('cifar10', 'resnet', 'apgd2', 2.)
     pytorch_baard_search_param('banknote', 'dnn', 'apgd', 0.3)

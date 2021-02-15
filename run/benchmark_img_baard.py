@@ -44,4 +44,4 @@ if __name__ == '__main__':
 #     pytorch_attack_against_baard('mnist', 'dnn', 'apgd', epsilons=[0.3], idx=0, baard_param='./params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
 
 # Example: Running from terminal
-# nohup python3 ./run/benchmark_img_baard.py > ./log/benchmark_img_baard.out 2> ./log/benchmark_img_baard.err & tail -f ./log/benchmark_img_baard.out
+# nohup python3 ./run/benchmark_img_baard.py -n 5 > ./log/benchmark_img_baard.out 2> ./log/benchmark_img_baard.err & tail -f ./log/benchmark_img_baard.out

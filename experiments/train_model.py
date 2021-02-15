@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import sys
 import time
@@ -11,24 +12,41 @@ from torch.utils.data import DataLoader
 sys.path.append(os.getcwd())
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
+from models.numeric import NumericModel
 from models.torch_util import train, validate
 
-EPOCHS = 200
+with open('metadata.json') as data_json:
+    METADATA = json.load(data_json)
 
 
-def train_model(data, model_name, dataset_train, dataset_test, device, file_model, use_prob=False, epochs=EPOCHS):
-    dataloader_train = DataLoader(dataset_train, batch_size=128, shuffle=True)
-    dataloader_test = DataLoader(dataset_test, batch_size=128, shuffle=False)
+def train_model(data_name,
+                model_name,
+                dataset_train,
+                dataset_test,
+                device,
+                file_model,
+                epochs=10,
+                batch_size=128):
+    dataloader_train = DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
+    dataloader_test = DataLoader(dataset_test, batch_size=batch_size, shuffle=True)
     print('[CLASSIFIER] Train set: {}, Test set: {}'.format(len(dataset_train), len(dataset_test)))
 
-    if data == 'mnist':
-        model = BaseModel(use_prob=use_prob).to(device)
-    elif data == 'cifar10' and model_name == 'resnet':
-        model = Resnet(use_prob=use_prob).to(device)
-    elif data == 'cifar10' and model_name == 'vgg':
-        model = Vgg(use_prob=use_prob).to(device)
+    if data_name == 'mnist':
+        model = BaseModel(use_prob=False).to(device)
+        model_temp = BaseModel(use_prob=False).to(device)
+    elif data_name == 'cifar10':
+        if model_name == 'resnet':
+            model = Resnet(use_prob=False).to(device)
+            model = Resnet(use_prob=False).to(device)
+        elif model_name == 'vgg':
+            model = Vgg(use_prob=False).to(device)
+        else:
+            raise NotImplementedError
     else:
-        raise NotImplementedError
+        n_features = METADATA['data'][data_name]['n_features']
+        n_hidden = n_features * 4
+        n_classes = METADATA['data'][data_name]['n_classes']
+        model = NumericModel(n_features=n_features, n_hidden=n_hidden, n_classes=n_classes, use_prob=False).to(device)
 
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
     loss = nn.CrossEntropyLoss()

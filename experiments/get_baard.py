@@ -14,11 +14,11 @@ from experiments.get_output_path import get_output_path
 
 
 def check_json_param(param1, param2):
-    assert param1['k_re'] == param2['k_re']
-    assert param1['k_de'] == param2['k_de']
-    assert param1['fpr1'] == param2['fpr1']
-    assert param1['fpr2'] == param2['fpr2']
-    assert param1['fpr3'] == param2['fpr3']
+    return (param1['k_re'] != param2['k_re'] or \
+        param1['k_de'] != param2['k_de'] or \
+        param1['fpr1'] != param2['fpr1'] or \
+        param1['fpr2'] != param2['fpr2'] or \
+        param1['fpr3'] != param2['fpr3'])
 
 
 def get_baard(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_param, restart):
@@ -56,9 +56,15 @@ def get_baard(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_
         sequence = baard_param['sequence']
         path_param_backup = os.path.join(path_results, 'results', '{}_{}_baard_{}.json'.format(data_name, model_name, np.sum(sequence)))
         if os.path.exists(path_param_backup):
-            with open(path_param_backup) as k:
-                param_saved = json.load(k)
-                check_json_param(baard_param, param_saved)
+            k = open(path_param_backup)
+            param_saved = json.load(k)
+            if check_json_param(baard_param, param_saved):
+                print('[DEFENCE] Do not match existing BAARD JSON params. Delete and save new JSON file.')
+                os.remove(path_param_backup)
+                json.dump(baard_param, open(path_param_backup, 'w'))
+                restart = True
+                print('[DEFENCE] Save to:', path_param_backup)
+            else:
                 print('[DEFENCE] Found existing BAARD params:', path_param_backup)
         else:
             json.dump(baard_param, open(path_param_backup, 'w'))

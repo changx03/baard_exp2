@@ -176,8 +176,8 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
             print('Acc without def:', acc_naked)
 
             # Preform defence
-            labelled_as_adv = detector.detect(adv, y_att)
             pred_adv = model.predict(adv)
+            labelled_as_adv = detector.detect(adv, pred_adv)
             acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
             print('acc_on_adv:', acc)
 

@@ -29,7 +29,8 @@ with open('metadata.json') as data_json:
     METADATA = json.load(data_json)
 with open('SEEDS') as f:
     SEEDS = [int(s) for s in f.read().split(',')]
-BATCH_SIZE = 128
+BATCH_SIZE = 192
+EPOCHS = 200
 N_SAMPLES = 2000
 DEF_NAME = 'baard'
 
@@ -73,7 +74,7 @@ def pytorch_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     file_model = os.path.join(path_results, 'data', '{}_{}_model.pt'.format(data_name, model_name))
     print('[CLASSIFIER] Start training {} model on {}...'.format(model_name, data_name))
     start = time.time()
-    model = train_model(data_name, model_name, dataset_train, dataset_test, device, file_model)
+    model = train_model(data_name, model_name, dataset_train, dataset_test, device, file_model, epochs=EPOCHS, batch_size=BATCH_SIZE)
     time_elapsed = time.time() - start
     print('[CLASSIFIER] Time spend on training classifier: {}'.format(str(datetime.timedelta(seconds=time_elapsed))))
 
@@ -152,7 +153,7 @@ def pytorch_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
             # Preform defence
             print('[DEFENCE] Start running BAARD...')
             start = time.time()
-            labelled_as_adv = detector.detect(adv, y_att)
+            labelled_as_adv = detector.detect(adv, pred_adv)
             labelled_benign_as_adv = detector.detect(X_att, y_att)
             time_elapsed = time.time() - start
             print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
@@ -214,12 +215,7 @@ if __name__ == '__main__':
 
 # # Testing
 # if __name__ == '__main__':
-#     pytorch_attack_against_baard('mnist', 'dnn', 'fgsm', [0.3], 10, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
 #     pytorch_attack_against_baard('mnist', 'dnn', 'apgd', [0.3], 10, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
 #     pytorch_attack_against_baard('mnist', 'dnn', 'apgd2', [2.0], 10, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
-#     pytorch_attack_against_baard('mnist', 'dnn', 'bim', [0.3], 10, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
-#     pytorch_attack_against_baard('mnist', 'dnn', 'boundary', [0.], 10, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
 #     pytorch_attack_against_baard('mnist', 'dnn', 'cw2', [0.], 10, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
 #     pytorch_attack_against_baard('mnist', 'dnn', 'cwinf', [10.], 10, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
-#     pytorch_attack_against_baard('mnist', 'dnn', 'deepfool', [1e-6], 10, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
-#     pytorch_attack_against_baard('mnist', 'dnn', 'line', [1.], 10, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)

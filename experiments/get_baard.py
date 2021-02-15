@@ -33,7 +33,7 @@ def get_baard(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_
         y_train = obj['y']
     else:
         if data_name in ['mnist', 'cifar10']:
-            X_train_s1 = preprocess_baard_img(torch.from_numpy(X_train))
+            X_train_s1 = preprocess_baard_img(data_name, torch.from_numpy(X_train))
             X_train_s1 = X_train_s1.cpu().detach().numpy()
         else:    
             X_train_s1 = preprocess_baard_numpy(X_train)

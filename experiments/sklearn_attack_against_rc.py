@@ -1,5 +1,6 @@
 """
-Evaluate Region-based Classifier against adversarial attacks on numeric datasets with SVM and Tree classifiers. 
+Evaluate Region-based Classifier against adversarial attacks on numeric datasets
+with SVM and Tree classifiers. 
 """
 import os
 import sys

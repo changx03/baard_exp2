@@ -1,5 +1,6 @@
 """
-Evaluate BAARD against adversarial attacks on numeric datasets with SVM and Tree classifiers. 
+Evaluate BAARD against adversarial attacks on numeric datasets with SVM and Tree
+classifiers. 
 """
 import os
 import sys

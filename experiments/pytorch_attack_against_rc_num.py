@@ -1,5 +1,6 @@
 """
-Evaluate Region-based Classifier against adversarial attacks on numeric datasets with PyTorch neural network classifiers.
+Evaluate Region-based Classifier against adversarial attacks on numeric datasets 
+with PyTorch neural network classifiers.
 """
 import os
 import sys

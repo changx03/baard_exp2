@@ -1,5 +1,6 @@
 """
-Evaluate BAARD against adversarial attacks on numeric datasets with PyTorch neural networks.
+Evaluate BAARD against adversarial attacks on numeric datasets with PyTorch 
+neural networks.
 """
 import os
 import sys

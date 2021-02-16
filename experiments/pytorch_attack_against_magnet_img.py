@@ -125,7 +125,7 @@ def get_magnet(data_name, model, X_train, y_train, X_val, device, path_results):
             path_magnet = os.path.join(path_results, 'data', '{}_magnet_{}.pt'.format(data_name, i))
             detector.load(path_magnet)
     else:
-        # Training autoencoders
+        print('[DEFENCE] Start training MagNet...')
         if data_name == 'mnist':
             detector1.fit(X_train, y_train, epochs=EPOCHS, verbose=0)
             detector2.fit(X_train, y_train, epochs=EPOCHS, verbose=0)
@@ -244,7 +244,6 @@ def pytorch_attack_against_magnet_img(data_name, model_name, att, epsilons, idx)
 
     ############################################################################
     # Step 4: Load detector
-    print('[DEFENCE] Start training MagNet...')
     detector = get_magnet(data_name, model, X_train, y_train, X_val, device, path_results)
 
     ############################################################################

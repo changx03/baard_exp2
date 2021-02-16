@@ -51,8 +51,8 @@ class AutoencoderNum1(nn.Module):
         self.n_out = round(n_features * 2. / 3.)
 
         self.ln1 = nn.Linear(n_features, self.n_hidden)
-        self.ln2 = nn.Linear(self.n_hidden, self.n_out)
-        self.ln3 = nn.Linear(self.n_out, self.n_hidden)
+        self.ln2 = nn.Linear(self.n_hidden, self.n_hidden)
+        self.ln3 = nn.Linear(self.n_hidden, self.n_hidden)
         self.ln4 = nn.Linear(self.n_hidden, n_features)
 
     def forward(self, x):
@@ -251,7 +251,7 @@ class MagNetDetector:
             scores = self.__get_js_divergence(
                 torch.from_numpy(X).type(torch.float32),
                 torch.from_numpy(X_ae).type(torch.float32))
-        index = int(np.round((1 - fp) * n))
+        index = int(np.floor((1 - fp) * n))
         threshold = np.sort(scores)[index]
         if update:
             self.threshold = threshold

@@ -73,42 +73,25 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
 
     path_results = get_output_path(idx, data_name, model_name)
     if not os.path.exists(path_results):
-        print('Output folder does not exist. Create:', path_results)
+        print('[DATA] Output folder does not exist. Create:', path_results)
         path = Path(os.path.join(path_results, 'data'))
-        print('Create folder:', path)
+        print('[DATA] Create folder:', path)
         path.mkdir(parents=True, exist_ok=True)
         path = Path(os.path.join(path_results, 'results'))
         path.mkdir(parents=True, exist_ok=True)
-        print('Create folder:', path)
+        print('[DATA] Create folder:', path)
 
     # Step 1 Load data
     data_path = os.path.join(DATA_PATH, METADATA['data'][data_name]['file_name'])
-    print('Read file: {}'.format(data_path))
+    print('[DATA] Read file: {}'.format(data_path))
+    n_test = METADATA['data'][data_name]['n_test']
     X, y = load_csv(data_path)
+    n_classes = len(np.unique(y))
 
     # Apply scaling
     scaler = MinMaxScaler().fit(X)
     X = scaler.transform(X)
-
-    path_X_train = os.path.join(path_results, 'data', '{}_{}_X_train.npy'.format(data_name, model_name))
-    if os.path.exists(path_X_train):
-        print('Found existing data:', path_X_train)
-        X_train = np.load(path_X_train)
-        X_test = np.load(os.path.join(path_results, 'data', '{}_{}_X_test.npy'.format(data_name, model_name)))
-        y_train = np.load(os.path.join(path_results, 'data', '{}_{}_y_tain.npy'.format(data_name, model_name)))
-        y_test = np.load(os.path.join(path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)))
-    else:
-        print('Cannot found:', path_X_train)
-        n_test = METADATA['data'][data_name]['n_test']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=n_test, random_state=seed)
-        np.save(path_X_train, X_train)
-        np.save(os.path.join(
-            path_results, 'data', '{}_{}_X_test.npy'.format(data_name, model_name)), X_test)
-        np.save(os.path.join(
-            path_results, 'data', '{}_{}_y_tain.npy'.format(data_name, model_name)), y_train)
-        np.save(os.path.join(
-            path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)), y_test)
-        print('Save to:', path_X_train)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=n_test, random_state=seed)
 
     ############################################################################
     # Step 2: Train model
@@ -121,12 +104,26 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     model.fit(X_train, y_train)
     acc_train = model.score(X_train, y_train)
     acc_test = model.score(X_test, y_test)
-    print(('Train Acc: {:.4f}, ' + 'Test Acc: {:.4f}').format(acc_train, acc_test))
+    print(('[CLASSIFIER] Train Acc: {:.4f}, ' + 'Test Acc: {:.4f}').format(acc_train, acc_test))
 
     ############################################################################
     # Step 3: Filter data
     # Get perfect subset
-    X_test, y_test = get_correct_examples_sklearn(model, X_test, y_test)
+    path_X_train = os.path.join(path_results, 'data', '{}_{}_X_train.npy'.format(data_name, model_name))
+    if os.path.exists(path_X_train):
+        print('[DATA] Found existing data:', path_X_train)
+        X_train = np.load(path_X_train)
+        y_train = np.load(os.path.join(path_results, 'data', '{}_{}_y_tain.npy'.format(data_name, model_name)))
+        X_test = np.load(os.path.join(path_results, 'data', '{}_{}_X_test.npy'.format(data_name, model_name)))
+        y_test = np.load(os.path.join(path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)))
+    else:
+        X_train, y_train = get_correct_examples_sklearn(model, X_train, y_train)
+        X_test, y_test = get_correct_examples_sklearn(model, X_test, y_test)
+        np.save(path_X_train, X_train)
+        np.save(os.path.join(path_results, 'data', '{}_{}_X_test.npy'.format(data_name, model_name)), X_test)
+        np.save(os.path.join(path_results, 'data', '{}_{}_y_tain.npy'.format(data_name, model_name)), y_train)
+        np.save(os.path.join(path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)), y_test)
+        print('[DATA] Save to:', path_X_train)
 
     # How many examples do we have?
     if len(X_test) > N_SAMPLES:
@@ -134,7 +131,7 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     else:
         n = len(X_test)
     n = n // 2
-    print('n:', n)
+    print('[DATA] n:', n)
     X_att = X_test[:n]
     y_att = y_test[:n]
     X_val = X_test[n:]
@@ -142,9 +139,8 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
 
     ############################################################################
     # Step 4: Load detector
-    print('Start training BAARD...')
-    X_train, y_train = get_correct_examples_sklearn(model, X_train, y_train)
-    print('Correct train set:', X_train.shape, y_train.shape)
+    print('[DEFENCE] Start training BAARD...')
+    print('[DEFENCE] Correct train set:', X_train.shape, y_train.shape)
     detector = get_baard(
         data_name=data_name,
         model_name=model_name,
@@ -172,25 +168,29 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
             attack = get_attack(att, classifier, e)
             path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
             if os.path.exists(path_adv) and not fresh_att:
-                print('Find:', path_adv)
+                print('[ATTACK] Find:', path_adv)
                 adv = np.load(path_adv)
             else:
                 adv = attack.generate(X_att)
                 np.save(path_adv, adv)
-                print('Save to', path_adv)
+                print('[ATTACK] Save to', path_adv)
 
             acc_naked = model.score(adv, y_att)
-            print('Acc without def:', acc_naked)
+            print('[ATTACK] Acc without def:', acc_naked)
 
             # Preform defence
             pred_adv = model.predict(adv)
             labelled_as_adv = detector.detect(adv, pred_adv)
             acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
-            print('acc_on_adv:', acc)
+            print('[DEFENCE] acc_on_adv:', acc)
 
-            labelled_benign_as_adv = detector.detect(X_att, y_att)
-            fpr = np.mean(labelled_benign_as_adv)
-            print('fpr:', fpr)
+            # NOTE: clean samples are the same set. Do not repeat.
+            if len(fprs) != 0:
+                fpr = fprs[0]
+            else:
+                labelled_benign_as_adv = detector.detect(X_att, y_att)
+                fpr = np.mean(labelled_benign_as_adv)
+            print('[DEFENCE] fpr:', fpr)
         except Exception as e:
             print(e)
             acc_naked = np.nan
@@ -222,7 +222,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
     parser.add_argument('-m', '--model', type=str, default='svm', choices=['svm', 'tree'])
     parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
-    parser.add_argument('-a', '--attack', type=str, default='fgsm', choices=ATTACKS)
+    parser.add_argument('-a', '--att', type=str, default='fgsm', choices=ATTACKS)
     parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
     parser.add_argument('-p', '--param', type=str, required=True, default=os.pah.join('params', 'baard_num_3.json'))
     args = parser.parse_args()
@@ -231,7 +231,7 @@ if __name__ == '__main__':
     idx = args.idx
     data = args.data
     model_name = args.model
-    att = args.attack
+    att = args.att
     epsilons = args.eps
     param = args.param
     print('data:', data)
@@ -243,4 +243,4 @@ if __name__ == '__main__':
     sklearn_attack_against_baard(data, model_name, att, epsilons, idx, param)
 
     # Testing
-    # sklearn_attack_against_baard('banknote', 'svm', 'fgsm', [0.2], 10, './params/baard_test.json', fresh_att=False, fresh_def=True)
+    # sklearn_attack_against_baard('banknote', 'svm', 'fgsm', [0.2], 0, './params/baard_num_3.json', fresh_att=False, fresh_def=True)

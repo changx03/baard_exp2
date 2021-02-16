@@ -126,6 +126,7 @@ def pytorch_train_classifier(data_name, model_name, idx):
     print('[CLASSIFIER] save to:', file_model)
 
     print()
+    return model
 
 
 if __name__ == '__main__':

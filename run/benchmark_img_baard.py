@@ -4,7 +4,8 @@ import sys
 
 sys.path.append(os.getcwd())
 
-from experiments.pytorch_attack_against_baard_img import pytorch_attack_against_baard
+from experiments.pytorch_attack_against_baard_img import \
+    pytorch_attack_against_baard_img
 
 
 def run_mnist(i):
@@ -19,32 +20,32 @@ def run_mnist(i):
     attacks = ['fgsm', 'apgd']
     for att in attacks:
         for p in params:
-            pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+            pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
     att = 'apgd2'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [0.]
     att = 'boundary'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [0.]
     att = 'deepfool'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [0., 5., 10.]
     att = 'cw2'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [1.]
     att = 'line'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
 
 def run_cifar10_resnet(i):
@@ -59,27 +60,27 @@ def run_cifar10_resnet(i):
     attacks = ['fgsm', 'apgd']
     for att in attacks:
         for p in params:
-            pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+            pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
     att = 'apgd2'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [0.]
     att = 'deepfool'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [0., 5., 10.]
     att = 'cw2'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [0., 1.]
     att = 'line'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
 
 def run_cifar10_vgg(i):
@@ -94,27 +95,27 @@ def run_cifar10_vgg(i):
     attacks = ['fgsm', 'apgd']
     for att in attacks:
         for p in params:
-            pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+            pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
     att = 'apgd2'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [0.]
     att = 'deepfool'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [0., 5., 10.]
     att = 'cw2'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
     eps = [0., 1.]
     att = 'line'
     for p in params:
-        pytorch_attack_against_baard(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p, fresh_att=False, fresh_def=True)
 
 
 def run(n):
@@ -131,9 +132,6 @@ if __name__ == '__main__':
     print('args:', args)
     run(args.n_times)
 
-# # Testing
-# if __name__ == '__main__':
-#     pytorch_attack_against_baard('mnist', 'dnn', 'apgd', epsilons=[0.3], idx=0, baard_param='./params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
 
 # Example: Running from terminal
 # nohup python3 ./run/benchmark_img_baard.py -n 2 > ./log/benchmark_img_baard.out 2> ./log/benchmark_img_baard.err & tail -f ./log/benchmark_img_baard.out

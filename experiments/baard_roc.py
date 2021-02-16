@@ -278,7 +278,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
     parser.add_argument('-m', '--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
-    parser.add_argument('-a', '--attack', type=str, default='fgsm', choices=ATTACKS)
+    parser.add_argument('-a', '--att', type=str, default='fgsm', choices=ATTACKS)
     parser.add_argument('-e', '--eps', type=float, default=0.3, required=True)
     args = parser.parse_args()
     print('args:', args)
@@ -286,7 +286,7 @@ if __name__ == '__main__':
     seed = SEEDS[0]
     data = args.data
     model_name = args.model
-    att = args.attack
+    att = args.att
     eps = args.eps
     print('seed:', seed)
     print('data:', data)

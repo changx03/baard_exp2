@@ -157,7 +157,7 @@ class ApplicabilityStage:
         for i in range(self.n_classes):
             idx = np.where(self.y_train_ == i)[0]
             if len(idx) == 0:
-                print('Class {:d} has no training samples!'.format(i))
+                print('[BAARD] Class {:d} has no training samples!'.format(i))
                 continue
             x_subset = self.X_train_[idx]
             thresholds.append(np.quantile(x_subset, [low, high], axis=0))
@@ -212,7 +212,7 @@ class ReliabilityStage:
         for i in range(self.n_classes):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
-                print('Class {:d} has no training samples!'.format(i))
+                print('[BAARD] Class {:d} has no training samples!'.format(i))
                 continue
             x_subset = X[idx]
             tree = BallTree(x_subset, leaf_size=64)
@@ -243,7 +243,7 @@ class ReliabilityStage:
         for i in trange(self.n_classes, desc='Reliability', disable=not self.verbose):
             idx = np.where(y == i)[0]
             if len(idx) == 0:
-                print('Class {:d} has no training samples!'.format(i))
+                print('[BAARD] Class {:d} has no training samples!'.format(i))
                 continue
             x_subset = X[idx]
             tree = self.trees_[i]
@@ -393,7 +393,7 @@ class DecidabilityStage:
             idx = np.where(y == i)[0]
             n = len(idx)
             if n == 0:
-                print('Class {:d} has no training samples!'.format(i))
+                print('[BAARD] Class {:d} has no training samples!'.format(i))
                 continue
             x_sub = X[idx]
             y_sub = y[idx]
@@ -576,7 +576,7 @@ class BAARDOperator:
             'ks': ks,
             'n_tolerance': self.stages[0].n_tolerance_}
         torch.save(obj, path)
-        print('Save to:', path)
+        print('[BAARD] Save to:', path)
 
     def load(self, path):
         obj = torch.load(path)
@@ -585,4 +585,4 @@ class BAARDOperator:
             self.stages[i].fpr = obj['fprs'][i]
             self.stages[i].k = obj['ks'][i]
         self.stages[0].n_tolerance_ = obj['n_tolerance']
-        print('Load from:', path)
+        print('[BAARD] Load from:', path)

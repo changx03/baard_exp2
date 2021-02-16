@@ -16,7 +16,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import torch
 from art.attacks.evasion import (BasicIterativeMethod, BoundaryAttack,
                                  DecisionTreeAttack, FastGradientMethod)
 from art.estimators.classification import SklearnClassifier
@@ -25,7 +24,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 from sklearn.tree import ExtraTreeClassifier
-from utils import acc_on_advx, load_csv, set_seeds
+from utils import (acc_on_advx, get_correct_examples_sklearn, load_csv,
+                   set_seeds)
 
 ATTACKS = ['bim', 'fgsm', 'boundary', 'tree']
 DATA_PATH = 'data'
@@ -78,41 +78,25 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_a
 
     path_results = get_output_path(idx, data_name, model_name)
     if not os.path.exists(path_results):
-        print('Output folder does not exist. Create:', path_results)
+        print('[DATA] Output folder does not exist. Create:', path_results)
         path = Path(os.path.join(path_results, 'data'))
-        print('Create folder:', path)
+        print('[DATA] Create folder:', path)
         path.mkdir(parents=True, exist_ok=True)
         path = Path(os.path.join(path_results, 'results'))
         path.mkdir(parents=True, exist_ok=True)
-        print('Create folder:', path)
+        print('[DATA] Create folder:', path)
 
     # Step 1 Load data
     data_path = os.path.join(DATA_PATH, METADATA['data'][data_name]['file_name'])
-    print('Read file: {}'.format(data_path))
+    n_test = METADATA['data'][data_name]['n_test']
+    print('[DATA] Read file: {}'.format(data_path))
     X, y = load_csv(data_path)
     n_classes = len(np.unique(y))
 
     # Apply scaling
     scaler = MinMaxScaler().fit(X)
     X = scaler.transform(X)
-
-    path_results = get_output_path(idx, data_name, model_name)
-    path_X_train = os.path.join(path_results, 'data', '{}_{}_X_train.npy'.format(data_name, model_name))
-    if os.path.exists(path_X_train):
-        print('Found existing data:', path_X_train)
-        X_train = np.load(path_X_train)
-        X_test = np.load(os.path.join(path_results, 'data', '{}_{}_X_test.npy'.format(data_name, model_name)))
-        y_train = np.load(os.path.join(path_results, 'data', '{}_{}_y_tain.npy'.format(data_name, model_name)))
-        y_test = np.load(os.path.join(path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)))
-    else:
-        print('Cannot found:', path_X_train)
-        n_test = METADATA['data'][data_name]['n_test']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=n_test, random_state=seed)
-        np.save(path_X_train, X_train)
-        np.save(os.path.join(path_results, 'data', '{}_{}_X_test.npy'.format(data_name, model_name)), X_test)
-        np.save(os.path.join(path_results, 'data', '{}_{}_y_tain.npy'.format(data_name, model_name)), y_train)
-        np.save(os.path.join(path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)), y_test)
-        print('Save to:', path_X_train)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=n_test, random_state=seed)
 
     ############################################################################
     # Step 2: Train model
@@ -125,15 +109,26 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_a
     model.fit(X_train, y_train)
     acc_train = model.score(X_train, y_train)
     acc_test = model.score(X_test, y_test)
-    print(('Train Acc: {:.4f}, ' + 'Test Acc: {:.4f}').format(acc_train, acc_test))
+    print(('[CLASSIFIER] Train Acc: {:.4f}, ' + 'Test Acc: {:.4f}').format(acc_train, acc_test))
 
     ############################################################################
     # Step 3: Filter data
     # Get perfect subset
-    pred_test = model.predict(X_test)
-    idx_correct = np.where(pred_test == y_test)[0]
-    X_test = X_test[idx_correct]
-    y_test = y_test[idx_correct]
+    path_X_train = os.path.join(path_results, 'data', '{}_{}_X_train.npy'.format(data_name, model_name))
+    if os.path.exists(path_X_train):
+        print('[DATA] Found existing data:', path_X_train)
+        X_train = np.load(path_X_train)
+        y_train = np.load(os.path.join(path_results, 'data', '{}_{}_y_tain.npy'.format(data_name, model_name)))
+        X_test = np.load(os.path.join(path_results, 'data', '{}_{}_X_test.npy'.format(data_name, model_name)))
+        y_test = np.load(os.path.join(path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)))
+    else:
+        X_train, y_train = get_correct_examples_sklearn(model, X_train, y_train)
+        X_test, y_test = get_correct_examples_sklearn(model, X_test, y_test)
+        np.save(path_X_train, X_train)
+        np.save(os.path.join(path_results, 'data', '{}_{}_X_test.npy'.format(data_name, model_name)), X_test)
+        np.save(os.path.join(path_results, 'data', '{}_{}_y_tain.npy'.format(data_name, model_name)), y_train)
+        np.save(os.path.join(path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)), y_test)
+        print('[DATA] Save to:', path_X_train)
 
     # How many examples do we have?
     if len(X_test) > N_SAMPLES:
@@ -143,7 +138,7 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_a
     # X_benign = X_test[:n]
     # y_true = y_test[:n]
     n = n // 2
-    print('n:', n)
+    print('[DATA] n:', n)
     X_att = X_test[:n]
     y_att = y_test[:n]
     X_val = X_test[n:]
@@ -162,23 +157,23 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_a
         step_size=0.02,
         stop_value=0.4)
 
-    path_best_r = os.path.join(path_results, 'results', '{}_{}.json'.format(data_name, model_name))
+    path_best_r = os.path.join(path_results, 'results', '{}_{}_rc_r.json'.format(data_name, model_name))
     if os.path.exists(path_best_r) and not fresh_def:
         with open(path_best_r) as j:
             obj_r = json.load(j)
         r_best = obj_r['r']
-        print('Find:', path_best_r)
+        print('[DEFENCE] Find:', path_best_r)
     else:
-        print('Cannot found:', path_best_r)
-        print('Start searching r_best...')
+        print('[DEFENCE] Cannot found:', path_best_r)
+        print('[DEFENCE] Start searching r_best...')
         time_start = time.time()
-        r_best = detector.search_thresholds(X_val, model.predict(X_val), np.zeros_like(y_val), verbose=0)
+        r_best = detector.search_thresholds(X_val, y_val, np.zeros_like(y_val), verbose=0)
         time_elapsed = time.time() - time_start
-        print('Total training time:', str(datetime.timedelta(seconds=time_elapsed)))
+        print('[DEFENCE] Total training time:', str(datetime.timedelta(seconds=time_elapsed)))
         with open(path_best_r, 'w') as f:
             json.dump({'r': r_best}, f)
-            print('Save to:', path_best_r)
-    print('r_best:', r_best)
+            print('[DEFENCE] Save to:', path_best_r)
+    print('[DEFENCE] r_best:', r_best)
     detector.r = r_best
 
     ############################################################################
@@ -197,26 +192,26 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_a
             attack = get_attack(att, classifier, e)
             path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
             if os.path.exists(path_adv) and not fresh_att:
-                print('Find:', path_adv)
+                print('[ATTACK] Find:', path_adv)
                 adv = np.load(path_adv)
             else:
                 adv = attack.generate(X_att)
                 np.save(path_adv, adv)
-                print('Save to', path_adv)
+                print('[ATTACK] Save to', path_adv)
 
             acc_naked = model.score(adv, y_att)
-            print('Acc without def:', acc_naked)
+            print('[ATTACK] Acc without def:', acc_naked)
 
             # Preform defence
             pred_adv = detector.detect(adv)
-            print('pred_adv:', pred_adv.shape)
+            print('[DEFENCE] pred_adv.shape:', pred_adv.shape)
             res_test = np.zeros_like(pred_adv)
             acc = acc_on_advx(pred_adv, y_att, res_test)
-            print('acc_on_advx:', acc)
+            print('[DEFENCE] acc_on_advx:', acc)
 
             pred_benign = detector.detect(X_att)
             fpr = np.mean(pred_benign != y_att)
-            print('fpr:', fpr)
+            print('[DEFENCE] fpr:', fpr)
         except Exception as e:
             print(e)
             acc_naked = np.nan
@@ -247,7 +242,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
     parser.add_argument('-m', '--model', type=str, default='svm', choices=['svm', 'tree'])
     parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
-    parser.add_argument('-a', '--attack', type=str, default='fgsm', choices=ATTACKS)
+    parser.add_argument('-a', '--att', type=str, default='fgsm', choices=ATTACKS)
     parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
     args = parser.parse_args()
     print('args:', args)
@@ -255,7 +250,7 @@ if __name__ == '__main__':
     idx = args.idx
     data = args.data
     model_name = args.model
-    att = args.attack
+    att = args.att
     epsilons = args.eps
     seed = SEEDS[args.idx]
     print('data:', data)
@@ -266,4 +261,4 @@ if __name__ == '__main__':
     sklearn_attack_against_rc(data, model_name, att, epsilons, idx)
 
     # Testing
-    # sklearn_attack_against_rc('banknote', 'svm', 'fgsm', ['0.2'], 10)
+    # sklearn_attack_against_rc('banknote', 'svm', 'bim', ['0.3'], 0)

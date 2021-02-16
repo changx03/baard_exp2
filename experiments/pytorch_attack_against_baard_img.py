@@ -170,14 +170,14 @@ def pytorch_attack_against_baard_img(data_name, model_name, att, epsilons, idx, 
             print('[DEFENCE] Start running BAARD...')
             start = time.time()
             labelled_as_adv = detector.detect(adv, pred_adv)
-            if len(fprs) == 0:
-                labelled_benign_as_adv = detector.detect(X_att, y_att)
             time_elapsed = time.time() - start
             print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
 
             acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
+
             # NOTE: clean samples are the same set. Do not repeat.
             if len(fprs) == 0:
+                labelled_benign_as_adv = detector.detect(X_att, y_att)
                 fpr = np.mean(labelled_benign_as_adv)
             else:
                 fpr = fprs[0]

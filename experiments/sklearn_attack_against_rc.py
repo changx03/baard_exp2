@@ -204,17 +204,24 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx):
             print('[ATTACK] Acc without def:', acc_naked)
 
             # Preform defence
+            print('[DEFENCE] Start running RC...')
             pred_adv = detector.detect(adv)
             print('[DEFENCE] pred_adv.shape:', pred_adv.shape)
+
             res_test = np.zeros_like(pred_adv)
             acc = acc_on_advx(pred_adv, y_att, res_test)
-            print('[DEFENCE] acc_on_advx:', acc)
 
-            pred_benign = detector.detect(X_att)
-            fpr = np.mean(pred_benign != y_att)
+            # NOTE: clean samples are the same set. Do not repeat.
+            if len(fprs) == 0:
+                pred_benign = detector.detect(X_att, y_att)
+                fpr = np.mean(pred_benign != y_att)
+            else:
+                fpr = fprs[0]
+
+            print('[DEFENCE] acc_on_adv:', acc)
             print('[DEFENCE] fpr:', fpr)
         except Exception as e:
-            print(e)
+            print('[ERROR]', e)
             acc_naked = np.nan
             acc = np.nan
             fpr = np.nan

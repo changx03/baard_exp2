@@ -193,11 +193,12 @@ def pytorch_attack_against_lid_num(data_name, att, epsilons, idx):
 
             labelled_as_adv = detector.detect(adv, pred_adv)
             labelled_benign_as_adv = detector.detect(X_att, y_att)
-                
+
             time_elapsed = time.time() - start
             print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
 
             acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
+
             # NOTE: LID does NOT have the same FPR!
             fpr = np.mean(labelled_benign_as_adv)
 

@@ -20,15 +20,16 @@ import torch
 import torch.nn as nn
 import torchvision as tv
 import torchvision.datasets as datasets
+from defences.feature_squeezing import (DepthSqueezer, FeatureSqueezingTorch,
+                                        MedianSqueezer, NLMeansColourSqueezer)
 from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.torch_util import predict_numpy, validate
 from torch.utils.data import DataLoader, TensorDataset
 from utils import acc_on_advx, get_correct_examples, set_seeds
-from defences.feature_squeezing import FeatureSqueezingTorch, DepthSqueezer, MedianSqueezer, NLMeansColourSqueezer
 
-from experiments import (ATTACKS, get_advx_untargeted,
-                         get_output_path, pytorch_train_classifier)
+from experiments import (ATTACKS, get_advx_untargeted, get_output_path,
+                         pytorch_train_classifier)
 
 DATA_PATH = 'data'
 with open('metadata.json') as data_json:
@@ -197,14 +198,14 @@ def pytorch_attack_against_fs_img(data_name, model_name, att, epsilons, idx):
             print('[DEFENCE] Start running FS...')
             start = time.time()
             labelled_as_adv = detector.detect(adv, pred_adv)
-            if len(fprs) == 0:
-                labelled_benign_as_adv = detector.detect(X_att, y_att)
             time_elapsed = time.time() - start
             print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
 
             acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
+
             # NOTE: clean samples are the same set. Do not repeat.
             if len(fprs) == 0:
+                labelled_benign_as_adv = detector.detect(X_att, y_att)
                 fpr = np.mean(labelled_benign_as_adv)
             else:
                 fpr = fprs[0]

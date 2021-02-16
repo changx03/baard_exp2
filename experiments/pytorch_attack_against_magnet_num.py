@@ -201,7 +201,6 @@ def pytorch_attack_against_magnet_num(data_name, att, epsilons, idx):
 
     ############################################################################
     # Step 4: Load detector
-    # TODO: Use MagNet
     detector = get_magnet(data_name, model, X_train, y_train, X_val, device, path_results)
 
     ############################################################################
@@ -238,20 +237,18 @@ def pytorch_attack_against_magnet_num(data_name, att, epsilons, idx):
             print('[DEFENCE] Start running MagNet...')
             start = time.time()
             X_reformed, labelled_as_adv = detector.detect(adv, pred_adv)
-
-            if len(fprs) == 0:
-                _, labelled_benign_as_adv = detector.detect(X_att, y_att)
             time_elapsed = time.time() - start
             print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
 
             pred_reformed = predict_numpy(model, X_reformed, device)
             acc = acc_on_advx(pred_reformed, y_att, labelled_as_adv)
+
             # NOTE: clean samples are the same set. Do not repeat.
             if len(fprs) == 0:
+                _, labelled_benign_as_adv = detector.detect(X_att, y_att)
                 fpr = np.mean(labelled_benign_as_adv)
             else:
                 fpr = fprs[0]
-            
 
             print('[DEFENCE] acc_on_adv:', acc)
             print('[DEFENCE] fpr:', fpr)
@@ -284,24 +281,24 @@ def pytorch_attack_against_magnet_num(data_name, att, epsilons, idx):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    # parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
-    # parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
-    # parser.add_argument('-a', '--att', type=str, default='fgsm', choices=ATTACKS)
-    # parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
-    # args = parser.parse_args()
-    # print('args:', args)
+    parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
+    parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
+    parser.add_argument('-a', '--att', type=str, default='fgsm', choices=ATTACKS)
+    parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
+    args = parser.parse_args()
+    print('args:', args)
 
-    # data = args.data
-    # idx = args.idx
-    # att = args.att
-    # epsilons = args.eps
-    # print('data:', data)
-    # print('attack:', att)
-    # print('epsilons:', epsilons)
-    # print('seed:', SEEDS[idx])
-    # pytorch_attack_against_magnet_num(data, att, epsilons, idx)
+    data = args.data
+    idx = args.idx
+    att = args.att
+    epsilons = args.eps
+    print('data:', data)
+    print('attack:', att)
+    print('epsilons:', epsilons)
+    print('seed:', SEEDS[idx])
+    pytorch_attack_against_magnet_num(data, att, epsilons, idx)
 
     # Testing
     # pytorch_attack_against_magnet_num('banknote', 'apgd', [0.05, 0.1, 0.3, 0.6, 1.0], 0)
     # pytorch_attack_against_magnet_num('breastcancer', 'apgd', [0.05, 0.1, 0.3, 0.6, 1.0], 0)
-    pytorch_attack_against_magnet_num('htru2', 'apgd', [0.05, 0.1, 0.3, 0.6, 1.0], 0)
+    # pytorch_attack_against_magnet_num('htru2', 'apgd', [0.05, 0.1, 0.3, 0.6, 1.0], 0)

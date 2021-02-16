@@ -277,16 +277,15 @@ def pytorch_attack_against_magnet_img(data_name, model_name, att, epsilons, idx)
             print('[DEFENCE] Start running MagNet...')
             start = time.time()
             X_reformed, labelled_as_adv = detector.detect(adv, pred_adv)
-
-            if len(fprs) == 0:
-                _, labelled_benign_as_adv = detector.detect(X_att, y_att)
             time_elapsed = time.time() - start
             print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
 
             pred_reformed = predict_numpy(model, X_reformed, device)
             acc = acc_on_advx(pred_reformed, y_att, labelled_as_adv)
+
             # NOTE: clean samples are the same set. Do not repeat.
             if len(fprs) == 0:
+                _, labelled_benign_as_adv = detector.detect(X_att, y_att)
                 fpr = np.mean(labelled_benign_as_adv)
             else:
                 fpr = fprs[0]

@@ -2,8 +2,10 @@
 Evaluate BAARD against adversarial attacks on numeric datasets with SVM and Tree
 classifiers. 
 """
+import datetime
 import os
 import sys
+import time
 
 sys.path.append(os.getcwd())
 LIB_PATH = os.getcwd() + "/art_library"
@@ -175,21 +177,27 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
                 np.save(path_adv, adv)
                 print('[ATTACK] Save to', path_adv)
 
+            pred_adv = model.predict(adv)
             acc_naked = model.score(adv, y_att)
             print('[ATTACK] Acc without def:', acc_naked)
 
             # Preform defence
-            pred_adv = model.predict(adv)
+            print('[DEFENCE] Start running BAARD...')
+            start = time.time()
             labelled_as_adv = detector.detect(adv, pred_adv)
+            time_elapsed = time.time() - start
+            print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
+
             acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
-            print('[DEFENCE] acc_on_adv:', acc)
 
             # NOTE: clean samples are the same set. Do not repeat.
-            if len(fprs) != 0:
-                fpr = fprs[0]
-            else:
+            if len(fprs) == 0:
                 labelled_benign_as_adv = detector.detect(X_att, y_att)
                 fpr = np.mean(labelled_benign_as_adv)
+            else:
+                fpr = fprs[0]
+
+            print('[DEFENCE] acc_on_adv:', acc)
             print('[DEFENCE] fpr:', fpr)
         except Exception as e:
             print(e)

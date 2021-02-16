@@ -193,6 +193,7 @@ def pytorch_attack_against_lid_img(data_name, model_name, att, epsilons, idx):
             print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
 
             acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
+
             # NOTE: LID does NOT have the same FPR!
             fpr = np.mean(labelled_benign_as_adv)
 

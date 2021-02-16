@@ -203,13 +203,18 @@ def pytorch_attack_against_rc_num(data_name, att, epsilons, idx):
             print('[DEFENCE] Start running RC...')
             start = time.time()
             pred_adv = detector.detect(adv, pred_adv)
-            pred_benign = detector.detect(X_att, y_att)
             time_elapsed = time.time() - start
             print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
 
             labels = np.zeros_like(pred_adv)
             acc = acc_on_advx(pred_adv, y_att, labels)
-            fpr = np.mean(pred_benign != y_att)
+
+            # NOTE: clean samples are the same set. Do not repeat.
+            if len(fprs) == 0:
+                pred_benign = detector.detect(X_att, y_att)
+                fpr = np.mean(pred_benign != y_att)
+            else:
+                fpr = fprs[0]
 
             print('[DEFENCE] acc_on_adv:', acc)
             print('[DEFENCE] fpr:', fpr)

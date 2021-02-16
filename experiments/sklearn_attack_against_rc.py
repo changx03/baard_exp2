@@ -1,3 +1,6 @@
+"""
+Evaluate Region-based Classifier against adversarial attacks on numeric datasets with SVM and Tree classifiers. 
+"""
 import os
 import sys
 
@@ -83,7 +86,7 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_a
         path.mkdir(parents=True, exist_ok=True)
         print('Create folder:', path)
 
-    # Prepare data
+    # Step 1 Load data
     data_path = os.path.join(DATA_PATH, METADATA['data'][data_name]['file_name'])
     print('Read file: {}'.format(data_path))
     X, y = load_csv(data_path)
@@ -111,7 +114,8 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_a
         np.save(os.path.join(path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)), y_test)
         print('Save to:', path_X_train)
 
-    # Train model
+    ############################################################################
+    # Step 2: Train model
     if model_name == 'svm':
         model = SVC(kernel="linear", C=1.0, gamma="scale", random_state=seed)
     elif model_name == 'tree':
@@ -123,6 +127,8 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_a
     acc_test = model.score(X_test, y_test)
     print(('Train Acc: {:.4f}, ' + 'Test Acc: {:.4f}').format(acc_train, acc_test))
 
+    ############################################################################
+    # Step 3: Filter data
     # Get perfect subset
     pred_test = model.predict(X_test)
     idx_correct = np.where(pred_test == y_test)[0]
@@ -143,7 +149,8 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_a
     X_val = X_test[n:]
     y_val = y_test[n:]
 
-    # Train defence
+    ############################################################################
+    # Step 4: Load detector
     detector = SklearnRegionBasedClassifier(
         model=model,
         r=0.2,
@@ -174,6 +181,8 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_a
     print('r_best:', r_best)
     detector.r = r_best
 
+    ############################################################################
+    # Step 5: Generate attack and preform defence
     # Override epsilon
     if att == 'boundary' or att == 'tree':
         epsilons = [0]
@@ -256,6 +265,5 @@ if __name__ == '__main__':
     print('seed:', seed)
     sklearn_attack_against_rc(data, model_name, att, epsilons, idx)
 
-# # Testing
-# if __name__ == '__main__':
-#     sklearn_attack_against_rc('banknote', 'svm', 'fgsm', ['0.2'], 10)
+    # Testing
+    # sklearn_attack_against_rc('banknote', 'svm', 'fgsm', ['0.2'], 10)

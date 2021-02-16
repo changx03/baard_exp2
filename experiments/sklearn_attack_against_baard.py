@@ -1,3 +1,6 @@
+"""
+Evaluate BAARD against adversarial attacks on numeric datasets with SVM and Tree classifiers. 
+"""
 import os
 import sys
 
@@ -78,7 +81,7 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
         path.mkdir(parents=True, exist_ok=True)
         print('Create folder:', path)
 
-    # Prepare data
+    # Step 1 Load data
     data_path = os.path.join(DATA_PATH, METADATA['data'][data_name]['file_name'])
     print('Read file: {}'.format(data_path))
     X, y = load_csv(data_path)
@@ -107,7 +110,8 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
             path_results, 'data', '{}_{}_y_test.npy'.format(data_name, model_name)), y_test)
         print('Save to:', path_X_train)
 
-    # Train model
+    ############################################################################
+    # Step 2: Train model
     if model_name == 'svm':
         model = SVC(kernel="linear", C=1.0, gamma="scale", random_state=seed)
     elif model_name == 'tree':
@@ -119,6 +123,8 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     acc_test = model.score(X_test, y_test)
     print(('Train Acc: {:.4f}, ' + 'Test Acc: {:.4f}').format(acc_train, acc_test))
 
+    ############################################################################
+    # Step 3: Filter data
     # Get perfect subset
     X_test, y_test = get_correct_examples_sklearn(model, X_test, y_test)
 
@@ -134,7 +140,8 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     X_val = X_test[n:]
     y_val = y_test[n:]
 
-    # Train defence
+    ############################################################################
+    # Step 4: Load detector
     print('Start training BAARD...')
     X_train, y_train = get_correct_examples_sklearn(model, X_train, y_train)
     print('Correct train set:', X_train.shape, y_train.shape)
@@ -149,6 +156,8 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
         baard_param=baard_param,
         restart=fresh_def)
 
+    ############################################################################
+    # Step 5: Generate attack and preform defence
     # Override epsilon
     if att == 'boundary' or att == 'tree':
         epsilons = [0]
@@ -233,6 +242,5 @@ if __name__ == '__main__':
     print('param:', param)
     sklearn_attack_against_baard(data, model_name, att, epsilons, idx, param)
 
-# # Testing
-# if __name__ == '__main__':
-#     sklearn_attack_against_baard('banknote', 'svm', 'fgsm', [0.2], 10, './params/baard_test.json', fresh_att=False, fresh_def=True)
+    # Testing
+    # sklearn_attack_against_baard('banknote', 'svm', 'fgsm', [0.2], 10, './params/baard_test.json', fresh_att=False, fresh_def=True)

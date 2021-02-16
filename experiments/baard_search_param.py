@@ -1,3 +1,6 @@
+"""
+Generating CSV files for ROC AUC plots.
+"""
 import os
 import sys
 
@@ -19,6 +22,9 @@ from defences.baard import (ApplicabilityStage, DecidabilityStage,
                             ReliabilityStage)
 from defences.preprocess_baard import (preprocess_baard_img,
                                        preprocess_baard_numpy)
+from models.cifar10 import Resnet, Vgg
+from models.mnist import BaseModel
+from models.numeric import NumericModel
 from models.torch_util import predict_numpy, validate
 from sklearn.metrics import roc_curve
 from sklearn.model_selection import train_test_split
@@ -27,8 +33,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 from utils import get_correct_examples, load_csv, set_seeds
 
-from experiments import (ATTACKS, get_advx_untargeted, get_output_path,
-                         train_model)
+from experiments import ATTACKS, get_advx_untargeted, get_output_path
 
 DATA_PATH = 'data'
 with open('metadata.json') as data_json:
@@ -62,11 +67,7 @@ def pytorch_baard_search_param(data_name, model_name, att, eps):
         dataset_train = datasets.MNIST(DATA_PATH, train=True, download=True, transform=transform)
         dataset_test = datasets.MNIST(DATA_PATH, train=False, download=True, transform=transform)
     elif data_name == 'cifar10':
-        transform_train = tv.transforms.Compose([
-            tv.transforms.RandomHorizontalFlip(),
-            tv.transforms.RandomCrop(32, padding=4),
-            tv.transforms.ToTensor()])
-        dataset_train = datasets.CIFAR10(DATA_PATH, train=True, download=True, transform=transform_train)
+        dataset_train = datasets.CIFAR10(DATA_PATH, train=True, download=True, transform=transform)
         dataset_test = datasets.CIFAR10(DATA_PATH, train=False, download=True, transform=transform)
     else:
         data_path = os.path.join(DATA_PATH, METADATA['data'][data_name]['file_name'])
@@ -85,12 +86,25 @@ def pytorch_baard_search_param(data_name, model_name, att, eps):
     print('[CLASSIFIER] Device: {}'.format(device))
 
     file_model = os.path.join(path_results, 'data', '{}_{}_model.pt'.format(data_name, model_name))
-    print('[CLASSIFIER] Start training {} model on {}...'.format(model_name, data_name))
-    start = time.time()
-    epochs = 200 if data_name in ['mnist', 'cifar10'] else 400
-    model = train_model(data_name, model_name, dataset_train, dataset_test, device, file_model, epochs=epochs, batch_size=BATCH_SIZE)
-    time_elapsed = time.time() - start
-    print('[CLASSIFIER] Time spend on training classifier: {}'.format(str(datetime.timedelta(seconds=time_elapsed))))
+    if not os.path.exists(file_model):
+        raise FileNotFoundError('Cannot find pretrained model: {}'.format(file_model))
+    if data_name == 'mnist':
+        model = BaseModel(use_prob=False).to(device)
+    elif data_name == 'cifar10':
+        if model_name == 'resnet':
+            model = Resnet(use_prob=False).to(device)
+        elif model_name == 'vgg':
+            model = Vgg(use_prob=False).to(device)
+        else:
+            raise NotImplementedError
+    else:
+        n_features = METADATA['data'][data_name]['n_features']
+        n_hidden = n_features * 4
+        n_classes = METADATA['data'][data_name]['n_classes']
+        model = NumericModel(n_features=n_features, n_hidden=n_hidden, n_classes=n_classes, use_prob=False).to(device)
+    # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
+    # loss = nn.CrossEntropyLoss()
+    model.load_state_dict(torch.load(file_model, map_location=device))
 
     ############################################################################
     # Step 3: Filter data
@@ -260,37 +274,35 @@ def pytorch_baard_search_param(data_name, model_name, att, eps):
     print()
 
 
-# if __name__ == '__main__':
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
-#     parser.add_argument('-m', '--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
-#     parser.add_argument('-a', '--attack', type=str, default='fgsm', choices=ATTACKS)
-#     parser.add_argument('-e', '--eps', type=float, default=0.3, required=True)
-#     args = parser.parse_args()
-#     print('args:', args)
-
-#     seed = SEEDS[args.idx]
-#     data = args.data
-#     model_name = args.model
-#     att = args.attack
-#     eps = args.eps
-#     print('seed:', seed)
-#     print('data:', data)
-#     print('model_name:', model_name)
-#     print('attack:', att)
-#     print('eps:', eps)
-#     pytorch_baard_search_param(data, model_name, att, eps)
-
-
-# Testing
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
+    parser.add_argument('-m', '--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
+    parser.add_argument('-a', '--attack', type=str, default='fgsm', choices=ATTACKS)
+    parser.add_argument('-e', '--eps', type=float, default=0.3, required=True)
+    args = parser.parse_args()
+    print('args:', args)
+
+    seed = SEEDS[0]
+    data = args.data
+    model_name = args.model
+    att = args.attack
+    eps = args.eps
+    print('seed:', seed)
+    print('data:', data)
+    print('model_name:', model_name)
+    print('attack:', att)
+    print('eps:', eps)
+    pytorch_baard_search_param(data, model_name, att, eps)
+
+    # Testing
     # pytorch_baard_search_param('mnist', 'dnn', 'apgd', 0.3)
     # pytorch_baard_search_param('mnist', 'dnn', 'apgd2', 2.)
     # pytorch_baard_search_param('cifar10', 'resnet', 'apgd', 0.3)
     # pytorch_baard_search_param('cifar10', 'resnet', 'apgd2', 2.)
-    pytorch_baard_search_param('banknote', 'dnn', 'apgd', 0.3)
-    pytorch_baard_search_param('banknote', 'dnn', 'apgd2', 2.)
-    pytorch_baard_search_param('breastcancer', 'dnn', 'apgd', 0.3)
-    pytorch_baard_search_param('breastcancer', 'dnn', 'apgd2', 2.)
-    pytorch_baard_search_param('htru2', 'dnn', 'apgd', 0.3)
-    pytorch_baard_search_param('htru2', 'dnn', 'apgd2', 2.)
+    # pytorch_baard_search_param('banknote', 'dnn', 'apgd', 0.3)
+    # pytorch_baard_search_param('banknote', 'dnn', 'apgd2', 2.)
+    # pytorch_baard_search_param('breastcancer', 'dnn', 'apgd', 0.3)
+    # pytorch_baard_search_param('breastcancer', 'dnn', 'apgd2', 2.)
+    # pytorch_baard_search_param('htru2', 'dnn', 'apgd', 0.3)
+    # pytorch_baard_search_param('htru2', 'dnn', 'apgd2', 2.)

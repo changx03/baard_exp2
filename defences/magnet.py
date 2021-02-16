@@ -43,6 +43,26 @@ class Autoencoder2(nn.Module):
         return x
 
 
+class AutoencoderNum1(nn.Module):
+    def __init__(self, n_features):
+        super(AutoencoderNum1, self).__init__()
+        self.n_features = n_features
+        self.n_hidden = int(n_features * 2)
+        self.n_out = round(n_features * 2. / 3.)
+
+        self.ln1 = nn.Linear(n_features, self.n_hidden)
+        self.ln2 = nn.Linear(self.n_hidden, self.n_out)
+        self.ln3 = nn.Linear(self.n_out, self.n_hidden)
+        self.ln4 = nn.Linear(self.n_hidden, n_features)
+
+    def forward(self, x):
+        x = torch.sigmoid(self.ln1(x))
+        x = torch.sigmoid(self.ln2(x))
+        x = torch.sigmoid(self.ln3(x))
+        x = torch.sigmoid(self.ln4(x))
+        return x
+
+
 def torch_add_noise(X, x_min, x_max, epsilon, device='cpu'):
     """Returns X with Gaussian noise and clip."""
     normal = torch.distributions.normal.Normal(
@@ -488,3 +508,11 @@ class MagNetOperator:
                 tensor_pred[start:end] = pred.cpu()
                 start = end
         return tensor_pred.detach().numpy()
+
+
+# Testing
+if __name__ == '__main__':
+    encoder = AutoencoderNum1(n_features=30)
+    X = torch.randn((128, 30))
+    output = encoder(X)
+    print(output.size())

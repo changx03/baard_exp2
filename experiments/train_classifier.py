@@ -104,7 +104,7 @@ def pytorch_train_classifier(data_name, model_name, idx):
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
     print('[CLASSIFIER] Start training {} model on {}...'.format(model_name, data_name))
-    start = time.time()
+    time_start = time.time()
     for e in range(epochs):
         start = time.time()
         tr_loss, tr_acc = train(model, dataloader_train, loss, optimizer, device)
@@ -113,7 +113,7 @@ def pytorch_train_classifier(data_name, model_name, idx):
         time_elapsed = time.time() - start
         print(('[CLASSIFIER] {:2d}/{:d}[{:s}] Train Loss: {:.4f} Acc: {:.4f}%, Test Loss: {:.4f} Acc: {:.4f}%').format(
             e + 1, epochs, str(datetime.timedelta(seconds=time_elapsed)), tr_loss, tr_acc * 100., va_loss, va_acc * 100.))
-    time_elapsed = time.time() - start
+    time_elapsed = time.time() - time_start
     print('[CLASSIFIER] Time spend on training classifier: {}'.format(str(datetime.timedelta(seconds=time_elapsed))))
 
     _, acc = validate(model, dataloader_train, loss, device)

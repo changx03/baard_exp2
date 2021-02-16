@@ -508,7 +508,7 @@ class BAARDOperator:
                 stage.fit(X, y)
         return self
 
-    def search_thresholds(self, X, y, labels_adv):
+    def search_thresholds(self, X, y, labels_adv=None):
         """Search thresholds for each stage.
 
         Parameters
@@ -522,6 +522,8 @@ class BAARDOperator:
         labels_adv : array-like of shape (n_samples, )
             Target adversarial labels. 1 is adversarial example, 0 is benign.
         """
+        if labels_adv is None:
+            labels_adv = np.zeros_like(y)
         for stage in self.stages:
             stage.search_thresholds(X, y, labels_adv)
 

@@ -72,7 +72,7 @@ def get_attack(att_name, classifier, eps=None):
     return attack
 
 
-def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_att=False, fresh_def=True):
+def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx):
     seed = SEEDS[idx]
     set_seeds(seed)
 
@@ -158,7 +158,7 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_a
         stop_value=0.4)
 
     path_best_r = os.path.join(path_results, 'results', '{}_{}_rc_r.json'.format(data_name, model_name))
-    if os.path.exists(path_best_r) and not fresh_def:
+    if os.path.exists(path_best_r):
         with open(path_best_r) as j:
             obj_r = json.load(j)
         r_best = obj_r['r']
@@ -191,7 +191,7 @@ def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx, fresh_a
             # Load/Create adversarial examples
             attack = get_attack(att, classifier, e)
             path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
-            if os.path.exists(path_adv) and not fresh_att:
+            if os.path.exists(path_adv):
                 print('[ATTACK] Find:', path_adv)
                 adv = np.load(path_adv)
             else:

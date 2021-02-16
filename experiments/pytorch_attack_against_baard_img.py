@@ -40,7 +40,7 @@ N_SAMPLES = 2000
 DEF_NAME = 'baard'
 
 
-def pytorch_attack_against_baard_img(data_name, model_name, att, epsilons, idx, baard_param, fresh_att=False, fresh_def=True):
+def pytorch_attack_against_baard_img(data_name, model_name, att, epsilons, idx, baard_param):
     seed = SEEDS[idx]
     set_seeds(seed)
 
@@ -140,8 +140,7 @@ def pytorch_attack_against_baard_img(data_name, model_name, att, epsilons, idx, 
         y_train=y_train,
         X_val=X_val,
         y_val=y_val,
-        baard_param=baard_param,
-        restart=fresh_def)
+        baard_param=baard_param)
 
     ############################################################################
     # Step 5: Generate attack and preform defence
@@ -151,7 +150,7 @@ def pytorch_attack_against_baard_img(data_name, model_name, att, epsilons, idx, 
     for e in epsilons:
         try:
             path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
-            if os.path.exists(path_adv) and not fresh_att:
+            if os.path.exists(path_adv):
                 print('[ATTACK] Find:', path_adv)
                 adv = np.load(path_adv)
             else:
@@ -236,7 +235,7 @@ if __name__ == '__main__':
     pytorch_attack_against_baard_img(data, model_name, att, epsilons, idx)
 
     # Testing
-    # pytorch_attack_against_baard_img('mnist', 'dnn', 'apgd', [0.3], 0, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
-    # pytorch_attack_against_baard_img('mnist', 'dnn', 'apgd2', [2.0], 0, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
-    # pytorch_attack_against_baard_img('mnist', 'dnn', 'cw2', [0.], 0, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
-    # pytorch_attack_against_baard_img('mnist', 'dnn', 'cwinf', [10.], 0, './params/baard_mnist_3.json', fresh_att=False, fresh_def=True)
+    # pytorch_attack_against_baard_img('mnist', 'dnn', 'apgd', [0.3], 0, './params/baard_mnist_3.json')
+    # pytorch_attack_against_baard_img('mnist', 'dnn', 'apgd2', [2.0], 0, './params/baard_mnist_3.json')
+    # pytorch_attack_against_baard_img('mnist', 'dnn', 'cw2', [0.], 0, './params/baard_mnist_3.json')
+    # pytorch_attack_against_baard_img('mnist', 'dnn', 'cwinf', [10.], 0, './params/baard_mnist_3.json')

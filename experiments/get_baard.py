@@ -21,7 +21,7 @@ def check_json_param(param1, param2):
         param1['fpr3'] != param2['fpr3'])
 
 
-def get_baard(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_param, restart):
+def get_baard(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_param):
     path_results = get_output_path(idx, data_name, model_name)
 
     file_baard_train = os.path.join(path_results, 'data', '{}_{}_baard_s1_train_data.pt'.format(data_name, model_name))
@@ -62,7 +62,6 @@ def get_baard(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_
                 print('[DEFENCE] Do not match existing BAARD JSON params. Delete and save new JSON file.')
                 os.remove(path_param_backup)
                 json.dump(baard_param, open(path_param_backup, 'w'))
-                restart = True
                 print('[DEFENCE] Save to:', path_param_backup)
             else:
                 print('[DEFENCE] Found existing BAARD params:', path_param_backup)
@@ -89,7 +88,7 @@ def get_baard(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_
 
     # Set thresholds
     file_baard_threshold = os.path.join(path_results, 'data', '{}_{}_baard_threshold_{}.pt'.format(data_name, model_name, len(stages)))
-    if os.path.exists(file_baard_threshold) and not restart:
+    if os.path.exists(file_baard_threshold):
         print('[DEFENCE] Found existing BAARD thresholds:', file_baard_threshold)
         detector.load(file_baard_threshold)
     else:

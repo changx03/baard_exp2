@@ -40,7 +40,7 @@ DEF_NAME = 'rc'
 MODEL_NAME = 'dnn'
 
 
-def pytorch_attack_against_rc_num(data_name, att, epsilons, idx, fresh_att=False):
+def pytorch_attack_against_rc_num(data_name, att, epsilons, idx):
     seed = SEEDS[idx]
     set_seeds(seed)
 
@@ -172,7 +172,7 @@ def pytorch_attack_against_rc_num(data_name, att, epsilons, idx, fresh_att=False
         try:
             path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(
                 data_name, MODEL_NAME, att, str(float(e))))
-            if os.path.exists(path_adv) and not fresh_att:
+            if os.path.exists(path_adv):
                 print('[ATTACK] Find:', path_adv)
                 adv = np.load(path_adv)
             else:

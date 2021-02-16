@@ -39,7 +39,7 @@ DEF_NAME = 'baard'
 MODEL_NAME = 'dnn'
 
 
-def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, param, fresh_att=False):
+def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, param):
     seed = SEEDS[idx]
     set_seeds(seed)
 
@@ -136,8 +136,7 @@ def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, param, fresh
         y_train=y_train,
         X_val=X_val,
         y_val=y_val,
-        baard_param=param,
-        restart=True)
+        baard_param=param)
 
     ############################################################################
     # Step 5: Generate attack and preform defence
@@ -150,7 +149,7 @@ def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, param, fresh
     for e in epsilons:
         try:
             path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, MODEL_NAME, att, str(float(e))))
-            if os.path.exists(path_adv) and not fresh_att:
+            if os.path.exists(path_adv):
                 print('[ATTACK] Find:', path_adv)
                 adv = np.load(path_adv)
             else:

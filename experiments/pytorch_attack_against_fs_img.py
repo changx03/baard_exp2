@@ -264,4 +264,3 @@ if __name__ == '__main__':
     # pytorch_attack_against_fs_img('mnist', 'dnn', 'apgd', [0.3], 0)
     # pytorch_attack_against_fs_img('mnist', 'dnn', 'apgd2', [2.0], 0)
     # pytorch_attack_against_fs_img('mnist', 'dnn', 'cw2', [0.], 0)
-    # pytorch_attack_against_fs_img('mnist', 'dnn', 'cwinf', [10.], 0)

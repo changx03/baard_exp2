@@ -238,4 +238,3 @@ if __name__ == '__main__':
     # pytorch_attack_against_baard_img('mnist', 'dnn', 'apgd', [0.3], 0, './params/baard_mnist_3.json')
     # pytorch_attack_against_baard_img('mnist', 'dnn', 'apgd2', [2.0], 0, './params/baard_mnist_3.json')
     # pytorch_attack_against_baard_img('mnist', 'dnn', 'cw2', [0.], 0, './params/baard_mnist_3.json')
-    # pytorch_attack_against_baard_img('mnist', 'dnn', 'cwinf', [10.], 0, './params/baard_mnist_3.json')

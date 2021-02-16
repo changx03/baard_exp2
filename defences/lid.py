@@ -102,7 +102,7 @@ def train_lid(sequence, X, X_noisy, X_adv, before_softmax=False, k=20, batch_siz
     lid_pos = lid_adv
     lid_neg = np.concatenate((lid_benign, lid_noisy))
     artifacts = np.concatenate((lid_pos, lid_neg))
-    labels = np.concatenate((np.ones(len(lid_pos), np.zeros(len(lid_neg)))))
+    labels = np.concatenate((np.ones(len(lid_pos)), np.zeros(len(lid_neg))))
     return artifacts, labels
 
 
@@ -206,7 +206,7 @@ class LidDetector:
         std = l2_adv / std_dominator
         print('Noise std:', std)
         noise = np.random.normal(0, scale=std, size=X.shape)
-        X_noisy = np.minimum(np.maximum(X + noise, self.x_min), self.x_max)
+        X_noisy = np.clip(X + noise, self.x_min, self.x_max)
         X_merged, y_merged = merge_adv_data(X, X_noisy, adv)
         return X_merged, y_merged
 

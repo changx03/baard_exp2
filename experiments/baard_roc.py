@@ -40,7 +40,7 @@ with open('metadata.json') as data_json:
     METADATA = json.load(data_json)
 with open('SEEDS') as f:
     SEEDS = [int(s) for s in f.read().split(',')]
-BATCH_SIZE = 128
+BATCH_SIZE = 192
 N_SAMPLES = 2000
 DEF_NAME = 'baard'
 FPR_LOOKUP_LIST = np.concatenate((np.arange(0., 0.02, step=0.002), np.arange(0.02, 0.2, step=0.01), np.arange(0.2, 1., step=0.1)))

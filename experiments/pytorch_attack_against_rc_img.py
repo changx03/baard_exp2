@@ -229,28 +229,28 @@ def pytorch_attack_against_rc_img(data_name, model_name, att, epsilons, idx):
 
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
-    # parser.add_argument('-m', '--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
-    # parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
-    # parser.add_argument('-a', '--att', type=str, default='fgsm', choices=ATTACKS)
-    # parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
-    # args = parser.parse_args()
-    # print('args:', args)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
+    parser.add_argument('-m', '--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
+    parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
+    parser.add_argument('-a', '--att', type=str, default='fgsm', choices=ATTACKS)
+    parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
+    args = parser.parse_args()
+    print('args:', args)
 
-    # idx = args.idx
-    # data = args.data
-    # model_name = args.model
-    # att = args.att
-    # epsilons = args.eps
-    # seed = SEEDS[args.idx]
-    # print('data:', data)
-    # print('model_name:', model_name)
-    # print('attack:', att)
-    # print('epsilons:', epsilons)
-    # print('seed:', seed)
-    # pytorch_attack_against_rc_img(data, model_name, att, epsilons, idx)
+    idx = args.idx
+    data = args.data
+    model_name = args.model
+    att = args.att
+    epsilons = args.eps
+    seed = SEEDS[args.idx]
+    print('data:', data)
+    print('model_name:', model_name)
+    print('attack:', att)
+    print('epsilons:', epsilons)
+    print('seed:', seed)
+    pytorch_attack_against_rc_img(data, model_name, att, epsilons, idx)
 
     # Testing
-    pytorch_attack_against_rc_img('mnist', 'dnn', 'apgd', [0.3], 0)
+    # pytorch_attack_against_rc_img('mnist', 'dnn', 'apgd', [0.3], 0)
     # pytorch_attack_against_rc_img('mnist', 'dnn', 'apgd2', [2.0], 0)

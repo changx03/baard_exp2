@@ -35,7 +35,7 @@ with open('metadata.json') as data_json:
     METADATA = json.load(data_json)
 with open('SEEDS') as f:
     SEEDS = [int(s) for s in f.read().split(',')]
-BATCH_SIZE = 128
+BATCH_SIZE = 192
 N_SAMPLES = 2000
 DEF_NAME = 'rc'
 MODEL_NAME = 'dnn'

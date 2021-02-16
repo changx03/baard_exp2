@@ -36,7 +36,6 @@ with open('metadata.json') as data_json:
 with open('SEEDS') as f:
     SEEDS = [int(s) for s in f.read().split(',')]
 BATCH_SIZE = 192
-EPOCHS = 50
 N_SAMPLES = 2000
 DEF_NAME = 'lid'
 K = 20
@@ -150,68 +149,68 @@ def pytorch_attack_against_lid_img(data_name, model_name, att, epsilons, idx):
     acc_on_advs = []
     fprs = []
     for e in epsilons:
-        # try:
-        path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
-        if os.path.exists(path_adv):
-            print('[ATTACK] Find:', path_adv)
-            adv = np.load(path_adv)
-        else:
-            print('[ATTACK] Start generating {} {} eps={} advx...'.format(X_att.shape[0], att, e))
+        try:
+            path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, att, str(float(e))))
+            if os.path.exists(path_adv):
+                print('[ATTACK] Find:', path_adv)
+                adv = np.load(path_adv)
+            else:
+                print('[ATTACK] Start generating {} {} eps={} advx...'.format(X_att.shape[0], att, e))
+                start = time.time()
+                adv = get_advx_untargeted(model, data_name, att, eps=e, device=device, X=X_att, y=y_att, batch_size=BATCH_SIZE)
+                time_elapsed = time.time() - start
+                print('[ATTACK] Time spend on generating {} advx: {}'.format(len(adv), str(datetime.timedelta(seconds=time_elapsed))))
+                np.save(path_adv, adv)
+                print('[ATTACK] Save to', path_adv)
+
+            path_adv_val = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv_val.npy'.format(data_name, model_name, att, str(float(e))))
+            if os.path.exists(path_adv_val):
+                print('[ATTACK] Find:', path_adv_val)
+                adv_val = np.load(path_adv_val)
+            else:
+                print('[ATTACK] Start generating {} {} eps={} advx (validation)...'.format(X_val.shape[0], att, e))
+                start = time.time()
+                adv_val = get_advx_untargeted(model, data_name, att, eps=e, device=device, X=X_val, y=y_val, batch_size=BATCH_SIZE)
+                time_elapsed = time.time() - start
+                print('[ATTACK] Time spend on generating {} advx (validation): {}'.format(len(adv_val), str(datetime.timedelta(seconds=time_elapsed))))
+                np.save(path_adv_val, adv_val)
+                print('[ATTACK] Save to', path_adv_val)
+
+            pred_adv = predict_numpy(model, adv, device)
+            acc_naked = np.mean(pred_adv == y_att)
+            print('[ATTACK] Acc without def:', acc_naked)
+
+            # Preform defence
+            print('[DEFENCE] Start running FS...')
             start = time.time()
-            adv = get_advx_untargeted(model, data_name, att, eps=e, device=device, X=X_att, y=y_att, batch_size=BATCH_SIZE)
+            # Train LID with adversarial examples
+            X_lid, y_lid = detector.get_train_set(X_val, adv_val, std_dominator=STD_DOMINATOR)
+            detector.fit(X_lid, y_lid, verbose=0)
+
+            labelled_as_adv = detector.detect(adv, pred_adv)
+            if len(fprs) == 0:
+                labelled_benign_as_adv = detector.detect(X_att, y_att)
             time_elapsed = time.time() - start
-            print('[ATTACK] Time spend on generating {} advx: {}'.format(len(adv), str(datetime.timedelta(seconds=time_elapsed))))
-            np.save(path_adv, adv)
-            print('[ATTACK] Save to', path_adv)
+            print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
 
-        path_adv_val = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv_val.npy'.format(data_name, model_name, att, str(float(e))))
-        if os.path.exists(path_adv_val):
-            print('[ATTACK] Find:', path_adv_val)
-            adv_val = np.load(path_adv_val)
-        else:
-            print('[ATTACK] Start generating {} {} eps={} advx (validation)...'.format(X_val.shape[0], att, e))
-            start = time.time()
-            adv_val = get_advx_untargeted(model, data_name, att, eps=e, device=device, X=X_val, y=y_val, batch_size=BATCH_SIZE)
-            time_elapsed = time.time() - start
-            print('[ATTACK] Time spend on generating {} advx (validation): {}'.format(len(adv_val), str(datetime.timedelta(seconds=time_elapsed))))
-            np.save(path_adv_val, adv_val)
-            print('[ATTACK] Save to', path_adv_val)
+            acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
+            # NOTE: clean samples are the same set. Do not repeat.
+            if len(fprs) == 0:
+                fpr = np.mean(labelled_benign_as_adv)
+            else:
+                fpr = fprs[0]
 
-        pred_adv = predict_numpy(model, adv, device)
-        acc_naked = np.mean(pred_adv == y_att)
-        print('[ATTACK] Acc without def:', acc_naked)
-
-        # Preform defence
-        print('[DEFENCE] Start running FS...')
-        start = time.time()
-        # Train LID with adversarial examples
-        X_lid, y_lid = detector.get_train_set(X_val, adv_val, std_dominator=STD_DOMINATOR)
-        detector.fit(X_lid, y_lid, verbose=0)
-
-        labelled_as_adv = detector.detect(adv, pred_adv)
-        if len(fprs) == 0:
-            labelled_benign_as_adv = detector.detect(X_att, y_att)
-        time_elapsed = time.time() - start
-        print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
-
-        acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
-        # NOTE: clean samples are the same set. Do not repeat.
-        if len(fprs) == 0:
-            fpr = np.mean(labelled_benign_as_adv)
-        else:
-            fpr = fprs[0]
-
-        print('[DEFENCE] acc_on_adv:', acc)
-        print('[DEFENCE] fpr:', fpr)
-        # except Exception as e:
-        #     print('[ERROR]', e)
-        #     acc_naked = np.nan
-        #     acc = np.nan
-        #     fpr = np.nan
-        # finally:
-        accuracies_no_def.append(acc_naked)
-        acc_on_advs.append(acc)
-        fprs.append(fpr)
+            print('[DEFENCE] acc_on_adv:', acc)
+            print('[DEFENCE] fpr:', fpr)
+        except Exception as e:
+            print('[ERROR]', e)
+            acc_naked = np.nan
+            acc = np.nan
+            fpr = np.nan
+        finally:
+            accuracies_no_def.append(acc_naked)
+            acc_on_advs.append(acc)
+            fprs.append(fpr)
 
     data = {
         'data': np.repeat(data_name, len(epsilons)),

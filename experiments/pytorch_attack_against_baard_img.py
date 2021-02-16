@@ -44,9 +44,6 @@ def pytorch_attack_against_baard_img(data_name, model_name, att, epsilons, idx, 
     seed = SEEDS[idx]
     set_seeds(seed)
 
-    if att == 'boundary':
-        epsilons = [0.]
-
     path_results = get_output_path(idx, data_name, model_name)
     if not os.path.exists(path_results):
         print('Output folder does not exist. Create:', path_results)
@@ -144,6 +141,9 @@ def pytorch_attack_against_baard_img(data_name, model_name, att, epsilons, idx, 
 
     ############################################################################
     # Step 5: Generate attack and preform defence
+    if att == 'boundary':
+        epsilons = [0.]
+
     accuracies_no_def = []
     acc_on_advs = []
     fprs = []
@@ -232,7 +232,7 @@ if __name__ == '__main__':
     print('attack:', att)
     print('epsilons:', epsilons)
     print('seed:', seed)
-    pytorch_attack_against_baard_img(data, model_name, att, epsilons, idx)
+    pytorch_attack_against_baard_img(data, model_name, att, epsilons, idx, args.param)
 
     # Testing
     # pytorch_attack_against_baard_img('mnist', 'dnn', 'apgd', [0.3], 0, './params/baard_mnist_3.json')

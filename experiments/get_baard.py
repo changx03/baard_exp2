@@ -53,8 +53,7 @@ def get_baard(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_
     # Load each stage
     with open(baard_param) as j:
         baard_param = json.load(j)
-        sequence = baard_param['sequence']
-        path_param_backup = os.path.join(path_results, 'results', '{}_{}_baard_{}.json'.format(data_name, model_name, np.sum(sequence)))
+        path_param_backup = os.path.join(path_results, 'results', 'baard_{}.json'.format(data_name))
         if os.path.exists(path_param_backup):
             k = open(path_param_backup)
             param_saved = json.load(k)
@@ -71,23 +70,14 @@ def get_baard(data_name, model_name, idx, X_train, y_train, X_val, y_val, baard_
     print('[DEFENCE] Param:', baard_param)
 
     stages = []
-    if sequence[0]:
-        s1 = ApplicabilityStage(n_classes=n_classes, fpr=baard_param['fpr1'], verbose=False)
-        s1.fit(X_train_s1, y_train)
-        stages.append(s1)
-    if sequence[1]:
-        s2 = ReliabilityStage(n_classes=n_classes, k=baard_param['k_re'], fpr=baard_param['fpr2'], verbose=False)
-        s2.fit(X_train, y_train)
-        stages.append(s2)
-    if sequence[2]:
-        s3 = DecidabilityStage(n_classes=n_classes, k=baard_param['k_de'], fpr=baard_param['fpr3'], verbose=False)
-        s3.fit(X_train, y_train)
-        stages.append(s3)
-    print('[DEFENCE] BAARD stages:', len(stages))
+    stages.append(ApplicabilityStage(n_classes=n_classes, fpr=baard_param['fpr1'], verbose=False))
+    stages.append(ReliabilityStage(n_classes=n_classes, k=baard_param['k_re'], fpr=baard_param['fpr2'], verbose=False))
+    stages.append(DecidabilityStage(n_classes=n_classes, k=baard_param['k_de'], fpr=baard_param['fpr3'], verbose=False))
     detector = BAARDOperator(stages=stages)
+    detector.fit(X_train, y_train, X_train_s1)
 
     # Set thresholds
-    file_baard_threshold = os.path.join(path_results, 'data', '{}_{}_baard_threshold_{}.pt'.format(data_name, model_name, len(stages)))
+    file_baard_threshold = os.path.join(path_results, 'data', '{}_{}_baard_threshold.pt'.format(data_name, model_name))
     if os.path.exists(file_baard_threshold):
         print('[DEFENCE] Found existing BAARD thresholds:', file_baard_threshold)
         detector.load(file_baard_threshold)

@@ -19,6 +19,7 @@ class BAARD_Clipper:
         y_pred = np.argmax(pred, axis=1)
         return clip_by_threshold(X, y_pred, thresholds)
 
+
 def clip_by_threshold(X, y, thresholds):
     n_classes = thresholds.shape[0]
     shape = X.shape
@@ -37,20 +38,3 @@ def clip_by_threshold(X, y, thresholds):
         out_flat[idx] = subset_clipped
 
     return out_flat.reshape(shape)
-
-
-if __name__ == '__main__':
-    # Load adversrial examples
-    path = os.path.join('result_0', 'mnist_dnn_apgd_300.pt')
-    obj = torch.load(path)
-    X = obj['X']
-    adv = obj['adv']
-    y = obj['y']  # NOTE: This is wrong, should be the prediction! Test only!
-    # Load thresholds
-    path = os.path.join('result_0', 'mnist_dnn_baard_threshold.pt')
-    obj = torch.load(path)
-    thresholds = obj['thresholds'][0]
-    X_clip = clip_by_threshold(X, y, thresholds)
-    adv_clip = clip_by_threshold(adv, y, thresholds)
-    print('L2 dist X:', np.linalg.norm(X - X_clip))
-    print('L2 dist adv:', np.linalg.norm(adv - adv_clip))

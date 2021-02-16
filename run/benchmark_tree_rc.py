@@ -15,7 +15,7 @@ for b in range(1, 4):
     params.append(path)
 
 
-def run_inner(i):
+def run(i):
     attacks = ['tree', 'boundary']
     datasets = ['banknote', 'breastcancer', 'htru2']
     for d in datasets:
@@ -23,17 +23,12 @@ def run_inner(i):
             sklearn_attack_against_rc(d, MODEL, a, epsilons=[0], idx=i)
 
 
-def run(n):
-    for i in range(n):
-        run_inner(i)
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--n_times', type=int, default=1)
+    parser.add_argument('-i', '--idx', type=int, default=1)
     args = parser.parse_args()
     print('args:', args)
-    run(args.n_times)
+    run(args.idx)
 
 # Example: Running from terminal
-# nohup python3 ./run/benchmark_tree_rc.py -n 2 > ./log/benchmark_tree_rc.out 2> ./log/benchmark_tree_rc.err & tail -f ./log/benchmark_tree_rc.out
+# nohup python3 ./run/benchmark_tree_rc.py -i 0 > ./log/benchmark_tree_rc_0.out &

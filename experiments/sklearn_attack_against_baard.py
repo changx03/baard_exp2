@@ -70,7 +70,7 @@ def get_attack(att_name, classifier, eps=None):
     return attack
 
 
-def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baard_param):
+def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baard_param=None):
     seed = SEEDS[idx]
     set_seeds(seed)
 
@@ -89,7 +89,7 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     print('[DATA] Read file: {}'.format(data_path))
     n_test = METADATA['data'][data_name]['n_test']
     X, y = load_csv(data_path)
-    n_classes = len(np.unique(y))
+    # n_classes = len(np.unique(y))
 
     # Apply scaling
     scaler = MinMaxScaler().fit(X)
@@ -143,7 +143,9 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     ############################################################################
     # Step 4: Load detector
     print('[DEFENCE] Start training BAARD...')
-    print('[DEFENCE] Correct train set:', X_train.shape, y_train.shape)
+    if baard_param is None:
+        baard_param = os.path.join('params', 'baard_{}.json'.format(data_name))
+
     detector = get_baard(
         data_name=data_name,
         model_name=model_name,
@@ -162,8 +164,12 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
 
     classifier = SklearnClassifier(model=model, clip_values=(0.0, 1.0))
     accuracies_no_def = []
-    acc_on_advs = []
-    fprs = []
+    acc_on_advs_1 = []
+    acc_on_advs_2 = []
+    acc_on_advs_3 = []
+    fprs_1 = []
+    fprs_2 = []
+    fprs_3 = []
     for e in epsilons:
         try:
             # Load/Create adversarial examples
@@ -184,18 +190,24 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
             # Preform defence
             print('[DEFENCE] Start running BAARD...')
             start = time.time()
-            labelled_as_adv = detector.detect(adv, pred_adv)
+            labelled_as_adv_1, labelled_as_adv_2, labelled_as_adv_3 = detector.detect(adv, pred_adv, per_stage=True)
             time_elapsed = time.time() - start
             print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
 
-            acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
+            acc_1 = acc_on_advx(pred_adv, y_att, labelled_as_adv_1)
+            acc_2 = acc_on_advx(pred_adv, y_att, labelled_as_adv_2)
+            acc_3 = acc_on_advx(pred_adv, y_att, labelled_as_adv_3)
 
             # NOTE: clean samples are the same set. Do not repeat.
-            if len(fprs) == 0:
-                labelled_benign_as_adv = detector.detect(X_att, y_att)
-                fpr = np.mean(labelled_benign_as_adv)
+            if len(fprs_1) == 0:
+                labelled_fp_1, labelled_fp_2, labelled_fp_3 = detector.detect(X_att, y_att, per_stage=True)
+                fpr_1 = np.mean(labelled_fp_1)
+                fpr_2 = np.mean(labelled_fp_2)
+                fpr_3 = np.mean(labelled_fp_3)
             else:
-                fpr = fprs[0]
+                fpr_1 = fprs_1[0]
+                fpr_2 = fprs_2[0]
+                fpr_3 = fprs_3[0]
 
             print('[DEFENCE] acc_on_adv:', acc)
             print('[DEFENCE] fpr:', fpr)
@@ -206,8 +218,12 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
             fpr = np.nan
         finally:
             accuracies_no_def.append(acc_naked)
-            acc_on_advs.append(acc)
-            fprs.append(fpr)
+            acc_on_advs_1.append(acc_1)
+            acc_on_advs_2.append(acc_2)
+            acc_on_advs_3.append(acc_3)
+            fprs_1.append(fpr_1)
+            fprs_2.append(fpr_2)
+            fprs_3.append(fpr_3)
 
     data = {
         'data': np.repeat(data_name, len(epsilons)),
@@ -215,11 +231,15 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
         'attack': np.repeat(att, len(epsilons)),
         'adv_param': np.array(epsilons),
         'acc_no_def': np.array(accuracies_no_def),
-        'acc_on_adv': np.array(acc_on_advs),
-        'fpr': np.array(fprs)
+        'acc_on_adv_1': np.array(acc_on_advs_1),
+        'fpr_1': np.array(fprs_1),
+        'acc_on_adv_2': np.array(acc_on_advs_2),
+        'fpr_2': np.array(fprs_2),
+        'acc_on_adv_3': np.array(acc_on_advs_3),
+        'fpr_3': np.array(fprs_3),
     }
     df = pd.DataFrame(data)
-    path_csv = os.path.join(path_results, 'results', '{}_{}_{}_{}_{}.csv'.format(data_name, model_name, att, DEF_NAME, len(detector.stages)))
+    path_csv = os.path.join(path_results, 'results', '{}_{}_{}_{}.csv'.format(data_name, model_name, att, DEF_NAME))
     df.to_csv(path_csv)
     print('Save to:', path_csv)
     print()
@@ -232,7 +252,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
     parser.add_argument('-a', '--att', type=str, default='fgsm', choices=ATTACKS)
     parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
-    parser.add_argument('-p', '--param', type=str, required=True, default=os.pah.join('params', 'baard_num_3.json'))
+    parser.add_argument('-p', '--param', type=str)
     args = parser.parse_args()
     print('args:', args)
 
@@ -251,4 +271,4 @@ if __name__ == '__main__':
     sklearn_attack_against_baard(data, model_name, att, epsilons, idx, param)
 
     # Testing
-    # sklearn_attack_against_baard('banknote', 'svm', 'fgsm', [0.2], 0, './params/baard_num_3.json')
+    # sklearn_attack_against_baard('banknote', 'svm', 'fgsm', [0.3, 1.0], 0)

@@ -11,127 +11,98 @@ from experiments.pytorch_attack_against_baard_img import \
 def run_mnist(i):
     data = 'mnist'
     model = 'dnn'
-    params = []
-    for j in range(1, 4):
-        path = os.path.join('params', 'baard_mnist_{}.json'.format(j))
-        params.append(path)
 
     eps = [0.063, 0.1, 0.3, 0.6, 1.0, 1.5, 2.0]
     attacks = ['fgsm', 'apgd']
     for att in attacks:
-        for p in params:
-            pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
     att = 'apgd2'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [0.]
     att = 'boundary'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [0.]
     att = 'deepfool'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [0., 5., 10.]
     att = 'cw2'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [1.]
     att = 'line'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
 
 def run_cifar10_resnet(i):
     data = 'cifar10'
     model = 'resnet'
-    params = []
-    for j in range(1, 4):
-        path = os.path.join('params', 'baard_cifar10_{}.json'.format(j))
-        params.append(path)
 
     eps = [0.031, 0.1, 0.3, 0.6, 1.0, 1.5, 2.0]
     attacks = ['fgsm', 'apgd']
     for att in attacks:
-        for p in params:
-            pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
     att = 'apgd2'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [0.]
     att = 'deepfool'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [0., 5., 10.]
     att = 'cw2'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [0., 1.]
     att = 'line'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
 
 def run_cifar10_vgg(i):
     data = 'cifar10'
     model = 'vgg'
-    params = []
-    for j in range(1, 4):
-        path = os.path.join('params', 'baard_cifar10_{}.json'.format(j))
-        params.append(path)
 
     eps = [0.031, 0.1, 0.3, 0.6, 1.0, 1.5, 2.0]
     attacks = ['fgsm', 'apgd']
     for att in attacks:
-        for p in params:
-            pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
     att = 'apgd2'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [0.]
     att = 'deepfool'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [0., 5., 10.]
     att = 'cw2'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
     eps = [0., 1.]
     att = 'line'
-    for p in params:
-        pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i, baard_param=p)
+    pytorch_attack_against_baard_img(data, model, att, epsilons=eps, idx=i)
 
 
-def run(n):
-    for i in range(n):
-        run_mnist(i)
-        run_cifar10_resnet(i)
-        run_cifar10_vgg(i)
+def run(i):
+    run_mnist(i)
+    run_cifar10_resnet(i)
+    run_cifar10_vgg(i)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--n_times', type=int, default=1)
+    parser.add_argument('-i', '--idx', type=int, default=0)
     args = parser.parse_args()
     print('args:', args)
-    run(args.n_times)
+    run(args.idx)
 
 
 # Example: Running from terminal
-# nohup python3 ./run/benchmark_img_baard.py -n 2 > ./log/benchmark_img_baard.out 2> ./log/benchmark_img_baard.err & tail -f ./log/benchmark_img_baard.out
+# nohup python3 ./run/benchmark_img_baard.py -i 0 > ./log/benchmark_img_baard_0.out &

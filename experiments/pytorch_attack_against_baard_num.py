@@ -40,7 +40,7 @@ DEF_NAME = 'baard'
 MODEL_NAME = 'dnn'
 
 
-def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, param):
+def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, baard_param=None):
     seed = SEEDS[idx]
     set_seeds(seed)
 
@@ -78,8 +78,8 @@ def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, param):
     n_hidden = n_features * 4
     n_classes = METADATA['data'][data_name]['n_classes']
     model = NumericModel(n_features=n_features, n_hidden=n_hidden, n_classes=n_classes, use_prob=False).to(device)
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
-    loss = nn.CrossEntropyLoss()
+    # optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
+    # loss = nn.CrossEntropyLoss()
     model.load_state_dict(torch.load(file_model, map_location=device))
 
     ############################################################################
@@ -129,6 +129,9 @@ def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, param):
 
     ############################################################################
     # Step 4: Load detector
+    if baard_param is None:
+        baard_param = os.path.join('params', 'baard_{}.json'.format(data_name))
+
     detector = get_baard(
         data_name=data_name,
         model_name=MODEL_NAME,
@@ -137,7 +140,7 @@ def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, param):
         y_train=y_train,
         X_val=X_val,
         y_val=y_val,
-        baard_param=param)
+        baard_param=baard_param)
 
     ############################################################################
     # Step 5: Generate attack and preform defence
@@ -145,8 +148,12 @@ def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, param):
         epsilons = [0]
 
     accuracies_no_def = []
-    acc_on_advs = []
-    fprs = []
+    acc_on_advs_1 = []
+    acc_on_advs_2 = []
+    acc_on_advs_3 = []
+    fprs_1 = []
+    fprs_2 = []
+    fprs_3 = []
     for e in epsilons:
         try:
             path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(data_name, MODEL_NAME, att, str(float(e))))
@@ -169,30 +176,40 @@ def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, param):
             # Preform defence
             print('[DEFENCE] Start running BAARD...')
             start = time.time()
-            labelled_as_adv = detector.detect(adv, pred_adv)
+            labelled_as_adv_1, labelled_as_adv_2, labelled_as_adv_3 = detector.detect(adv, pred_adv, per_stage=True)
             time_elapsed = time.time() - start
             print('[DEFENCE] Time spend:', str(datetime.timedelta(seconds=time_elapsed)))
 
-            acc = acc_on_advx(pred_adv, y_att, labelled_as_adv)
+            acc_1 = acc_on_advx(pred_adv, y_att, labelled_as_adv_1)
+            acc_2 = acc_on_advx(pred_adv, y_att, labelled_as_adv_2)
+            acc_3 = acc_on_advx(pred_adv, y_att, labelled_as_adv_3)
 
             # NOTE: clean samples are the same set. Do not repeat.
-            if len(fprs) == 0:
-                labelled_benign_as_adv = detector.detect(X_att, y_att)
-                fpr = np.mean(labelled_benign_as_adv)
+            if len(fprs_1) == 0:
+                labelled_fp_1, labelled_fp_2, labelled_fp_3 = detector.detect(X_att, y_att, per_stage=True)
+                fpr_1 = np.mean(labelled_fp_1)
+                fpr_2 = np.mean(labelled_fp_2)
+                fpr_3 = np.mean(labelled_fp_3)
             else:
-                fpr = fprs[0]
+                fpr_1 = fprs_1[0]
+                fpr_2 = fprs_2[0]
+                fpr_3 = fprs_3[0]
 
-            print('[DEFENCE] acc_on_adv:', acc)
-            print('[DEFENCE] fpr:', fpr)
+            print('[DEFENCE] acc_on_adv (Stage 3):', acc_3)
+            print('[DEFENCE] fpr (Stage 3):', fpr_3)
         except Exception as e:
             print('[ERROR]', e)
             acc_naked = np.nan
-            acc = np.nan
-            fpr = np.nan
+            acc_1 = acc_2 = acc_3 = np.nan
+            fpr_1 = fpr_2 = fpr_3 = np.nan
         finally:
             accuracies_no_def.append(acc_naked)
-            acc_on_advs.append(acc)
-            fprs.append(fpr)
+            acc_on_advs_1.append(acc_1)
+            acc_on_advs_2.append(acc_2)
+            acc_on_advs_3.append(acc_3)
+            fprs_1.append(fpr_1)
+            fprs_2.append(fpr_2)
+            fprs_3.append(fpr_3)
 
     data = {
         'data': np.repeat(data_name, len(epsilons)),
@@ -200,11 +217,15 @@ def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, param):
         'attack': np.repeat(att, len(epsilons)),
         'adv_param': np.array(epsilons),
         'acc_no_def': np.array(accuracies_no_def),
-        'acc_on_adv': np.array(acc_on_advs),
-        'fpr': np.array(fprs)
+        'acc_on_adv_1': np.array(acc_on_advs_1),
+        'fpr_1': np.array(fprs_1),
+        'acc_on_adv_2': np.array(acc_on_advs_2),
+        'fpr_2': np.array(fprs_2),
+        'acc_on_adv_3': np.array(acc_on_advs_3),
+        'fpr_3': np.array(fprs_3),
     }
     df = pd.DataFrame(data)
-    path_csv = os.path.join(path_results, 'results', '{}_{}_{}_{}_{}.csv'.format(data_name, MODEL_NAME, att, DEF_NAME, len(detector.stages)))
+    path_csv = os.path.join(path_results, 'results', '{}_{}_{}_{}.csv'.format(data_name, MODEL_NAME, att, DEF_NAME))
     df.to_csv(path_csv)
     print('Save to:', path_csv)
     print()
@@ -216,7 +237,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
     parser.add_argument('-a', '--att', type=str, default='fgsm', choices=ATTACKS)
     parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
-    parser.add_argument('-p', '--param', type=str, required=True, default=os.pah.join('params', 'baard_num_3.json'))
+    parser.add_argument('-p', '--param', type=str)
     args = parser.parse_args()
     print('args:', args)
 
@@ -234,4 +255,4 @@ if __name__ == '__main__':
     pytorch_attack_against_baard_num(data, att, epsilons, idx, param)
 
     # Testing
-    # pytorch_attack_against_baard_num('banknote', 'apgd', [0.3], 0, './params/baard_num_3.json')
+    # pytorch_attack_against_baard_num('banknote', 'apgd', [0.3, 1.0], 0)

@@ -527,7 +527,7 @@ class BAARDOperator:
         for stage in self.stages:
             stage.search_thresholds(X, y, labels_adv)
 
-    def detect(self, X, y):
+    def detect(self, X, y, per_stage=False):
         """Detect adversarial examples in X.
 
         Parameters
@@ -536,31 +536,40 @@ class BAARDOperator:
             Samples.
 
         y : array-like of shape (n_samples, )
-            Predicted labels from the initial model. NOTE: Since the detector 
-            has no access to the model, we do not have the true labels at the 
-            run time. Therefore, y is the predictions rather than the true 
-            labels.
+            Predicted labels from the initial model.
+
+        per_stage : bool, default=False
+            If per_stage is True, the functions will return the results per 
+            stage.
 
         Returns
         -------
-        labels : array of shape (n_samples,)
+        *labels : array of shape (n_samples,)
             Returns labels for adversarial examples. 1 is adversarial example, 
             0 is benign.
         """
         n = len(X)
-        labels = np.zeros(n, dtype=np.long)
+        labelled_as_adv = np.zeros(n, dtype=np.long)
+        labelled_as_adv_per_stage = []
         for stage in self.stages:
-            uncertain_idx = np.where(labels == 0)[0]
+            uncertain_idx = np.where(labelled_as_adv == 0)[0]
             # No benign samples left in the queue
             if np.sum(uncertain_idx) == 0:
-                return labels
+                labelled_as_adv_per_stage.append(labelled_as_adv.copy())
+                continue
             X_uncertain = X[uncertain_idx]
             y_uncertain = y[uncertain_idx]
             results = stage.predict(X_uncertain, y_uncertain)
             positive_results = np.where(results == 1)[0]
             positive_idx = uncertain_idx[positive_results]
-            labels[positive_idx] = 1
-        return labels
+            labelled_as_adv[positive_idx] = 1
+            # Save a copy
+            labelled_as_adv_per_stage.append(labelled_as_adv.copy())
+
+        if per_stage:
+            return tuple(labelled_as_adv_per_stage)
+        else:
+            return labelled_as_adv
 
     def save(self, path):
         thresholds = []

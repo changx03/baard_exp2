@@ -144,14 +144,10 @@ cython_debug/
 *.out
 *.pt
 ~*
-baard_venv/
 *.tar.gz
 data/cifar-10-batches-py/
 data/MNIST/
 log/
-nohup.out
 results/
-test.ipynb
-test.py
-test.sh
+test.*
 *.pdf

@@ -252,3 +252,5 @@ if __name__ == '__main__':
 
     # Testing
     # pytorch_attack_against_lid_num('banknote', 'apgd', [0.3], 0)
+
+# python ./experiments/pytorch_attack_against_lid_num.py -d banknote -i 0 -a apgd -e 0.3 1.0

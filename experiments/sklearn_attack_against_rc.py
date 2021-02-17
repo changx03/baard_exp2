@@ -270,3 +270,5 @@ if __name__ == '__main__':
 
     # Testing
     # sklearn_attack_against_rc('banknote', 'svm', 'bim', ['0.3'], 0)
+
+# python ./experiments/sklearn_attack_against_rc.py -d banknote -m svm -i 0 -a fgsm -e 0.3 1.0

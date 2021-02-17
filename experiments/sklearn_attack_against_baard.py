@@ -272,3 +272,5 @@ if __name__ == '__main__':
 
     # Testing
     # sklearn_attack_against_baard('banknote', 'svm', 'fgsm', [0.3, 1.0], 0)
+
+# python ./experiments/sklearn_attack_against_baard.py -d banknote -m svm -i 0 -a fgsm -e 0.3 1.0

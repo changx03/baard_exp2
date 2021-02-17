@@ -141,8 +141,6 @@ if __name__ == '__main__':
     seed = SEEDS[idx]
     data_name = args.data
     model_name = args.model
-    att = args.attack
-    eps = args.eps
     print('seed:', seed)
     print('data_name:', data_name)
     print('model_name:', model_name)
@@ -150,12 +148,12 @@ if __name__ == '__main__':
 
     pytorch_train_classifier(data_name, model_name, idx)
 
+    # Testing
+    # pytorch_train_classifier('banknote', 'dnn', 0)
+    # pytorch_train_classifier('breastcancer', 'dnn', 0)
+    # pytorch_train_classifier('htru2', 'dnn', 0)
+    # pytorch_train_classifier('mnist', 'dnn', 0)
+    # pytorch_train_classifier('cifar10', 'resnet', 0)
+    # pytorch_train_classifier('cifar10', 'vgg', 0)
 
-# Testing
-# if __name__ == '__main__':
-    # pytorch_train_classifier('banknote', 'dnn', 10)
-    # pytorch_train_classifier('breastcancer', 'dnn', 10)
-    # pytorch_train_classifier('htru2', 'dnn', 10)
-    # pytorch_train_classifier('mnist', 'dnn', 10)
-    # pytorch_train_classifier('cifar10', 'resnet', 10)
-    # pytorch_train_classifier('cifar10', 'vgg', 10)
+# python ./experiments/train_classifier.py -d banknote -m dnn -i 0

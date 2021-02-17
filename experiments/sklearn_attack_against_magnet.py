@@ -313,3 +313,5 @@ if __name__ == '__main__':
 
     # Testing
     # sklearn_attack_against_magnet('banknote', 'svm', 'bim', [0.05, 0.1, 0.3, 0.6, 1.0], 0)
+
+# python ./experiments/sklearn_attack_against_magnet.py -d banknote -m svm -i 0 -a fgsm -e 0.3 1.0

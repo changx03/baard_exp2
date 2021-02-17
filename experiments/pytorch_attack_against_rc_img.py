@@ -259,3 +259,5 @@ if __name__ == '__main__':
     # Testing
     # pytorch_attack_against_rc_img('mnist', 'dnn', 'apgd', [0.3], 0)
     # pytorch_attack_against_rc_img('mnist', 'dnn', 'apgd2', [2.0], 0)
+
+# python ./experiments/pytorch_attack_against_rc_img.py -d mnist -i 0 -a apgd -e 0.3 1.0

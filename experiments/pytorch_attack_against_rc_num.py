@@ -266,3 +266,5 @@ if __name__ == '__main__':
 
     # Testing
     # pytorch_attack_against_rc_num('banknote', 'apgd', [0.3], 0)
+
+# python ./experiments/pytorch_attack_against_rc_num.py -d banknote -i 0 -a fgsm -e 0.3 1.0

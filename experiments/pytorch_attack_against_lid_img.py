@@ -252,3 +252,5 @@ if __name__ == '__main__':
     # pytorch_attack_against_lid_img('mnist', 'dnn', 'apgd', [0.3], 0)
     # pytorch_attack_against_lid_img('mnist', 'dnn', 'apgd2', [2.0], 0)
     # pytorch_attack_against_lid_img('mnist', 'dnn', 'cw2', [0.], 0)
+
+# python3 ./experiments/pytorch_attack_against_lid_img.py -d mnist -i 0 -a apgd -e 0.063 0.3 1.0

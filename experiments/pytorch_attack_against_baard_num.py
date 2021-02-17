@@ -243,7 +243,6 @@ if __name__ == '__main__':
 
     idx = args.idx
     data = args.data
-    MODEL_NAME = args.model
     att = args.att
     epsilons = args.eps
     param = args.param
@@ -256,3 +255,5 @@ if __name__ == '__main__':
 
     # Testing
     # pytorch_attack_against_baard_num('banknote', 'apgd', [0.3, 1.0], 0)
+
+# python3 ./experiments/pytorch_attack_against_baard_num.py -d banknote -i 0 -a apgd -e 0.3 1.0

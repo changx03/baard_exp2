@@ -325,7 +325,6 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
     parser.add_argument('-a', '--att', type=str, default='fgsm', choices=ATTACKS)
     parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
-    parser.add_argument('-p', '--param', type=str, required=True)
     args = parser.parse_args()
     print('args:', args)
 
@@ -340,10 +339,12 @@ if __name__ == '__main__':
     print('attack:', att)
     print('epsilons:', epsilons)
     print('seed:', seed)
-    pytorch_attack_against_magnet_img(data, model_name, att, epsilons, idx, args.param)
+    pytorch_attack_against_magnet_img(data, model_name, att, epsilons, idx)
 
     # Testing
     # pytorch_attack_against_magnet_img('mnist', 'dnn', 'apgd', [0.3], 0)
     # pytorch_attack_against_magnet_img('mnist', 'dnn', 'apgd2', [2.0], 0)
     # pytorch_attack_against_magnet_img('mnist', 'dnn', 'cw2', [0.], 0)
     # pytorch_attack_against_magnet_img('cifar10', 'resnet', 'apgd', [0.3], 0)
+
+# python ./experiments/pytorch_attack_against_magnet_img.py -d mnist -i 0 -a apgd -e 0.3 1.0

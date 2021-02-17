@@ -302,3 +302,5 @@ if __name__ == '__main__':
     # pytorch_attack_against_magnet_num('banknote', 'apgd', [0.05, 0.1, 0.3, 0.6, 1.0], 0)
     # pytorch_attack_against_magnet_num('breastcancer', 'apgd', [0.05, 0.1, 0.3, 0.6, 1.0], 0)
     # pytorch_attack_against_magnet_num('htru2', 'apgd', [0.05, 0.1, 0.3, 0.6, 1.0], 0)
+
+# python ./experiments/pytorch_attack_against_magnet_num.py -d banknote -i 0 -a apgd -e 0.05 0.3 1.0

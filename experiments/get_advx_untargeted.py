@@ -72,8 +72,7 @@ def get_advx_untargeted(model, data_name, att_name, eps, device, X, y=None, batc
             estimator=classifier,
             max_iter=1000,
             sample_size=batch_size,
-            targeted=False,
-            verbose=False)
+            targeted=False)
     elif att_name == 'cw2':
         attack = CarliniWagnerAttackL2(
             model=classifier._model._model,

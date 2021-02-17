@@ -57,8 +57,7 @@ def get_attack(att_name, classifier, eps=None):
         attack = BoundaryAttack(
             estimator=classifier,
             max_iter=1000,
-            targeted=False,
-            verbose=False)
+            targeted=False)
     elif att_name == 'fgsm':
         attack = FastGradientMethod(
             estimator=classifier,

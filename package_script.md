@@ -7,6 +7,8 @@ python3 -m venv ./venv
 pip install --upgrade pip
 pip list
 pip install torch torchvision
-pip install scikit-learn tqdm jupyterlab matplotlib pandas opencv-python
+pip install scikit-learn tqdm jupyterlab matplotlib pandas
 pip install openpyxl
+
+sudo apt-get install python-opencv
 ```

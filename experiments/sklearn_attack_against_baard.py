@@ -209,13 +209,13 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
                 fpr_2 = fprs_2[0]
                 fpr_3 = fprs_3[0]
 
-            print('[DEFENCE] acc_on_adv:', acc)
-            print('[DEFENCE] fpr:', fpr)
+            print('[DEFENCE] acc_on_adv (Stage 3):', acc_3)
+            print('[DEFENCE] fpr (Stage 3):', fpr_3)
         except Exception as e:
             print(e)
             acc_naked = np.nan
-            acc = np.nan
-            fpr = np.nan
+            acc_1 = acc_2 = acc_3 = np.nan
+            fpr_1 = fpr_2 = fpr_3 = np.nan
         finally:
             accuracies_no_def.append(acc_naked)
             acc_on_advs_1.append(acc_1)

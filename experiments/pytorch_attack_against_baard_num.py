@@ -27,7 +27,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from utils import acc_on_advx, get_correct_examples, load_csv, set_seeds
 
 from experiments import (ATTACKS, get_advx_untargeted, get_baard,
-                         get_output_path)
+                         get_output_path, pytorch_train_classifier)
 
 DATA_PATH = 'data'
 with open('metadata.json') as data_json:
@@ -73,7 +73,7 @@ def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, baard_param=
 
     file_model = os.path.join(path_results, 'data', '{}_{}_model.pt'.format(data_name, MODEL_NAME))
     if not os.path.exists(file_model):
-        raise FileNotFoundError('Cannot find pretrained model: {}'.format(file_model))
+        pytorch_train_classifier(data_name, MODEL_NAME, idx)
 
     n_features = METADATA['data'][data_name]['n_features']
     n_hidden = n_features * 4

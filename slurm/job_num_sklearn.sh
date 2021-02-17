@@ -1,7 +1,7 @@
 #!/bin/bash -e
 #SBATCH --job-name=num_sklearn
 #SBATCH --output=log/exp_num_sklearn_%a.out
-#SBATCH --time=10:00:00
+#SBATCH --time=24:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=4G
 #SBATCH --array=0-4

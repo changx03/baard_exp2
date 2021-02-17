@@ -140,6 +140,7 @@ def get_magnet(data_name, model, X_train, y_train, X_val, device, path_results):
 
 
 def sklearn_attack_against_magnet(data_name, model_name, att, epsilons, idx):
+    print('Runing sklearn_attack_against_magnet.py')
     seed = SEEDS[idx]
     set_seeds(seed)
 

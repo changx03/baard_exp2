@@ -113,6 +113,7 @@ def get_magnet(data_name, model, X_train, y_train, X_val, device, path_results):
 
 
 def pytorch_attack_against_magnet_num(data_name, att, epsilons, idx):
+    print('Runing pytorch_attack_against_magnet_num.py')
     seed = SEEDS[idx]
     set_seeds(seed)
 

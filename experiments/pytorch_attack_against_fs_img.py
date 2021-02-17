@@ -43,6 +43,7 @@ DEF_NAME = 'fs'
 
 
 def pytorch_attack_against_fs_img(data_name, model_name, att, epsilons, idx):
+    print('Runing pytorch_attack_against_fs_img.py')
     seed = SEEDS[idx]
     set_seeds(seed)
 

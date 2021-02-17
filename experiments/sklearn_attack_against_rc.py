@@ -74,6 +74,7 @@ def get_attack(att_name, classifier, eps=None):
 
 
 def sklearn_attack_against_rc(data_name, model_name, att, epsilons, idx):
+    print('Runing sklearn_attack_against_rc.py')
     seed = SEEDS[idx]
     set_seeds(seed)
 

@@ -71,6 +71,7 @@ def get_attack(att_name, classifier, eps=None):
 
 
 def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baard_param=None):
+    print('Runing sklearn_attack_against_baard.py')
     seed = SEEDS[idx]
     set_seeds(seed)
 

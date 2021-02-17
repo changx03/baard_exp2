@@ -42,6 +42,7 @@ DEF_NAME = 'rc'
 
 
 def pytorch_attack_against_rc_img(data_name, model_name, att, epsilons, idx):
+    print('Runing pytorch_attack_against_rc_img.py')
     seed = SEEDS[idx]
     set_seeds(seed)
 

@@ -42,6 +42,7 @@ MODEL_NAME = 'dnn'
 
 
 def pytorch_attack_against_rc_num(data_name, att, epsilons, idx):
+    print('Runing pytorch_attack_against_rc_num.py')
     seed = SEEDS[idx]
     set_seeds(seed)
 

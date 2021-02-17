@@ -44,6 +44,7 @@ LID_BATCH_SIZE = 100
 
 
 def pytorch_attack_against_lid_img(data_name, model_name, att, epsilons, idx):
+    print('Runing pytorch_attack_against_lid_img.py')
     seed = SEEDS[idx]
     set_seeds(seed)
 

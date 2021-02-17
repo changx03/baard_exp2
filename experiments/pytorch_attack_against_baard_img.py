@@ -41,6 +41,7 @@ DEF_NAME = 'baard'
 
 
 def pytorch_attack_against_baard_img(data_name, model_name, att, epsilons, idx, baard_param=None):
+    print('Runing pytorch_attack_against_baard_img.py')
     seed = SEEDS[idx]
     set_seeds(seed)
 

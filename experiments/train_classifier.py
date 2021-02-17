@@ -36,6 +36,7 @@ BATCH_SIZE = 192
 
 
 def pytorch_train_classifier(data_name, model_name, idx):
+    print('Runing train_classifier.py')
     seed = SEEDS[idx]
     set_seeds(seed)
 

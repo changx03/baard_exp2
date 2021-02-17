@@ -41,6 +41,7 @@ MODEL_NAME = 'dnn'
 
 
 def pytorch_attack_against_baard_num(data_name, att, epsilons, idx, baard_param=None):
+    print('Runing pytorch_attack_against_baard_num.py')
     seed = SEEDS[idx]
     set_seeds(seed)
 

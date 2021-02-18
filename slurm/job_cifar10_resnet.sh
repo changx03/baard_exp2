@@ -1,7 +1,7 @@
 #!/bin/bash -e
 #SBATCH --job-name=cifar10_resnet
 #SBATCH --output=log/exp_cifar10_resnet_%a.out
-#SBATCH --time=72:00:00
+#SBATCH --time=120:00:00
 #SBATCH --mem=16G
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1

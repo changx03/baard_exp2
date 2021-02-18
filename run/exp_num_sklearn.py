@@ -33,12 +33,12 @@ def run_svm(i, data):
 def run_tree(i, data):
     model = 'tree'
 
-    eps = [0.]
-    att = 'boundary'
-    run_small_batch(data, model, att, eps, i)
-
     eps = [0., 5., 10.]
     att = 'tree'
+    run_small_batch(data, model, att, eps, i)
+
+    eps = [0.]
+    att = 'boundary'
     run_small_batch(data, model, att, eps, i)
 
 

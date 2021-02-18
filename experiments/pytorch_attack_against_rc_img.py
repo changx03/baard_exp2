@@ -105,6 +105,12 @@ def pytorch_attack_against_rc_img(data_name, model_name, att, epsilons, idx):
         y_train = tensor_y_train.cpu().detach().numpy()
         X_test = tensor_X_test.cpu().detach().numpy()
         y_test = tensor_y_test.cpu().detach().numpy()
+
+        # Shuffle indices before saving
+        idx_shuffle = np.random.permutation(X_test.shape[0])
+        X_test = X_test[idx_shuffle]
+        y_test = y_test[idx_shuffle]
+        
         np.save(path_X_train, X_train)
         np.save(os.path.join(path_results, 'data', '{}_{}_X_test.npy'.format(data_name, model_name)), X_test)
         np.save(os.path.join(path_results, 'data', '{}_{}_y_tain.npy'.format(data_name, model_name)), y_train)
@@ -119,9 +125,6 @@ def pytorch_attack_against_rc_img(data_name, model_name, att, epsilons, idx):
     # Split rules:
     # 1. Benchmark_defence_test: 1000 (def_test)
     # 2. Benchmark_defence_val:  1000 (def_val)
-    idx_shuffle = np.random.permutation(X_test.shape[0])[:N_SAMPLES]
-    X_test = X_test[idx_shuffle]
-    y_test = y_test[idx_shuffle]
     n = N_SAMPLES // 2
     print('[DATA] n:', n)
     X_att = X_test[:n]

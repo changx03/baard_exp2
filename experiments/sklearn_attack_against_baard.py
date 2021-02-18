@@ -13,7 +13,6 @@ sys.path.append(LIB_PATH)
 
 import argparse
 import json
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -24,7 +23,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 from sklearn.tree import ExtraTreeClassifier
-from utils import (acc_on_advx, get_correct_examples_sklearn, load_csv,
+from utils import (acc_on_advx, get_correct_examples_sklearn, load_csv, mkdir,
                    set_seeds)
 
 from experiments import get_baard, get_output_path
@@ -75,14 +74,8 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     set_seeds(seed)
 
     path_results = get_output_path(idx, data_name, model_name)
-    if not os.path.exists(path_results):
-        print('[DATA] Output folder does not exist. Create:', path_results)
-        path = Path(os.path.join(path_results, 'data'))
-        print('[DATA] Create folder:', path)
-        path.mkdir(parents=True, exist_ok=True)
-        path = Path(os.path.join(path_results, 'results'))
-        path.mkdir(parents=True, exist_ok=True)
-        print('[DATA] Create folder:', path)
+    mkdir(os.path.join(path_results, 'data'))
+    mkdir(os.path.join(path_results, 'results'))
 
     # Step 1 Load data
     data_path = os.path.join(DATA_PATH, METADATA['data'][data_name]['file_name'])

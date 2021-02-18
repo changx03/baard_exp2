@@ -5,5 +5,6 @@ from .get_dataset_shape import *
 from .get_roc import *
 from .load_csv import *
 from .load_numpy_to_dataframe import *
+from .mkdir import *
 from .print_acc_per_label import *
 from .set_seeds import *

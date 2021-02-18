@@ -12,7 +12,6 @@ import argparse
 import datetime
 import json
 import time
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -27,7 +26,7 @@ from models.cifar10 import Resnet, Vgg
 from models.mnist import BaseModel
 from models.torch_util import predict_numpy, validate
 from torch.utils.data import DataLoader, TensorDataset
-from utils import acc_on_advx, get_correct_examples, set_seeds
+from utils import acc_on_advx, get_correct_examples, mkdir, set_seeds
 
 from experiments import (ATTACKS, get_advx_untargeted, get_output_path,
                          pytorch_train_classifier)
@@ -161,14 +160,8 @@ def pytorch_attack_against_magnet_img(data_name, model_name, att, epsilons, idx)
     set_seeds(seed)
 
     path_results = get_output_path(idx, data_name, model_name)
-    if not os.path.exists(path_results):
-        print('Output folder does not exist. Create:', path_results)
-        path = Path(os.path.join(path_results, 'data'))
-        print('Create folder:', path)
-        path.mkdir(parents=True, exist_ok=True)
-        path = Path(os.path.join(path_results, 'results'))
-        path.mkdir(parents=True, exist_ok=True)
-        print('Create folder:', path)
+    mkdir(os.path.join(path_results, 'data'))
+    mkdir(os.path.join(path_results, 'results'))
 
     # Step 1 Load data
     transform = tv.transforms.Compose([tv.transforms.ToTensor()])

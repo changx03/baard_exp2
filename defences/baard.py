@@ -595,3 +595,16 @@ class BAARDOperator:
             self.stages[i].k = obj['ks'][i]
         self.stages[0].n_tolerance_ = obj['n_tolerance']
         print('[BAARD] Load from:', path)
+
+# Testing
+if __name__ == '__main__':
+    k = 3
+    neigh_idx = np.array([[0, 1, 2], [3, 4, 0]])
+    y_train = np.array([0, 0, 0, 1, 1, 1])
+    y = np.array([0, 1])
+    neigh_y = np.array([y_train[i] for i in neigh_idx])
+    print('neigh_y', neigh_y)
+    y_grid = np.repeat(np.expand_dims(y, axis=0).transpose(), k, axis=1)
+    print('y_grid', y_grid)
+    likelihood = np.sum(neigh_y == y_grid, axis=1) / k
+    print('likelihood', likelihood)

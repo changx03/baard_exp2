@@ -10,7 +10,6 @@ import argparse
 import datetime
 import json
 import time
-from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -23,7 +22,7 @@ from models.torch_util import train, validate
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import DataLoader, TensorDataset
-from utils import load_csv, set_seeds
+from utils import load_csv, mkdir, set_seeds
 
 from experiments import get_output_path
 
@@ -41,14 +40,8 @@ def pytorch_train_classifier(data_name, model_name, idx):
     set_seeds(seed)
 
     path_results = get_output_path(idx, data_name, model_name)
-    if not os.path.exists(path_results):
-        print('[DATA] Output folder does not exist. Create:', path_results)
-        path = Path(os.path.join(path_results, 'data'))
-        print('[DATA] Create folder:', path)
-        path.mkdir(parents=True, exist_ok=True)
-        path = Path(os.path.join(path_results, 'results'))
-        path.mkdir(parents=True, exist_ok=True)
-        print('[DATA] Create folder:', path)
+    mkdir(os.path.join(path_results, 'data'))
+    mkdir(os.path.join(path_results, 'results'))
 
     # Step 1: Load data
     transform = tv.transforms.Compose([tv.transforms.ToTensor()])
@@ -73,8 +66,8 @@ def pytorch_train_classifier(data_name, model_name, idx):
         dataset_train = TensorDataset(torch.from_numpy(X_train), torch.from_numpy(y_train))
         dataset_test = TensorDataset(torch.from_numpy(X_test), torch.from_numpy(y_test))
 
-    dataloader_train = DataLoader(dataset_train, batch_size=BATCH_SIZE, shuffle=True)
-    dataloader_test = DataLoader(dataset_test, batch_size=BATCH_SIZE, shuffle=True)
+    loader_train = DataLoader(dataset_train, batch_size=BATCH_SIZE, shuffle=True)
+    loader_test = DataLoader(dataset_test, batch_size=BATCH_SIZE, shuffle=True)
 
     ############################################################################
     # Step 2: Train model
@@ -98,7 +91,11 @@ def pytorch_train_classifier(data_name, model_name, idx):
         n_features = METADATA['data'][data_name]['n_features']
         n_hidden = n_features * 4
         n_classes = METADATA['data'][data_name]['n_classes']
-        model = NumericModel(n_features=n_features, n_hidden=n_hidden, n_classes=n_classes, use_prob=False).to(device)
+        model = NumericModel(
+            n_features=n_features,
+            n_hidden=n_hidden,
+            n_classes=n_classes,
+            use_prob=False).to(device)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
     loss = nn.CrossEntropyLoss()
@@ -108,8 +105,8 @@ def pytorch_train_classifier(data_name, model_name, idx):
     time_start = time.time()
     for e in range(epochs):
         start = time.time()
-        tr_loss, tr_acc = train(model, dataloader_train, loss, optimizer, device)
-        va_loss, va_acc = validate(model, dataloader_test, loss, device)
+        tr_loss, tr_acc = train(model, loader_train, loss, optimizer, device)
+        va_loss, va_acc = validate(model, loader_test, loss, device)
         scheduler.step()
         time_elapsed = time.time() - start
         print(('[CLASSIFIER] {:2d}/{:d}[{:s}] Train Loss: {:.4f} Acc: {:.4f}%, Test Loss: {:.4f} Acc: {:.4f}%').format(
@@ -117,9 +114,9 @@ def pytorch_train_classifier(data_name, model_name, idx):
     time_elapsed = time.time() - time_start
     print('[CLASSIFIER] Time spend on training classifier: {}'.format(str(datetime.timedelta(seconds=time_elapsed))))
 
-    _, acc = validate(model, dataloader_train, loss, device)
+    _, acc = validate(model, loader_train, loss, device)
     print('[CLASSIFIER] accuracy on training set:', acc)
-    _, acc = validate(model, dataloader_test, loss, device)
+    _, acc = validate(model, loader_test, loss, device)
     print('[CLASSIFIER] accuracy on test set:    ', acc)
 
     file_model = os.path.join(path_results, 'data', '{}_{}_model.pt'.format(data_name, model_name))

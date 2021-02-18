@@ -20,7 +20,7 @@ def generate_random_samples(x, x_min, x_max, r, size):
     dtype = x.dtype
     noise = np.random.uniform(low=-abs(r), high=abs(r), size=shape).astype(dtype)
     rng_samples = np.repeat([x], repeats=size, axis=0) + noise
-    rng_samples = np.minimum(np.maximum(rng_samples, x_min), x_max)
+    rng_samples = np.clip(rng_samples, x_min, x_max)
     return rng_samples
 
 

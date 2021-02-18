@@ -167,9 +167,12 @@ def pytorch_attack_against_rc_num(data_name, att, epsilons, idx):
     if att == 'boundary':
         epsilons = [0]
 
+    # Adversarial examples come from the same benign set
+    pred_benign = detector.detect(X_att, y_att)
+    fpr = np.mean(pred_benign != y_att)
+
     accuracies_no_def = []
     acc_on_advs = []
-    fprs = []
     for e in epsilons:
         try:
             path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(
@@ -210,24 +213,15 @@ def pytorch_attack_against_rc_num(data_name, att, epsilons, idx):
             labels = np.zeros_like(pred_adv)
             acc = acc_on_advx(pred_adv, y_att, labels)
 
-            # NOTE: clean samples are the same set. Do not repeat.
-            if len(fprs) == 0:
-                pred_benign = detector.detect(X_att, y_att)
-                fpr = np.mean(pred_benign != y_att)
-            else:
-                fpr = fprs[0]
-
             print('[DEFENCE] acc_on_adv:', acc)
             print('[DEFENCE] fpr:', fpr)
         except Exception as e:
             print('[ERROR]', e)
             acc_naked = np.nan
             acc = np.nan
-            fpr = np.nan
         finally:
             accuracies_no_def.append(acc_naked)
             acc_on_advs.append(acc)
-            fprs.append(fpr)
 
     data = {
         'data': np.repeat(data_name, len(epsilons)),
@@ -236,8 +230,7 @@ def pytorch_attack_against_rc_num(data_name, att, epsilons, idx):
         'adv_param': np.array(epsilons),
         'acc_no_def': np.array(accuracies_no_def),
         'acc_on_adv': np.array(acc_on_advs),
-        'fpr': np.array(fprs)
-    }
+        'fpr': np.repeat(fpr, len(epsilons))}
     df = pd.DataFrame(data)
     path_csv = os.path.join(path_results, 'results', '{}_{}_{}_{}.csv'.format(
         data_name, MODEL_NAME, att, DEF_NAME))

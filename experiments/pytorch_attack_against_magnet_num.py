@@ -209,9 +209,12 @@ def pytorch_attack_against_magnet_num(data_name, att, epsilons, idx):
     if att == 'boundary':
         epsilons = [0]
 
+    # Adversarial examples come from the same benign set
+    _, labelled_benign_as_adv = detector.detect(X_att, y_att)
+    fpr = np.mean(labelled_benign_as_adv)
+
     accuracies_no_def = []
     acc_on_advs = []
-    fprs = []
     for e in epsilons:
         try:
             path_adv = os.path.join(path_results, 'data', '{}_{}_{}_{}_adv.npy'.format(
@@ -244,24 +247,15 @@ def pytorch_attack_against_magnet_num(data_name, att, epsilons, idx):
             pred_reformed = predict_numpy(model, X_reformed, device)
             acc = acc_on_advx(pred_reformed, y_att, labelled_as_adv)
 
-            # NOTE: clean samples are the same set. Do not repeat.
-            if len(fprs) == 0:
-                _, labelled_benign_as_adv = detector.detect(X_att, y_att)
-                fpr = np.mean(labelled_benign_as_adv)
-            else:
-                fpr = fprs[0]
-
             print('[DEFENCE] acc_on_adv:', acc)
             print('[DEFENCE] fpr:', fpr)
         except Exception as e:
             print('[ERROR]', e)
             acc_naked = np.nan
             acc = np.nan
-            fpr = np.nan
         finally:
             accuracies_no_def.append(acc_naked)
             acc_on_advs.append(acc)
-            fprs.append(fpr)
 
     data = {
         'data': np.repeat(data_name, len(epsilons)),
@@ -270,8 +264,7 @@ def pytorch_attack_against_magnet_num(data_name, att, epsilons, idx):
         'adv_param': np.array(epsilons),
         'acc_no_def': np.array(accuracies_no_def),
         'acc_on_adv': np.array(acc_on_advs),
-        'fpr': np.array(fprs)
-    }
+        'fpr': np.repeat(fpr, len(epsilons))}
     df = pd.DataFrame(data)
     path_csv = os.path.join(path_results, 'results', '{}_{}_{}_{}.csv'.format(
         data_name, MODEL_NAME, att, DEF_NAME))

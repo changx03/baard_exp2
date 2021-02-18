@@ -145,6 +145,8 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     print('[DEFENCE] Start training BAARD...')
     if baard_param is None:
         baard_param = os.path.join('params', 'baard_{}.json'.format(data_name))
+    if not os.path.exists(baard_param):
+        raise FileNotFoundError("Cannot find BAARD's config file: {}".format(baard_param))
 
     detector = get_baard(
         data_name=data_name,
@@ -162,14 +164,17 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
     if att == 'boundary' or att == 'tree':
         epsilons = [0]
 
+    # Adversarial examples come from the same benign set
+    labelled_fp_1, labelled_fp_2, labelled_fp_3 = detector.detect(X_att, y_att, per_stage=True)
+    fpr_1 = np.mean(labelled_fp_1)
+    fpr_2 = np.mean(labelled_fp_2)
+    fpr_3 = np.mean(labelled_fp_3)
+
     classifier = SklearnClassifier(model=model, clip_values=(0.0, 1.0))
     accuracies_no_def = []
     acc_on_advs_1 = []
     acc_on_advs_2 = []
     acc_on_advs_3 = []
-    fprs_1 = []
-    fprs_2 = []
-    fprs_3 = []
     for e in epsilons:
         try:
             # Load/Create adversarial examples
@@ -198,32 +203,17 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
             acc_2 = acc_on_advx(pred_adv, y_att, labelled_as_adv_2)
             acc_3 = acc_on_advx(pred_adv, y_att, labelled_as_adv_3)
 
-            # NOTE: clean samples are the same set. Do not repeat.
-            if len(fprs_1) == 0:
-                labelled_fp_1, labelled_fp_2, labelled_fp_3 = detector.detect(X_att, y_att, per_stage=True)
-                fpr_1 = np.mean(labelled_fp_1)
-                fpr_2 = np.mean(labelled_fp_2)
-                fpr_3 = np.mean(labelled_fp_3)
-            else:
-                fpr_1 = fprs_1[0]
-                fpr_2 = fprs_2[0]
-                fpr_3 = fprs_3[0]
-
             print('[DEFENCE] acc_on_adv (Stage 3):', acc_3)
             print('[DEFENCE] fpr (Stage 3):', fpr_3)
         except Exception as e:
             print(e)
             acc_naked = np.nan
             acc_1 = acc_2 = acc_3 = np.nan
-            fpr_1 = fpr_2 = fpr_3 = np.nan
         finally:
             accuracies_no_def.append(acc_naked)
             acc_on_advs_1.append(acc_1)
             acc_on_advs_2.append(acc_2)
             acc_on_advs_3.append(acc_3)
-            fprs_1.append(fpr_1)
-            fprs_2.append(fpr_2)
-            fprs_3.append(fpr_3)
 
     data = {
         'data': np.repeat(data_name, len(epsilons)),
@@ -232,12 +222,11 @@ def sklearn_attack_against_baard(data_name, model_name, att, epsilons, idx, baar
         'adv_param': np.array(epsilons),
         'acc_no_def': np.array(accuracies_no_def),
         'acc_on_adv_1': np.array(acc_on_advs_1),
-        'fpr_1': np.array(fprs_1),
+        'fpr_1': np.repeat(fpr_1, len(epsilons)),
         'acc_on_adv_2': np.array(acc_on_advs_2),
-        'fpr_2': np.array(fprs_2),
+        'fpr_2': np.repeat(fpr_2, len(epsilons)),
         'acc_on_adv_3': np.array(acc_on_advs_3),
-        'fpr_3': np.array(fprs_3),
-    }
+        'fpr_3': np.repeat(fpr_3, len(epsilons))}
     df = pd.DataFrame(data)
     path_csv = os.path.join(path_results, 'results', '{}_{}_{}_{}.csv'.format(data_name, model_name, att, DEF_NAME))
     df.to_csv(path_csv)

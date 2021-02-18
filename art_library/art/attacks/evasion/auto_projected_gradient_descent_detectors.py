@@ -17,14 +17,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
+class AutoProjectedGradientDescentDetectors(
+    AutoProjectedGradientDescent):
     """
     """
     attack_params = AutoProjectedGradientDescent.attack_params + [
         "detector",
         "detector_th",
-        "beta",
-        "clf_loss_multiplier",
+        "beta"
     ]
 
     _predefined_losses = ["cross_entropy", 'difference_logits_ratio', "logits_difference"]
@@ -35,7 +35,6 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         detector: "CLASSIFIER_LOSS_GRADIENTS_TYPE",
         detector_th : int = 0.5,
         beta: int = 0.5,
-        clf_loss_multiplier: int = 1,
         detector_clip_fun = None,
         norm: Union[int, float, str] = np.inf,
         eps: float = 0.3,
@@ -58,8 +57,6 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         :param beta: Constant which regulates the trade-off between the
         optimization of the classifier and the detector losses. In
         particular is the weight given to the detector's loss.
-        :param clf_loss_multiplier: Constant for which the classifier loss
-        will be multiplied.
         :param norm: The norm of the adversarial perturbation. Possible values: "inf", np.inf, 1 or 2.
         :param eps: Maximum perturbation that the attacker can introduce.
         :param eps_step: Attack step size (input variation) at each iteration.
@@ -74,7 +71,6 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
         self.beta = beta
         self.detector_th = detector_th
-        self.clf_loss_multiplier = clf_loss_multiplier
 
         self.detector_clip_fun = detector_clip_fun
 
@@ -170,12 +166,35 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         grad[grad_bigger_than_0,:] = grad[grad_bigger_than_0,:] / grad_norms[grad_bigger_than_0]
         return grad.reshape(shape)
 
+    def _reduce_loss(self, loss):
+
+        # divide the loss by 10 until is absolute value is between 0 and 1.
+        loss = loss
+        loss = np.array(loss)
+
+        # compute the mean loss
+        mean_loss = np.abs(np.mean(loss))
+
+        multiplier = 1.0
+        while mean_loss > 1:
+         multiplier *= 0.1
+         mean_loss *= multiplier
+
+        loss = loss * multiplier
+
+        return loss, multiplier
+
     def _cmpt_grad(self, x, y):
 
         # set grad equal to the classifier gradient
-        grad= self.clf_loss_multiplier * \
-                   self.estimator.loss_gradient(x, y) * \
+        grad= self.estimator.loss_gradient(x, y) * \
                    (1 - 2 * int(self.targeted))
+
+        ##### make the clf loss comparable with the detector one
+        loss = self.estimator.loss(x=x, y=y,
+                                         reduction="none")
+        loss, multiplier = self._reduce_loss(loss)
+        grad *= multiplier
 
         # normalize the gradients
         grad = self._grad_normalization(grad)
@@ -207,11 +226,11 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         loss = self.estimator.loss(x=x, y=y,
                                          reduction="none")
 
-        loss = self.clf_loss_multiplier * loss
+        # make clf loss comparable with grad loss
+        loss = self._reduce_loss(loss)[0]
 
-        loss = np.array(loss)
-
-        #print("abs clf loss: ", np.abs(np.mean(loss)))
+        mean_loss = np.mean(np.array(loss))
+        #print("clf loss ",mean_loss )
 
         scores = self.estimator.predict(x)
         y_pred = np.argmax(scores, axis=1)
@@ -224,9 +243,13 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
             misclass = y_pred != y_true
             x_misclass = x[misclass, :]
             y_misclass = y[misclass, :]
-            loss[misclass] -=  self.beta * \
+
+            detector_loss =  self.beta * \
                            self.detector.loss(x=x_misclass, y=y_misclass,
                                               reduction="none")
+            loss[misclass] -= detector_loss
+
+            #print("detector loss ", np.mean(detector_loss))
 
         return np.mean(loss)
 
@@ -265,8 +288,12 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
 
             # get the detector prediction (1 means the sample is predicted
             # as malicious, 0 as benign).
-            detector_scores = self.estimator.predict(x_adv)
+            detector_scores = self.detector.predict(x_adv)
             detector_pred = np.argmax(detector_scores, axis=1)
+
+            #print("num detected adv {:}/{:}".format( np.sum(detector_pred
+            # ==1),
+                                                    # detector_pred.size))
 
             # the element of sample_is_robust will be 0 if the sample is
             # classified as the attacker wants, 1 otherwise
@@ -435,10 +462,14 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
                 y_pred_adv_k = self.estimator.predict(x_k)
 
                 # get the detector prediction.
-                detector_scores_k = self.estimator.predict(x_k)
+                detector_scores_k = self.detector.predict(x_k)
                 detector_pred_k = np.argmax(detector_scores_k, axis=1)
                 # invert the detector prediction
                 inv_detector_pred_k = np.invert(detector_pred_k)
+
+                #print("num detected adv {:}/{:}".format(
+                #    np.sum(detector_pred_k == 1),
+                #    detector_pred_k.size))
 
                 # the element of sample_is_not_robust_k will be 1 if the
                 # sample is classified as the attacker wants, 0 otherwise
@@ -464,5 +495,7 @@ class AutoProjectedGradientDescentDetectors(AutoProjectedGradientDescent):
         if self.detector_clip_fun is not None:
             x_adv = self.detector_clip_fun(x_adv,
                                          self.estimator)
+
+
         return x_adv
 

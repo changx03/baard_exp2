@@ -1,7 +1,7 @@
 #!/bin/bash -e
 #SBATCH --job-name=mnist
 #SBATCH --output=log/exp_mnist_%a.out
-#SBATCH --time=96:00:00
+#SBATCH --time=72:00:00
 #SBATCH --mem=8G
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1

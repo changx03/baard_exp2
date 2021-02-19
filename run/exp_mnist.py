@@ -43,9 +43,9 @@ def run(i):
     att = 'line'
     run_small_batch(att, eps, i)
 
-    eps = [0.]
-    att = 'boundary'
-    run_small_batch(att, eps, i)
+    # eps = [0.]
+    # att = 'boundary'
+    # run_small_batch(att, eps, i)
 
 
 if __name__ == '__main__':

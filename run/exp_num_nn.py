@@ -33,9 +33,9 @@ def run_per_dataset(i, data):
     att = 'cw2'
     run_small_batch(data, att, eps, i)
 
-    eps = [0.]
-    att = 'boundary'
-    run_small_batch(data, att, eps, i)
+    # eps = [0.]
+    # att = 'boundary'
+    # run_small_batch(data, att, eps, i)
 
 
 def run(i):

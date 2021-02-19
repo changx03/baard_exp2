@@ -177,7 +177,7 @@ def pytorch_attack_against_lid_num(data_name, att, epsilons, idx):
             print('[ATTACK] Acc without def:', acc_naked)
 
             # Preform defence
-            print('[DEFENCE] Start running FS...')
+            print('[DEFENCE] Start running LID...')
             start = time.time()
             # Train LID with adversarial examples
             X_lid, y_lid = detector.get_train_set(X_val, adv_val, std_dominator=STD_DOMINATOR)

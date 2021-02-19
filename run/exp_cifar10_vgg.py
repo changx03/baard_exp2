@@ -49,9 +49,9 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--idx', type=int, default=0)
     args = parser.parse_args()
     print('args:', args)
-    print('Running full experiment on MNIST...')
+    print('Running full experiment on CIFAR10 Vgg...')
 
     start = time.time()
     run(args.idx)
     time_elapsed = time.time() - start
-    print('Total time spend on MNIST:', str(datetime.timedelta(seconds=time_elapsed)))
+    print('Total time spend on CIFAR10 Vgg:', str(datetime.timedelta(seconds=time_elapsed)))

@@ -120,8 +120,8 @@ def pytorch_attack_against_lid_num(data_name, att, epsilons, idx):
     print('[DATA] n:', n)
     X_att = X_test[:n]
     y_att = y_test[:n]
-    X_val = X_test[n:]
-    y_val = y_test[n:]
+    X_val = X_test[n: n * 2]
+    y_val = y_test[n: n * 2]
 
     ############################################################################
     # Step 4: Load detector

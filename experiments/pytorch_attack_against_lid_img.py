@@ -123,8 +123,8 @@ def pytorch_attack_against_lid_img(data_name, model_name, att, epsilons, idx):
     print('[DATA] n:', n)
     X_att = X_test[:n]
     y_att = y_test[:n]
-    X_val = X_test[n:]
-    y_val = y_test[n:]
+    X_val = X_test[n: n * 2]
+    y_val = y_test[n: n * 2]
 
     ############################################################################
     # Step 4: Load detector
@@ -224,30 +224,31 @@ def pytorch_attack_against_lid_img(data_name, model_name, att, epsilons, idx):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
-    parser.add_argument('-m', '--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
-    parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
-    parser.add_argument('-a', '--att', type=str, default='fgsm', choices=ATTACKS)
-    parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
-    args = parser.parse_args()
-    print('args:', args)
+    # parser.add_argument('-d', '--data', type=str, required=True, choices=METADATA['datasets'])
+    # parser.add_argument('-m', '--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
+    # parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
+    # parser.add_argument('-a', '--att', type=str, default='fgsm', choices=ATTACKS)
+    # parser.add_argument('-e', '--eps', type=float, default=[0.3], nargs='+')
+    # args = parser.parse_args()
+    # print('args:', args)
 
-    idx = args.idx
-    data = args.data
-    model_name = args.model
-    att = args.att
-    epsilons = args.eps
-    seed = SEEDS[args.idx]
-    print('data:', data)
-    print('model_name:', model_name)
-    print('attack:', att)
-    print('epsilons:', epsilons)
-    print('seed:', seed)
-    pytorch_attack_against_lid_img(data, model_name, att, epsilons, idx)
+    # idx = args.idx
+    # data = args.data
+    # model_name = args.model
+    # att = args.att
+    # epsilons = args.eps
+    # seed = SEEDS[args.idx]
+    # print('data:', data)
+    # print('model_name:', model_name)
+    # print('attack:', att)
+    # print('epsilons:', epsilons)
+    # print('seed:', seed)
+    # pytorch_attack_against_lid_img(data, model_name, att, epsilons, idx)
 
     # Testing
     # pytorch_attack_against_lid_img('mnist', 'dnn', 'apgd', [0.3], 0)
     # pytorch_attack_against_lid_img('mnist', 'dnn', 'apgd2', [2.0], 0)
     # pytorch_attack_against_lid_img('mnist', 'dnn', 'cw2', [0.], 0)
+    pytorch_attack_against_lid_img('cifar10', 'resnet', 'apgd', [0.1], 0)
 
 # python3 ./experiments/pytorch_attack_against_lid_img.py -d mnist -i 0 -a apgd -e 0.063 0.3 1.0

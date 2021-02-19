@@ -367,7 +367,7 @@ def surrogate_sim(data_name, epsilons, idx, baard_param=None):
         'accs_on_surr': np.array(accs_on_surr),
         'similarity': np.array(similarities)}
     df = pd.DataFrame(data)
-    path_csv = os.path.join(path_wb_results, '{}_{}_baard_whitebox.csv'.format(data_name, model_name))
+    path_csv = os.path.join(path_wb_results, '{}_{}_baard_surrogate.csv'.format(data_name, model_name))
     df.to_csv(path_csv)
     print('Save to:', path_csv)
     print()

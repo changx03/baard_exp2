@@ -1,7 +1,7 @@
 #!/bin/bash -e
 #SBATCH --job-name=num_nn
 #SBATCH --output=log/exp_num_nn_%a.out
-#SBATCH --time=72:00:00
+#SBATCH --time=24:00:00
 #SBATCH --mem=6G
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1

@@ -1,7 +1,7 @@
 #!/bin/bash -e
 #SBATCH --job-name=cifar10_vgg
 #SBATCH --output=log/exp_cifar10_vgg_%a.out
-#SBATCH --time=72:00:00
+#SBATCH --time=24:00:00
 #SBATCH --mem=16G
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1

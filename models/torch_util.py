@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import TensorDataset
@@ -38,6 +39,23 @@ def predict_numpy(model, X, device):
     return tensor_pred.detach().numpy()
 
 
+def predict_numpy_bin(model, X, device):
+    model.eval()
+    dataset = TensorDataset(torch.from_numpy(X).type(torch.float32))
+    loader = DataLoader(dataset, batch_size=512, shuffle=False)
+    tensor_pred = -torch.ones(len(X), dtype=torch.float32)
+
+    start = 0
+    with torch.no_grad():
+        for batch in loader:
+            x = batch[0].to(device)
+            end = start + x.size(0)
+            outputs = model(x)
+            tensor_pred[start:end] = outputs.cpu().detach().squeeze()
+            start = end
+    return np.round(tensor_pred.detach().numpy())
+
+
 def train(model, loader, loss, optimizer, device):
     model.train()
     running_loss = 0.0
@@ -64,6 +82,32 @@ def train(model, loader, loss, optimizer, device):
     return epoch_loss, epoch_acc
 
 
+def train_bin(model, loader, loss, optimizer, device):
+    model.train()
+    running_loss = 0.0
+    corrects = .0
+
+    for x, y in loader:
+        x = x.to(device)
+        y = y.to(device)
+
+        optimizer.zero_grad()
+        outputs = model(x)
+        l = loss(outputs, y.view_as(outputs).type(outputs.dtype))
+        l.backward()
+        optimizer.step()
+
+        # for display
+        running_loss += l.item() * x.size(0)
+        preds = torch.round(outputs).type(y.dtype)
+        corrects += preds.eq(y.view_as(preds)).sum().item()
+
+    n = len(loader.dataset)
+    epoch_loss = running_loss / n
+    epoch_acc = corrects / n
+    return epoch_loss, epoch_acc
+
+
 def validate(model, loader, loss, device):
     model.eval()
     running_loss = .0
@@ -77,6 +121,27 @@ def validate(model, loader, loss, device):
             l = loss(outputs, y)
             running_loss += l.item() * x.size(0)
             preds = outputs.max(1, keepdim=True)[1]
+            corrects += preds.eq(y.view_as(preds)).sum().item()
+
+    n = len(loader.dataset)
+    epoch_loss = running_loss / n
+    epoch_acc = corrects / n
+    return epoch_loss, epoch_acc
+
+
+def validate_bin(model, loader, loss, device):
+    model.eval()
+    running_loss = .0
+    corrects = .0
+
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device)
+            y = y.to(device)
+            outputs = model(x)
+            l = loss(outputs, y.view_as(outputs).type(outputs.dtype))
+            running_loss += l.item() * x.size(0)
+            preds = torch.round(outputs).type(y.dtype)
             corrects += preds.eq(y.view_as(preds)).sum().item()
 
     n = len(loader.dataset)

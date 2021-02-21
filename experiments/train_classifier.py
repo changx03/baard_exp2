@@ -78,8 +78,12 @@ def pytorch_train_classifier(data_name, model_name, idx):
     print('[CLASSIFIER] device:', device)
 
     if data_name == 'mnist':
+        n_classes = 10
+        n_features = (1, 28, 28)
         model = BaseModel(use_prob=False).to(device)
     elif data_name == 'cifar10':
+        n_classes = 10
+        n_features = (3, 32, 32)
         if model_name == 'resnet':
             model = Resnet(use_prob=False).to(device)
             model = Resnet(use_prob=False).to(device)
@@ -102,6 +106,7 @@ def pytorch_train_classifier(data_name, model_name, idx):
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
     print('[CLASSIFIER] Start training {} model on {}...'.format(model_name, data_name))
+    hist_train_loss = []
     time_start = time.time()
     for e in range(epochs):
         start = time.time()
@@ -111,6 +116,10 @@ def pytorch_train_classifier(data_name, model_name, idx):
         time_elapsed = time.time() - start
         print(('[CLASSIFIER] {:2d}/{:d}[{:s}] Train Loss: {:.4f} Acc: {:.4f}%, Test Loss: {:.4f} Acc: {:.4f}%').format(
             e + 1, epochs, str(datetime.timedelta(seconds=time_elapsed)), tr_loss, tr_acc * 100., va_loss, va_acc * 100.))
+        hist_train_loss.append(tr_loss)
+        if len(hist_train_loss) > 10 and hist_train_loss[-5] <= tr_loss:
+            print('[SURROGATE] Training is converged at:', e)
+            break
     time_elapsed = time.time() - time_start
     print('[CLASSIFIER] Time spend on training classifier: {}'.format(str(datetime.timedelta(seconds=time_elapsed))))
 

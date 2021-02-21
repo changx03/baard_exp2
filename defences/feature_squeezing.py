@@ -145,10 +145,10 @@ class FeatureSqueezingTorch:
                 torch.from_numpy(y.astype(np.long)))
             loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
+            hist_train_loss = []
             for e in range(epochs):
                 time_start = time.time()
-                current_loss, accuracy = self.__train(
-                    loader, model, self.loss, optimizer)
+                current_loss, accuracy = self.__train(loader, model, self.loss, optimizer)
                 scheduler.step()
                 losses.append(current_loss)
                 time_elapsed = time.time() - time_start
@@ -160,7 +160,8 @@ class FeatureSqueezingTorch:
                         squeezer.name,
                         current_loss,
                         accuracy * 100))
-                if accuracy >= 0.9999 and e >= 10:
+                hist_train_loss.append(current_loss)
+                if len(hist_train_loss) > 10 and hist_train_loss[-5] <=current_loss:
                     print('Training set is converged at:', e)
                     break
             self.__history_losses[i] = losses

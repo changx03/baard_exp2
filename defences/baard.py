@@ -571,7 +571,7 @@ class BAARDOperator:
         else:
             return labelled_as_adv
 
-    def save(self, path):
+    def save(self, path, without_s1=False):
         thresholds = []
         fprs = np.zeros(3, dtype=np.float)
         ks = np.zeros(3, dtype=np.long)
@@ -579,11 +579,17 @@ class BAARDOperator:
             thresholds.append(stage.thresholds_)
             ks[i] = stage.k
             fprs[i] = stage.fpr
-        obj = {
-            'thresholds': thresholds,
-            'fprs': fprs,
-            'ks': ks,
-            'n_tolerance': self.stages[0].n_tolerance_}
+        if without_s1:
+            obj = {
+                'thresholds': thresholds,
+                'fprs': fprs,
+                'ks': ks}
+        else:
+            obj = {
+                'thresholds': thresholds,
+                'fprs': fprs,
+                'ks': ks,
+                'n_tolerance': self.stages[0].n_tolerance_}
         torch.save(obj, path)
         print('[BAARD] Save to:', path)
 

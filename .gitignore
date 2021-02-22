@@ -150,4 +150,3 @@ data/MNIST/
 log/
 results/
 test.*
-*.pdf

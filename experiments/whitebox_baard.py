@@ -331,25 +331,24 @@ def whitebox_baard(data_name, epsilons, idx, baard_param=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    # parser.add_argument('-d', '--data', type=str, required=True, choices=['mnist', 'cifar10'])
-    # parser.add_argument('-e', '--eps', type=float, required=True, nargs='+')
-    # parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
-    # parser.add_argument('-p', '--param', type=str)
-    # args = parser.parse_args()
-    # print('args:', args)
+    parser.add_argument('-d', '--data', type=str, required=True, choices=['mnist', 'cifar10'])
+    parser.add_argument('-e', '--eps', type=float, required=True, nargs='+')
+    parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
+    parser.add_argument('-p', '--param', type=str)
+    args = parser.parse_args()
+    print('args:', args)
 
-    # idx = args.idx
-    # data = args.data
-    # epsilons = args.eps
-    # seed = SEEDS[args.idx]
-    # print('data:', data)
-    # print('epsilons:', epsilons)
-    # print('seed:', seed)
+    idx = args.idx
+    data = args.data
+    epsilons = args.eps
+    seed = SEEDS[args.idx]
+    print('data:', data)
+    print('epsilons:', epsilons)
+    print('seed:', seed)
 
-    # whitebox_baard(data, epsilons, idx, args.param)
+    whitebox_baard(data, epsilons, idx, args.param)
 
     # Testing
-    whitebox_baard('mnist', [5.], 0)
     # whitebox_baard('mnist', [1., 2., 3., 5., 8.], 0)
     # whitebox_baard('cifar10', [0.05, 0.1, 0.5, 1., 2.], 0)
 

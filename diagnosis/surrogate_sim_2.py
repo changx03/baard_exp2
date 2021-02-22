@@ -181,16 +181,8 @@ def surrogate_sim(data_name, epsilons, idx, baard_param=None):
     stages.append(s3)
     detector = BAARDOperator(stages=stages)
 
-    # Set thresholds
-    file_baard_threshold = os.path.join(path_data, '{}_{}_baard_threshold.pt'.format(data_name, model_name))
-    if os.path.exists(file_baard_threshold):
-        print('[DEFENCE] Found existing BAARD thresholds:', file_baard_threshold)
-        detector.load(file_baard_threshold)
-    else:
-        # Search thresholds
-        detector.search_thresholds(X_val, y_val, np.zeros_like(y_val))
-        detector.save(file_baard_threshold)
-        print('[DEFENCE] Save to:', file_baard_threshold)
+    # Search thresholds
+    detector.search_thresholds(X_val, y_val, np.zeros_like(y_val))
 
     ############################################################################
     # Step 5: Train surrogate model

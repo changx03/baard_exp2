@@ -30,7 +30,7 @@ from models.torch_util import predict_numpy, validate
 from torch.utils.data import DataLoader, TensorDataset
 from utils import acc_on_advx, get_correct_examples, mkdir, set_seeds
 
-from experiments import get_output_path, pytorch_train_classifier
+from experiments import get_baard, get_output_path, pytorch_train_classifier
 from experiments.train_baard_surrogate import (SurrogateModel,
                                                train_surrogate_v2)
 
@@ -158,29 +158,22 @@ def whitebox_baard(data_name, epsilons, idx, baard_param=None):
     if not os.path.exists(baard_param):
         raise FileNotFoundError("Cannot find BAARD's config file: {}".format(baard_param))
 
-    # Load each stage
-    with open(baard_param) as j:
-        baard_param = json.load(j)
-        path_param_backup = os.path.join(path_results, 'baard_{}.json'.format(data_name))
-        json.dump(baard_param, open(path_param_backup, 'w'))
-        print('[DEFENCE] Save to:', path_param_backup)
-    print('[DEFENCE] Param:', baard_param)
+    detector = get_baard(
+        data_name=data_name,
+        model_name=model_name,
+        idx=idx,
+        X_train=X_train,
+        y_train=y_train,
+        X_val=X_val,
+        y_val=y_val,
+        baard_param=baard_param)
 
     stages = []
-    s2 = ReliabilityStage(n_classes=n_classes, k=baard_param['k_re'], fpr=baard_param['fpr2'], verbose=False)
-    s2.fit(X_train, y_train)
-    s3 = DecidabilityStage(n_classes=n_classes, k=baard_param['k_de'], fpr=baard_param['fpr3'], verbose=False)
-    s3.fit(X_train, y_train)
+    s2 = detector.stages[1]
+    s3 = detector.stages[2]
     stages.append(s2)
     stages.append(s3)
-    detector = BAARDOperator(stages=stages)
-
-    # Set thresholds
-    file_baard_threshold = os.path.join(path_data, '{}_{}_baard_threshold_no_s1.pt'.format(data_name, model_name))
-    # Search thresholds
-    detector.search_thresholds(X_val, y_val, np.zeros_like(y_val))
-    detector.save(file_baard_threshold, without_s1=True)
-    print('[DEFENCE] Save to:', file_baard_threshold)
+    baard_no_s1 = BAARDOperator(stages=stages)
 
     ############################################################################
     # Step 5: Train surrogate model
@@ -198,7 +191,7 @@ def whitebox_baard(data_name, epsilons, idx, baard_param=None):
         surr_epsilons = EPS_SURR_MNIST if data_name == 'mnist' else EPS_SURR_CIFAR10
         surrogate = train_surrogate_v2(
             model=model,
-            detector=detector,
+            detector=baard_no_s1,
             data_name=data_name,
             X_train=X_train[idx_choice],
             y_train=y_train[idx_choice],
@@ -237,7 +230,7 @@ def whitebox_baard(data_name, epsilons, idx, baard_param=None):
     # clf_loss_multiplier = 1. / 36. if data_name == 'mnist' else 0.1  # 0.1 for CIFAR10
 
     # Adversarial examples come from the same benign set
-    lbl_fp_2, lbl_fp_3 = detector.detect(X_wb_test, y_wb_test, per_stage=True)
+    lbl_fp_2, lbl_fp_3 = baard_no_s1.detect(X_wb_test, y_wb_test, per_stage=True)
     fpr_2 = np.mean(lbl_fp_2)
     fpr_3 = np.mean(lbl_fp_3)  # whitebox attack requires FPR from BAARD
     lbl_fp_surr = predict_numpy(surrogate, X_wb_test, device)
@@ -264,7 +257,7 @@ def whitebox_baard(data_name, epsilons, idx, baard_param=None):
             attack = AutoProjectedGradientDescentDetectors(
                 estimator=art_classifier,
                 detector=art_detector,
-                detector_th=fpr_3,
+                detector_th=0.,
                 detector_clip_fun=clip_fun,
                 norm=2,
                 eps=e,
@@ -284,9 +277,9 @@ def whitebox_baard(data_name, epsilons, idx, baard_param=None):
         # Without defence
         pred_wb = predict_numpy(model, adv_wb_test, device)
         acc_naked = np.mean(pred_wb == y_wb_test)
-        rej_2 = np.mean(detector.stages[0].predict(adv_wb_test, pred_wb))
-        rej_3 = np.mean(detector.stages[1].predict(adv_wb_test, pred_wb))
-        lbl_adv_2, lbl_adv_3 = detector.detect(adv_wb_test, pred_wb, per_stage=True)
+        rej_2 = np.mean(baard_no_s1.stages[0].predict(adv_wb_test, pred_wb))
+        rej_3 = np.mean(baard_no_s1.stages[1].predict(adv_wb_test, pred_wb))
+        lbl_adv_2, lbl_adv_3 = baard_no_s1.detect(adv_wb_test, pred_wb, per_stage=True)
         rej_all = np.mean(lbl_adv_3)
         acc_2 = acc_on_advx(pred_wb, y_wb_test, lbl_adv_2)
         acc_3 = acc_on_advx(pred_wb, y_wb_test, lbl_adv_3)
@@ -338,24 +331,25 @@ def whitebox_baard(data_name, epsilons, idx, baard_param=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data', type=str, required=True, choices=['mnist', 'cifar10'])
-    parser.add_argument('-e', '--eps', type=float, required=True, nargs='+')
-    parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
-    parser.add_argument('-p', '--param', type=str)
-    args = parser.parse_args()
-    print('args:', args)
+    # parser.add_argument('-d', '--data', type=str, required=True, choices=['mnist', 'cifar10'])
+    # parser.add_argument('-e', '--eps', type=float, required=True, nargs='+')
+    # parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
+    # parser.add_argument('-p', '--param', type=str)
+    # args = parser.parse_args()
+    # print('args:', args)
 
-    idx = args.idx
-    data = args.data
-    epsilons = args.eps
-    seed = SEEDS[args.idx]
-    print('data:', data)
-    print('epsilons:', epsilons)
-    print('seed:', seed)
+    # idx = args.idx
+    # data = args.data
+    # epsilons = args.eps
+    # seed = SEEDS[args.idx]
+    # print('data:', data)
+    # print('epsilons:', epsilons)
+    # print('seed:', seed)
 
-    whitebox_baard(data, epsilons, idx, args.param)
+    # whitebox_baard(data, epsilons, idx, args.param)
 
     # Testing
+    whitebox_baard('mnist', [5.], 0)
     # whitebox_baard('mnist', [1., 2., 3., 5., 8.], 0)
     # whitebox_baard('cifar10', [0.05, 0.1, 0.5, 1., 2.], 0)
 

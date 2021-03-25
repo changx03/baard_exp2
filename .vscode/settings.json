@@ -3,6 +3,5 @@
         "--max-line-length=200",
         "--ignore",
         "E402"
-    ],
-    "python.pythonPath": "C:\\Users\\Luke Chang\\.conda\\envs\\torchenv\\python.exe"
+    ]
 }

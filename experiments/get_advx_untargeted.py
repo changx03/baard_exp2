@@ -12,6 +12,7 @@ from art.attacks.evasion import (AutoProjectedGradientDescent,
                                  BasicIterativeMethod, BoundaryAttack,
                                  CarliniLInfMethod, DeepFool,
                                  FastGradientMethod)
+from art.attacks.evasion.auto_projected_gradient_descent_graybox import AutoProjectedGradientDescentGrayBox
 from art.estimators.classification import PyTorchClassifier
 from attacks.carlini import CarliniWagnerAttackL2
 from attacks.line_attack import LineAttack
@@ -54,6 +55,38 @@ def get_advx_untargeted(model, data_name, att_name, eps, device, X, y=None, batc
             norm=2,
             eps=eps,
             eps_step=0.1,
+            max_iter=1000,
+            batch_size=batch_size,
+            targeted=False,
+            verbose=False)
+    elif att_name == 'apgd_v2_inf':
+        eps_step = eps / 10.0 if eps <= 0.1 else 0.1
+        attack = AutoProjectedGradientDescentGrayBox(
+            estimator=classifier,
+            eps=eps,
+            eps_step=eps_step,
+            max_iter=1000,
+            batch_size=batch_size,
+            targeted=False,
+            verbose=False)
+    elif att_name == 'apgd_v2_l1':
+        eps_step = eps / 10.0 if eps <= 0.1 else 0.1
+        attack = AutoProjectedGradientDescentGrayBox(
+            estimator=classifier,
+            norm=1,
+            eps=eps,
+            eps_step=eps_step,
+            max_iter=1000,
+            batch_size=batch_size,
+            targeted=False,
+            verbose=False)
+    elif att_name == 'apgd_v2_l2':
+        eps_step = eps / 10.0 if eps <= 0.1 else 0.1
+        attack = AutoProjectedGradientDescentGrayBox(
+            estimator=classifier,
+            norm=2,
+            eps=eps,
+            eps_step=eps_step,
             max_iter=1000,
             batch_size=batch_size,
             targeted=False,

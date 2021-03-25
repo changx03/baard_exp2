@@ -7,8 +7,8 @@ from art.attacks.evasion.adversarial_patch.adversarial_patch_tensorflow import A
 from art.attacks.evasion.auto_attack import AutoAttack
 from art.attacks.evasion.auto_projected_gradient_descent import AutoProjectedGradientDescent
 
-from art.attacks.evasion.auto_projected_gradient_descent_detectors import \
-    AutoProjectedGradientDescentDetectors
+from art.attacks.evasion.auto_projected_gradient_descent_detectors import AutoProjectedGradientDescentDetectors
+from art.attacks.evasion.auto_projected_gradient_descent_graybox import AutoProjectedGradientDescentGrayBox
 
 from art.attacks.evasion.brendel_bethge import BrendelBethgeAttack
 from art.attacks.evasion.boundary import BoundaryAttack

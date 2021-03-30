@@ -268,23 +268,23 @@ def baard_grid_search(data_name, model_name):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    # parser.add_argument('-d', '--data', type=str, required=True)
-    # parser.add_argument('-m', '--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
-    # args = parser.parse_args()
-    # print('args:', args)
+    parser.add_argument('-d', '--data', type=str, required=True)
+    parser.add_argument('-m', '--model', type=str, default='dnn', choices=['dnn', 'resnet', 'vgg'])
+    args = parser.parse_args()
+    print('args:', args)
 
-    # seed = SEEDS[0]
-    # data_name = args.data
-    # model_name = args.model
-    # print('seed:', seed)
-    # print('data:', data_name)
-    # print('model_name:', model_name)
+    seed = SEEDS[0]
+    data_name = args.data
+    model_name = args.model
+    print('seed:', seed)
+    print('data:', data_name)
+    print('model_name:', model_name)
 
-    # baard_grid_search(data_name, model_name)
+    baard_grid_search(data_name, model_name)
 
     # Testing
     # baard_grid_search('banknote', 'dnn')
-    baard_grid_search('breastcancer', 'dnn')
+    # baard_grid_search('breastcancer', 'dnn')
     # baard_grid_search('htru2', 'dnn')
     # baard_grid_search('mnist', 'dnn')
     # baard_grid_search('cifar10', 'resnet')

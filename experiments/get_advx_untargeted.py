@@ -39,27 +39,27 @@ def get_advx_untargeted(model, data_name, att_name, eps, device, X, y=None, batc
         clip_values=(0.0, 1.0),
         device_type=device_type)
 
+    # if att_name == 'apgd':
+    #     eps_step = eps / 10.0 if eps <= 0.1 else 0.1
+    #     attack = AutoProjectedGradientDescent(
+    #         estimator=classifier,
+    #         eps=eps,
+    #         eps_step=eps_step,
+    #         max_iter=1000,
+    #         batch_size=batch_size,
+    #         targeted=False,
+    #         verbose=False)
+    # elif att_name == 'apgd2':
+    #     attack = AutoProjectedGradientDescent(
+    #         estimator=classifier,
+    #         norm=2,
+    #         eps=eps,
+    #         eps_step=0.1,
+    #         max_iter=1000,
+    #         batch_size=batch_size,
+    #         targeted=False,
+    #         verbose=False)
     if att_name == 'apgd':
-        eps_step = eps / 10.0 if eps <= 0.1 else 0.1
-        attack = AutoProjectedGradientDescent(
-            estimator=classifier,
-            eps=eps,
-            eps_step=eps_step,
-            max_iter=1000,
-            batch_size=batch_size,
-            targeted=False,
-            verbose=False)
-    elif att_name == 'apgd2':
-        attack = AutoProjectedGradientDescent(
-            estimator=classifier,
-            norm=2,
-            eps=eps,
-            eps_step=0.1,
-            max_iter=1000,
-            batch_size=batch_size,
-            targeted=False,
-            verbose=False)
-    elif att_name == 'apgd_v2_inf':
         eps_step = eps / 10.0 if eps <= 0.1 else 0.1
         attack = AutoProjectedGradientDescentGrayBox(
             estimator=classifier,
@@ -69,7 +69,7 @@ def get_advx_untargeted(model, data_name, att_name, eps, device, X, y=None, batc
             batch_size=batch_size,
             targeted=False,
             verbose=False)
-    elif att_name == 'apgd_v2_l1':
+    elif att_name == 'apgd1':
         eps_step = eps / 10.0 if eps <= 0.1 else 0.1
         attack = AutoProjectedGradientDescentGrayBox(
             estimator=classifier,
@@ -80,7 +80,7 @@ def get_advx_untargeted(model, data_name, att_name, eps, device, X, y=None, batc
             batch_size=batch_size,
             targeted=False,
             verbose=False)
-    elif att_name == 'apgd_v2_l2':
+    elif att_name == 'apgd2':
         eps_step = eps / 10.0 if eps <= 0.1 else 0.1
         attack = AutoProjectedGradientDescentGrayBox(
             estimator=classifier,

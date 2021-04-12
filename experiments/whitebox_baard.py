@@ -32,7 +32,7 @@ from utils import acc_on_advx, get_correct_examples, mkdir, set_seeds
 
 from experiments import get_baard, get_output_path, pytorch_train_classifier
 from experiments.train_baard_surrogate import (SurrogateModel,
-                                               train_surrogate_v2)
+                                               train_surrogate)
 
 DATA_PATH = 'data'
 with open('metadata.json') as data_json:
@@ -189,7 +189,7 @@ def whitebox_baard(data_name, epsilons, idx, baard_param=None):
     else:
         idx_choice = np.random.choice(X_train.shape[0], size=10000, replace=False)
         surr_epsilons = EPS_SURR_MNIST if data_name == 'mnist' else EPS_SURR_CIFAR10
-        surrogate = train_surrogate_v2(
+        surrogate = train_surrogate(
             model=model,
             detector=baard_no_s1,
             data_name=data_name,

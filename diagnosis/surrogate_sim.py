@@ -1,5 +1,13 @@
 """
 Evalute BAARD on white-box surrogate attacks.
+
+This script includes the following steps:
+1. Load data
+2. Load model
+3. Filter, split data
+4. Load detector
+5. Train surrogate model
+6. Evaluate surrogate model
 """
 import os
 import sys
@@ -19,8 +27,7 @@ import torchvision as tv
 import torchvision.datasets as datasets
 from experiments import (get_advx_untargeted, get_baard, get_output_path,
                          pytorch_train_classifier)
-from experiments.train_baard_surrogate import (SurrogateModel, train_surrogate,
-                                               train_surrogate_v2)
+from experiments.train_baard_surrogate import train_surrogate
 from models.cifar10 import Resnet
 from models.mnist import BaseModel
 from models.torch_util import predict_numpy, validate
@@ -163,7 +170,7 @@ def surrogate_sim(data_name, epsilons, idx, baard_param=None):
 
     ############################################################################
     idx_choice = np.random.choice(X_train.shape[0], size=10000, replace=False)
-    surrogate = train_surrogate_v2(
+    surrogate = train_surrogate(
         model=model,
         detector=detector,
         data_name=data_name,

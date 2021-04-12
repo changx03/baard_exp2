@@ -33,7 +33,7 @@ import torchvision.datasets as datasets
 from defences.baard import BAARDOperator, DecidabilityStage, ReliabilityStage
 from experiments import (get_advx_untargeted, get_output_path,
                          pytorch_train_classifier)
-from experiments.train_baard_surrogate import train_surrogate_v2
+from experiments.train_baard_surrogate import train_surrogate
 from models.cifar10 import Resnet
 from models.mnist import BaseModel
 from models.torch_util import predict_numpy, validate
@@ -187,7 +187,7 @@ def surrogate_sim(data_name, epsilons, idx, baard_param=None):
     ############################################################################
     # Step 5: Train surrogate model
     idx_choice = np.random.choice(X_train.shape[0], size=10000, replace=False)
-    surrogate = train_surrogate_v2(
+    surrogate = train_surrogate(
         model=model,
         detector=detector,
         data_name=data_name,
@@ -311,5 +311,5 @@ if __name__ == '__main__':
     # surrogate_sim('mnist', [1., 2., 3., 5., 8.], 0)
     # surrogate_sim('cifar10', [0.1, 0.5, 1., 2., 5.], 0)
 
-# python ./diagnosis/surrogate_sim.py -d mnist -i 0 -e 1.0 2.0 3.0 5.0 8.0
-# python ./diagnosis/surrogate_sim.py -d cifar10 -i 0 -e 0.1 .5 1.0 2.0 5.0
+# python ./diagnosis/surrogate_sim_2.py -d mnist -i 0 -e 1.0 2.0 3.0 5.0 8.0
+# python ./diagnosis/surrogate_sim_2.py -d cifar10 -i 0 -e 0.1 .5 1.0 2.0 5.0

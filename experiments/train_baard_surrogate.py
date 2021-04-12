@@ -50,40 +50,7 @@ class SurrogateModel(nn.Module):
         return x
 
 
-def train_surrogate(X_train, y_train, X_test, y_test, epochs, device):
-    n_channels = X_train.shape[1]
-    print('[SURROGATE] n_channels', n_channels)
-
-    model = SurrogateModel(in_channels=n_channels).to(device)
-    optimizer = optim.AdamW(model.parameters(), lr=0.001, weight_decay=1e-6)
-    loss = nn.CrossEntropyLoss()
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-
-    dataset_train = TensorDataset(torch.from_numpy(X_train).type(torch.float32), torch.from_numpy(y_train).type(torch.long))
-    loader_train = DataLoader(dataset_train, batch_size=BATCH_SIZE, shuffle=True)
-    dataset_test = TensorDataset(torch.from_numpy(X_test).type(torch.float32), torch.from_numpy(y_test).type(torch.long))
-    loader_test = DataLoader(dataset_test, batch_size=BATCH_SIZE, shuffle=True)
-
-    time_start = time.time()
-    hist_train_loss = []
-    for e in range(epochs):
-        start = time.time()
-        tr_loss, tr_acc = train(model, loader_train, loss, optimizer, device)
-        va_loss, va_acc = validate(model, loader_test, loss, device)
-        scheduler.step()
-        time_elapsed = time.time() - start
-        print(('[SURROGATE] {:2d}/{:d}[{:s}] Train Loss: {:.4f} Acc: {:.2f}%, Test Loss: {:.4f} Acc: {:.2f}%').format(
-            e + 1, epochs, str(datetime.timedelta(seconds=time_elapsed)), tr_loss, tr_acc * 100, va_loss, va_acc * 100))
-        hist_train_loss.append(tr_loss)
-        if len(hist_train_loss) > 10 and hist_train_loss[-10] <= tr_loss:
-            print('[SURROGATE] Training is converged at:', e)
-            break
-    time_elapsed = time.time() - time_start
-    print('[SURROGATE] Total training time:', str(datetime.timedelta(seconds=time_elapsed)))
-    return model
-
-
-def train_surrogate_v2(model,
+def train_surrogate(model,
                        detector,
                        data_name,
                        X_train,

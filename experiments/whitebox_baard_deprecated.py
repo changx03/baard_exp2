@@ -168,108 +168,7 @@ def whitebox_baard(data_name, epsilons, idx, baard_param=None):
         baard_param=baard_param)
 
     ############################################################################
-    # Step 5: Build surrogate train set (Train adversarial examples)
-    # Save X
-    path_X_surr_train = os.path.join(path_wb_data, '{}_{}_X_surro_train.npy'.format(data_name, model_name))
-    path_y_surr_train = os.path.join(path_wb_data, '{}_{}_y_surro_train.npy'.format(data_name, model_name))
-    # Check both files are exist.
-    if os.path.exists(path_X_surr_train) and os.path.exists(path_y_surr_train):
-        print('[SURROGATE] Found surrogate train set:', path_X_surr_train)
-        X_surr_train = np.load(path_X_surr_train)
-        y_surr_train = np.load(path_y_surr_train)
-    else:
-        np.save(path_X_surr_train, X_surr_train)
-        np.save(path_y_surr_train, y_surr_train)
-        print('[SURROGATE] Save surrogate train set to:', path_X_surr_train)
-
-    surr_epsilons = EPS_SURR_MNIST if data_name == 'mnist' else EPS_SURR_CIFAR10
-    # surr_epsilons = epsilons  # Using the same set of epsilons as whitebox attacks
-    print('[SURROGATE] Epsilon for train set:', surr_epsilons)
-    adv_surr_train = []
-    for i, e in enumerate(surr_epsilons):
-        # This is a slow process, we save each segment.
-        path_adv_surr_train = os.path.join(
-            path_wb_data, '{}_{}_adv_surro_train_{}_{}.npy'.format(data_name, model_name, ATT_SURR, str(float(e))))
-        if os.path.exists(path_adv_surr_train):
-            print('[SURROGATE] Found surrogate advx:', path_adv_surr_train)
-            adv = np.load(path_adv_surr_train)
-        else:
-            print('[SURROGATE] Start training {} {} eps={}...'.format(X_surr_train.shape[0], ATT_SURR, e))
-            adv = get_advx_untargeted(
-                model,
-                data_name,
-                ATT_SURR,
-                eps=e,
-                device=device,
-                X=X_surr_train,
-                batch_size=BATCH_SIZE)
-            np.save(path_adv_surr_train, adv)
-            print('[SURROGATE] Save surrogate advx to:', path_adv_surr_train)
-        adv_surr_train.append(adv)
-
-        # pred = predict_numpy(model, adv, device)
-        # lbl_adv = detector.detect(adv, pred, device)
-        # acc = acc_on_advx(pred, y_surr_train, lbl_adv)
-        # print('[DEBUG] acc:', acc)
-
-    # Combine subsets into one
-    adv_surr_train = np.concatenate(adv_surr_train)
-    # Duplicate benign set to avoid imbalanced data
-    X_surr_train = np.vstack([X_surr_train] * len(surr_epsilons))
-    assert X_surr_train.shape == adv_surr_train.shape
-    assert np.all(X_surr_train[0] == X_surr_train[2000])
-
-    n_benign = len(X_surr_train)
-    # The training set contains X = benign + advx, y = baard(benign) + baard(advx).
-    X_surr_train = np.concatenate((X_surr_train, adv_surr_train))
-    pred_surr_train = predict_numpy(model, X_surr_train, device)
-    y_surr_train = np.tile(y_surr_train, len(surr_epsilons) * 2)
-    assert np.all(y_surr_train[0:100] == y_surr_train[2000:2100])
-    print('[SURROGATE] X_train, pred_train, y_train:', X_surr_train.shape, pred_surr_train.shape, y_surr_train.shape)
-    print('[SURROGATE] Classifier acc. on advx (train):  ', np.mean(pred_surr_train[n_benign:] == y_surr_train[n_benign:]))
-    print('[SURROGATE] Classifier acc. on benign (train):', np.mean(pred_surr_train[:n_benign] == y_surr_train[:n_benign]))
-
-    path_lbl_surr_train = os.path.join(path_wb_data, '{}_{}_label_surro_train.npy'.format(data_name, model_name))
-    if os.path.exists(path_lbl_surr_train):
-        print('[SURROGATE] Found lbls for surr train set:', path_lbl_surr_train)
-        lbl_surr_train = np.load(path_lbl_surr_train)
-    else:
-        print('[SURROGATE] BAARD is labelling surrogate train set...')
-        lbl_surr_train = detector.detect(X_surr_train, pred_surr_train)
-        np.save(path_lbl_surr_train, lbl_surr_train)
-        print('[SURROGATE] Save surrogate train labels to:', path_lbl_surr_train)
-
-    # Only 2nd half contains advx
-    acc = acc_on_advx(pred_surr_train[n_benign:], y_surr_train[n_benign:], lbl_surr_train[n_benign:])
-    fpr = np.mean(lbl_surr_train[:n_benign])
-    print('[DEFENCE] BAARD acc on surrogate train set:', acc)
-    print('[DEFENCE] BAARD fpr on surrogate train set:', fpr)
-
-    ############################################################################
-    # Step 6: Train surrogate model
-    # Load a test set
-    path_adv = os.path.join(path_data, '{}_{}_{}_{}_adv.npy'.format(data_name, model_name, ATT_TEST, str(float(EPS_TEST))))
-    if os.path.exists(path_adv):
-        print('[ATTACK] Find:', path_adv)
-        adv_test = np.load(path_adv)
-    else:
-        print('[ATTACK] Start generating {} {} eps={} advx...'.format(X_att.shape[0], ATT_TEST, EPS_TEST))
-        adv_test = get_advx_untargeted(
-            model,
-            data_name,
-            ATT_TEST,
-            eps=EPS_TEST,
-            device=device,
-            X=X_att,
-            batch_size=BATCH_SIZE)
-        np.save(path_adv, adv_test)
-        print('[ATTACK] Save to', path_adv)
-    X_surr_test = np.concatenate((X_att, adv_test))
-    pred_surr_test = predict_numpy(model, X_surr_test, device)
-    lbl_surr_test = detector.detect(X_surr_test, pred_surr_test)
-    print('[SURROGATE] Classifier acc. on advx (test):  ', np.mean(pred_surr_test[len(y_att):] == y_att))
-    print('[SURROGATE] Classifier acc. on benign (test):', np.mean(pred_surr_test[:len(y_att)] == y_att))
-
+    # Step 5: Train surrogate model
     path_surr_model = os.path.join(path_wb_data, '{}_{}_baard_surrogate.pt'.format(data_name, model_name))
     if os.path.exists(path_surr_model):
         print('[SURROGATE] Found surrogate model:', path_surr_model)
@@ -280,22 +179,27 @@ def whitebox_baard(data_name, epsilons, idx, baard_param=None):
         surrogate = SurrogateModel(in_channels=n_channels).to(device)
         surrogate.load_state_dict(torch.load(path_surr_model, map_location=device))
     else:
+        idx_choice = np.random.choice(X_train.shape[0], size=10000, replace=False)
+        surr_epsilons = EPS_SURR_MNIST if data_name == 'mnist' else EPS_SURR_CIFAR10
         surrogate = train_surrogate(
-            X_train=X_surr_train,
-            X_test=X_surr_test,
-            y_train=lbl_surr_train,
-            y_test=lbl_surr_test,
+            model=model,
+            detector=detector,
+            data_name=data_name,
+            X_train=X_train[idx_choice],
+            y_train=y_train[idx_choice],
+            X_test=X_att,
+            y_test=y_att,
             epochs=EPOCHS,
+            att_name=ATT_SURR,
+            epsilons=surr_epsilons,
+            eps_test=2.0,
+            path=path_wb_data,
             device=device)
         torch.save(surrogate.state_dict(), path_surr_model)
         print('[SURROGATE] Save surrogate model to:', path_surr_model)
 
-    pred = predict_numpy(surrogate, X_surr_test, device)
-    acc = np.mean(pred == lbl_surr_test)
-    print('[SURROGATE] Test set acc on surrogate model:', acc)
-
     ############################################################################
-    # Step 7: Perform white-box attacks
+    # Step 6: Perform white-box attacks
     device_type = 'cpu' if device == 'cpu' else 'gpu'
     art_classifier = PyTorchClassifier(
         model,
@@ -430,26 +334,26 @@ def whitebox_baard(data_name, epsilons, idx, baard_param=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    # parser.add_argument('-d', '--data', type=str, required=True, choices=['mnist', 'cifar10'])
-    # parser.add_argument('-e', '--eps', type=float, required=True, nargs='+')
-    # parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
-    # parser.add_argument('-p', '--param', type=str)
-    # args = parser.parse_args()
-    # print('args:', args)
+    parser.add_argument('-d', '--data', type=str, required=True, choices=['mnist', 'cifar10'])
+    parser.add_argument('-e', '--eps', type=float, required=True, nargs='+')
+    parser.add_argument('-i', '--idx', type=int, default=0, choices=list(range(len(SEEDS))))
+    parser.add_argument('-p', '--param', type=str)
+    args = parser.parse_args()
+    print('args:', args)
 
-    # idx = args.idx
-    # data = args.data
-    # epsilons = args.eps
-    # seed = SEEDS[args.idx]
-    # print('data:', data)
-    # print('epsilons:', epsilons)
-    # print('seed:', seed)
+    idx = args.idx
+    data = args.data
+    epsilons = args.eps
+    seed = SEEDS[args.idx]
+    print('data:', data)
+    print('epsilons:', epsilons)
+    print('seed:', seed)
 
-    # whitebox_baard(data, epsilons, idx, args.param)
+    whitebox_baard(data, epsilons, idx, args.param)
 
     # Testing
-    whitebox_baard('mnist', [1., 2., 3., 5., 8.], 0)
+    # whitebox_baard('mnist', [1., 2., 3., 5., 8.], 0)
     # whitebox_baard('cifar10', [0.05, 0.1, 0.5, 1., 2.], 0)
 
-# python ./experiments/whitebox_baard.py -d mnist -i 0 -e 1.0 2.0 3.0 5.0 8.0
-# python ./experiments/whitebox_baard.py -d cifar10 -i 0 -e 0.05 0.1 0.5 1.0 2.0
+# python ./experiments/whitebox_baard_deprecated.py -d mnist -i 0 -e 1.0 2.0 3.0 5.0 8.0
+# python ./experiments/whitebox_baard_deprecated.py -d cifar10 -i 0 -e 0.05 0.1 0.5 1.0 2.0

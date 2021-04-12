@@ -23,7 +23,8 @@ def run_small_batch(att, eps, i, data='mnist', model='dnn'):
 
 def run(i):
     eps = [0.063, 0.1, 0.3, 0.6, 1.0, 1.5, 2.0]
-    attacks = ['fgsm', 'apgd']
+    # attacks = ['fgsm', 'apgd']
+    attacks = ['apgd']
     for att in attacks:
         run_small_batch(att, eps, i)
 
@@ -31,17 +32,17 @@ def run(i):
     att = 'apgd2'
     run_small_batch(att, eps, i)
 
-    eps = [0.]
-    att = 'deepfool'
-    run_small_batch(att, eps, i)
+    # eps = [0.]
+    # att = 'deepfool'
+    # run_small_batch(att, eps, i)
 
-    eps = [0., 5., 10.]
-    att = 'cw2'
-    run_small_batch(att, eps, i)
+    # eps = [0., 5., 10.]
+    # att = 'cw2'
+    # run_small_batch(att, eps, i)
 
-    eps = [1.]
-    att = 'line'
-    run_small_batch(att, eps, i)
+    # eps = [1.]
+    # att = 'line'
+    # run_small_batch(att, eps, i)
 
     # eps = [0.]
     # att = 'boundary'
